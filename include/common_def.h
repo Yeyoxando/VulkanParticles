@@ -8,7 +8,7 @@
 
 // Comment and uncomment those defines to select which main test will be executed
 
-#define MAIN_WINDOW_TEST
-//#define MAIN_HELLO_TRIANGLE
+//#define MAIN_WINDOW_TEST
+#define MAIN_HELLO_TRIANGLE
 
 // ------------------------------------------------------------------------- // 
