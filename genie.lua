@@ -83,8 +83,7 @@ project "ParticleEditor"
 		
 		}
 		defines { 	
-			--"GLEW_STATIC",
-			--"_GLFW_WIN32",
+			"GLFW_INCLUDE_VULKAN",
 			"WIN32",
 			"_WIN32",
 			"_WINDOWS",

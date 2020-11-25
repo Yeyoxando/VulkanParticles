@@ -6,62 +6,65 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include "hello_triangle_app.h"
+#include "window.h"
 
 // ------------------------------------------------------------------------- // 
 
-HelloTriangleApp::HelloTriangleApp() {
+Window::Window() {
+
+  window = nullptr;
+  kWindowWidth = 0;
+  kWindowHeight = 0;
 
 }
 
 // ------------------------------------------------------------------------- // 
 
-HelloTriangleApp::~HelloTriangleApp() {
+Window::~Window() {
 
 }
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::run() {
+void Window::init(int width /*= 800*/, int height /*= 600*/) {
 
-  window.init();
+  glfwInit();
 
-  init();
-  renderLoop();
-  close();
+  // Tell GLFW to not use OpenGL API
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-}
+  // No resize allowed for now
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-// ------------------------------------------------------------------------- // 
-
-void HelloTriangleApp::init() {
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void HelloTriangleApp::renderLoop() {
-
-  while (!window.shouldClose()) {
-    
-    window.pollEvents();
-
-    // Draw things
-
-  }
+  window = glfwCreateWindow(width, height, "Vulkan Particles", nullptr, nullptr);
+  kWindowWidth = width;
+  kWindowHeight = height;
 
 }
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::close() {
+bool Window::shouldClose() {
 
-  // Other close things
-
-  window.close();
+  return glfwWindowShouldClose(window);
 
 }
 
 // ------------------------------------------------------------------------- // 
 
+void Window::pollEvents() {
 
+  glfwPollEvents();
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void Window::close() {
+
+  glfwDestroyWindow(window);
+  glfwTerminate();
+
+}
+
+// ------------------------------------------------------------------------- // 
