@@ -1,6 +1,6 @@
 solution ("VulkanParticles")
 	configurations { "Debug", "Release" }
-	platforms { "x32", "x64" }
+	platforms { "x64" }
 	location ("build")	
 	
 	projects = { "ParticleEditor" }

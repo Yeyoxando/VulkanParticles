@@ -1,3 +1,16 @@
+/*
+ *	Author: Diego Ochando Torres
+ *  Date: 24/11/2020
+ *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
+ */
+ 
+// ------------------------------------------------------------------------- // 
+
+#include "common_def.h"
+#ifdef MAIN_WINDOW_TEST
+
+
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -9,6 +22,7 @@
 #include <iostream>
 
 int main() {
+	
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -32,4 +46,7 @@ int main() {
     glfwTerminate();
 
     return 0;
+	
 }
+
+#endif
