@@ -9,7 +9,7 @@
 #ifndef __HELLO_TRIANGLE_APP_H__
 #define __HELLO_TRIANGLE_APP_H__
 
-#include "window.h"
+#include "GLFW/glfw3.h"
 
 class HelloTriangleApp {
 public:
@@ -21,8 +21,13 @@ public:
 
 private:
 
+  // GENERAL FUNCTIONS
+
+  // Initializes GLFW and creates a window
+  void initWindow(int width = 800, int height = 600);
+
 	// Allocates all the necessary vulkan resources
-	void init();
+	void initVulkan();
 
 	// Executes the main render loop
 	void renderLoop();
@@ -30,9 +35,19 @@ private:
 	// Frees all the allocated resources and close the app
 	void close();
 
-	// Variables
-	Window window;
+  // VULKAN FUNCTIONS
+  void createInstance();
+
+  // VARIABLES
+  // Window variables
+  GLFWwindow* window_;
+
+  int window_width_;
+  int window_height_;
+
+  // Vulkan variables
+  VkInstance instance_;
 
 };
 
-#endif
+#endif // __HELLO_TRIANGLE_APP_H__
