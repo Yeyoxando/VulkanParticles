@@ -21,8 +21,9 @@ HelloTriangleApp::HelloTriangleApp() {
   window_width_ = 0;
   window_height_ = 0;
 
-  instance_ = nullptr;
-  debug_messenger_ = nullptr;
+  instance_ = VK_NULL_HANDLE;
+  debug_messenger_ = VK_NULL_HANDLE;
+  physical_device_ = VK_NULL_HANDLE;
 
 }
 
@@ -67,10 +68,8 @@ void HelloTriangleApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 void HelloTriangleApp::initVulkan() {
 
   createInstance();
-
-  if (kEnableValidationLayers) {
-    setupDebugMessenger();
-  }
+  setupDebugMessenger();
+  pickPhysicalDevice();
 
 }
 
@@ -274,6 +273,88 @@ VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(
   }
 
   return VK_FALSE;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::pickPhysicalDevice() {
+
+  // Request available physical devices (graphics cards)
+  uint32_t device_count = 0;
+  vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
+  
+  if (device_count == 0) {
+    throw std::runtime_error("The device does not have any GPUs supporting Vulkan.");
+  }
+
+  std::vector<VkPhysicalDevice> devices(device_count);
+  vkEnumeratePhysicalDevices(instance_, &device_count, devices.data());
+
+  for (uint32_t i = 0; i < devices.size(); i++) {
+    if (isDeviceSuitable(devices[i])) {
+      physical_device_ = devices[i];
+      break;
+    }
+  }
+
+  if (physical_device_ == VK_NULL_HANDLE) {
+    throw std::runtime_error("The device's GPUs are not suitable for the requested functionality.");
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+bool HelloTriangleApp::isDeviceSuitable(VkPhysicalDevice device) {
+
+  // Basic device properties
+  VkPhysicalDeviceProperties device_properties;
+  vkGetPhysicalDeviceProperties(device, &device_properties);
+
+  // Tex compression, 64-bit floats and multi-viewport rendering
+  VkPhysicalDeviceFeatures device_features;
+  vkGetPhysicalDeviceFeatures(device, &device_features);
+
+  // Example if card don't support geometry shader
+  /*if (!device_features.geometryShader) {
+    return false;
+  }*/
+
+  // Check if device supports graphic queues
+  QueueFamilyIndices indices = findQueueFamilies(device);
+  if (!indices.graphics_family.has_value()) {
+    return false;
+  }
+
+  // Expand this function with necessary features
+
+  return true;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device) {
+  
+  QueueFamilyIndices indices;
+
+  // Get device family queue properties
+  uint32_t queue_family_count = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
+
+  for (uint32_t i = 0; i < queue_families.size(); i++) {
+    // Check if graphics queue is supported
+    if (queue_families[i].queueFlags && VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphics_family = i;
+      break;
+    }
+  }
+
+  return indices;
 
 }
 

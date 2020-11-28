@@ -11,6 +11,11 @@
 
 #include "common_def.h"
 #include <GLFW/glfw3.h>
+#include <optional>
+
+struct QueueFamilyIndices {
+  std::optional<uint32_t> graphics_family;
+};
 
 class HelloTriangleApp {
 public:
@@ -50,6 +55,13 @@ private:
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData);
+  // Select a physical device that supports the requested features
+  void pickPhysicalDevice();
+  // Check if the device fits with the necessary operations
+  bool isDeviceSuitable(VkPhysicalDevice device);
+  // Checks which queue families are supported on the device
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+
 
   // VARIABLES
   // Window variables
@@ -61,6 +73,7 @@ private:
   // Vulkan variables
   VkInstance instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
+  VkPhysicalDevice physical_device_;
 
 };
 

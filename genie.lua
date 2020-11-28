@@ -13,7 +13,7 @@ solution ("VulkanParticles")
 
 		location (prj_path .. "/" .. _ACTION)
 	
-        flags { "ExtraWarnings" }
+        flags { "ExtraWarnings", "Cpp17" }
 
 		defines { 	
 			"_CRT_SECURE_NO_WARNINGS",
@@ -52,9 +52,9 @@ project "ParticleEditor"
 	--Common files
 	files{
 		--ParticleEditor
-		"./include/*.h",
-		"./src/*.cpp",
-		"./tests/*.cpp", 
+		"./include/**.h",
+		"./src/**.cpp",
+		"./tests/**.cpp", 
 
 		-- Vulkan
 		--"D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
@@ -77,19 +77,15 @@ project "ParticleEditor"
 
 	}
 
-	--Windows files
-	configuration "vs*"
-		files {
-		
-		}
-		defines { 	
-			"GLFW_INCLUDE_VULKAN",
-			"WIN32",
-			"_WIN32",
-			"_WINDOWS",
-		}	 
-		links{
-			"D:/ProgramFiles/VulkanSDK/1.2.154.1/Lib/vulkan-1",
-			"D:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
-		}
+	defines { 	
+		"GLFW_INCLUDE_VULKAN",
+		"WIN32",
+		"_WIN32",
+		"_WINDOWS",
+	}	 
+	
+	links{
+		"D:/ProgramFiles/VulkanSDK/1.2.154.1/Lib/vulkan-1",
+		"D:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
+	}
 
