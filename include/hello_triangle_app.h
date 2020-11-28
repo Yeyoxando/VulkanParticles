@@ -61,6 +61,8 @@ private:
   bool isDeviceSuitable(VkPhysicalDevice device);
   // Checks which queue families are supported on the device
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+  // Creates a logical device for the selected physical device
+  void createLogicalDevice();
 
 
   // VARIABLES
@@ -74,6 +76,8 @@ private:
   VkInstance instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
   VkPhysicalDevice physical_device_;
+  VkDevice logical_device_;
+  VkQueue graphics_queue_;
 
 };
 

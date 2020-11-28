@@ -70,6 +70,7 @@ void HelloTriangleApp::initVulkan() {
   createInstance();
   setupDebugMessenger();
   pickPhysicalDevice();
+  createLogicalDevice();
 
 }
 
@@ -92,6 +93,8 @@ void HelloTriangleApp::renderLoop() {
 void HelloTriangleApp::close() {
 
   // Vulkan cleanup
+  vkDestroyDevice(logical_device_, nullptr);
+  
   if (kEnableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance_, debug_messenger_, nullptr);
   }
@@ -355,6 +358,49 @@ QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device) 
   }
 
   return indices;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::createLogicalDevice() {
+
+  // Create needed queues
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_);
+  float queue_priority = 1.0f;
+
+  VkDeviceQueueCreateInfo queue_create_info{};
+  queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queue_create_info.queueFamilyIndex = indices.graphics_family.value();
+  queue_create_info.queueCount = 1;
+  queue_create_info.pQueuePriorities = &queue_priority;
+
+  // Set needed vulkan features
+  VkPhysicalDeviceFeatures device_features{};
+
+  // Create the device
+  VkDeviceCreateInfo device_create_info{};
+  device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  device_create_info.pQueueCreateInfos = &queue_create_info;
+  device_create_info.queueCreateInfoCount = 1;
+  device_create_info.pEnabledFeatures = &device_features;
+  device_create_info.enabledExtensionCount = 0;
+
+  // Only for older Vulkan apps, layers don't need to be set in the device on actual versions
+  if (kEnableValidationLayers) {
+    device_create_info.enabledLayerCount = static_cast<uint32_t>(kVkValidationLayers.size());
+    device_create_info.ppEnabledLayerNames = kVkValidationLayers.data();
+  }
+  else {
+    device_create_info.enabledLayerCount = 0;
+  }
+
+  if (vkCreateDevice(physical_device_, &device_create_info, nullptr, &logical_device_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create Vulkan logical device.");
+  }
+
+  // Store queue handle
+  vkGetDeviceQueue(logical_device_, indices.graphics_family.value(), 0, &graphics_queue_);
 
 }
 
