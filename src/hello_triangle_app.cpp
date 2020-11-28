@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <vector>
+#include <set>
 
 // ------------------------------------------------------------------------- // 
 
@@ -24,6 +25,10 @@ HelloTriangleApp::HelloTriangleApp() {
   instance_ = VK_NULL_HANDLE;
   debug_messenger_ = VK_NULL_HANDLE;
   physical_device_ = VK_NULL_HANDLE;
+  logical_device_ = VK_NULL_HANDLE;
+  graphics_queue_ = VK_NULL_HANDLE;
+  present_queue_ = VK_NULL_HANDLE;
+  surface_ = VK_NULL_HANDLE;
 
 }
 
@@ -69,6 +74,7 @@ void HelloTriangleApp::initVulkan() {
 
   createInstance();
   setupDebugMessenger();
+  createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
 
@@ -95,6 +101,8 @@ void HelloTriangleApp::close() {
   // Vulkan cleanup
   vkDestroyDevice(logical_device_, nullptr);
   
+  vkDestroySurfaceKHR(instance_, surface_, nullptr);
+
   if (kEnableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance_, debug_messenger_, nullptr);
   }
@@ -326,7 +334,7 @@ bool HelloTriangleApp::isDeviceSuitable(VkPhysicalDevice device) {
 
   // Check if device supports graphic queues
   QueueFamilyIndices indices = findQueueFamilies(device);
-  if (!indices.graphics_family.has_value()) {
+  if (!indices.isComplete()) {
     return false;
   }
 
@@ -353,6 +361,17 @@ QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device) 
     // Check if graphics queue is supported
     if (queue_families[i].queueFlags && VK_QUEUE_GRAPHICS_BIT) {
       indices.graphics_family = i;
+    }
+
+    // Check if present queue is supported
+    VkBool32 present_support = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present_support);
+    if (present_support) {
+      indices.present_family = i;
+    }
+
+    // Break if both are found
+    if (indices.isComplete()) {
       break;
     }
   }
@@ -369,20 +388,30 @@ void HelloTriangleApp::createLogicalDevice() {
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
   float queue_priority = 1.0f;
 
-  VkDeviceQueueCreateInfo queue_create_info{};
-  queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  queue_create_info.queueFamilyIndex = indices.graphics_family.value();
-  queue_create_info.queueCount = 1;
-  queue_create_info.pQueuePriorities = &queue_priority;
+  // Store unique queues
+  std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+  std::set<uint32_t> unique_queue_families = {indices.graphics_family.value(), 
+    indices.present_family.value()};
+
+  // Create unique queues create info
+  for (uint32_t queue_family : unique_queue_families) {
+    VkDeviceQueueCreateInfo queue_create_info{};
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.queueFamilyIndex = queue_family;
+    queue_create_info.queueCount = 1;
+    queue_create_info.pQueuePriorities = &queue_priority;
+    queue_create_infos.push_back(queue_create_info);
+  }
 
   // Set needed vulkan features
   VkPhysicalDeviceFeatures device_features{};
+  //device_features.geometryShader = true; // For example
 
   // Create the device
   VkDeviceCreateInfo device_create_info{};
   device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  device_create_info.pQueueCreateInfos = &queue_create_info;
-  device_create_info.queueCreateInfoCount = 1;
+  device_create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
+  device_create_info.pQueueCreateInfos = queue_create_infos.data();
   device_create_info.pEnabledFeatures = &device_features;
   device_create_info.enabledExtensionCount = 0;
 
@@ -399,8 +428,21 @@ void HelloTriangleApp::createLogicalDevice() {
     throw std::runtime_error("Failed to create Vulkan logical device.");
   }
 
-  // Store queue handle
+  // Store graphics queue handle
   vkGetDeviceQueue(logical_device_, indices.graphics_family.value(), 0, &graphics_queue_);
+
+  // Store present queue handle
+  vkGetDeviceQueue(logical_device_, indices.present_family.value(), 0, &present_queue_);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::createSurface() {
+
+  if (glfwCreateWindowSurface(instance_, window_, nullptr, &surface_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create window surface.");
+  }
 
 }
 

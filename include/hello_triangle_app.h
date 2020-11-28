@@ -15,6 +15,11 @@
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphics_family;
+  std::optional<uint32_t> present_family;
+
+  bool isComplete() {
+    return graphics_family.has_value() && present_family.has_value();
+  }
 };
 
 class HelloTriangleApp {
@@ -63,6 +68,8 @@ private:
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
   // Creates a logical device for the selected physical device
   void createLogicalDevice();
+  // Creates a surface handle for the current window
+  void createSurface();
 
 
   // VARIABLES
@@ -75,9 +82,11 @@ private:
   // Vulkan variables
   VkInstance instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
-  VkPhysicalDevice physical_device_;
+  VkPhysicalDevice physical_device_; // GPU
   VkDevice logical_device_;
   VkQueue graphics_queue_;
+  VkQueue present_queue_;
+  VkSurfaceKHR surface_; //Abstract window
 
 };
 
