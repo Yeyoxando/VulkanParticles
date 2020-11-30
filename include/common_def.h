@@ -8,6 +8,7 @@
 #define __COMMON_DEF_H__
 
 #include <vector>
+#include <Vulkan/vulkan.h>
 
 // ------------------------------------------------------------------------- // 
 
@@ -19,7 +20,6 @@
 // ------------------------------------------------------------------------- // 
 
 // Vulkan validation layers
-
 const std::vector<const char*> kVkValidationLayers = {
   "VK_LAYER_KHRONOS_validation",
 };
@@ -29,6 +29,11 @@ const bool kEnableValidationLayers = true;
 #else
 const bool kEnableValidationLayers = false;
 #endif
+
+// Vulkan extensions
+const std::vector<const char*> kDeviceExtensions = {
+  VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+};
 
 // ------------------------------------------------------------------------- // 
 

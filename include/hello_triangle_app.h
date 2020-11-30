@@ -22,6 +22,12 @@ struct QueueFamilyIndices {
   }
 };
 
+struct SwapChainSupportDetails {
+  VkSurfaceCapabilitiesKHR capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> present_modes;
+};
+
 class HelloTriangleApp {
 public:
   HelloTriangleApp();
@@ -60,16 +66,28 @@ private:
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData);
+  // Creates a surface handle for the current window
+  void createSurface();
   // Select a physical device that supports the requested features
   void pickPhysicalDevice();
   // Check if the device fits with the necessary operations
   bool isDeviceSuitable(VkPhysicalDevice device);
+  // Check if the extensions are supported on the device
+  bool checkDeviceExtensionSupport(VkPhysicalDevice device);
   // Checks which queue families are supported on the device
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+  // Queries which swap chain details are supported on the device
+  SwapChainSupportDetails querySwapChainSupportDetails(VkPhysicalDevice device);
+  // Chooses the best swap chain surface formats from the available
+  VkSurfaceFormatKHR chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats);
+  // Chooses the best swap chain surface present mode from the available
+  VkPresentModeKHR  chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes);
+  // Choose a swap chain extent (resolution) with the device capabilities
+  VkExtent2D chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
   // Creates a logical device for the selected physical device
   void createLogicalDevice();
-  // Creates a surface handle for the current window
-  void createSurface();
+  // Creates the swap chain
+  void createSwapChain();
 
 
   // VARIABLES
@@ -87,6 +105,10 @@ private:
   VkQueue graphics_queue_;
   VkQueue present_queue_;
   VkSurfaceKHR surface_; //Abstract window
+  VkSwapchainKHR swap_chain_;
+  std::vector<VkImage> swap_chain_images_;
+  VkFormat swap_chain_image_format_;
+  VkExtent2D swap_chain_extent_;
 
 };
 
