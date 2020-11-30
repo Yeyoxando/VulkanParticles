@@ -88,6 +88,8 @@ private:
   void createLogicalDevice();
   // Creates the swap chain
   void createSwapChain();
+  // Create the image views for he swap chain images
+  void createImageViews();
 
 
   // VARIABLES
@@ -109,6 +111,7 @@ private:
   std::vector<VkImage> swap_chain_images_;
   VkFormat swap_chain_image_format_;
   VkExtent2D swap_chain_extent_;
+  std::vector<VkImageView> swap_chain_image_views_;
 
 };
 
