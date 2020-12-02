@@ -90,6 +90,10 @@ private:
   void createSwapChain();
   // Create the image views for he swap chain images
   void createImageViews();
+  // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
+  void createGraphicsPipeline();
+  // Create a shader module with the given bytecode
+  VkShaderModule createShaderModule(const std::vector<char>& bytecode);
 
 
   // VARIABLES

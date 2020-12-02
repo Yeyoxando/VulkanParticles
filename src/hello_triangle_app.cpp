@@ -80,6 +80,7 @@ void HelloTriangleApp::initVulkan() {
   createLogicalDevice();
   createSwapChain();
   createImageViews();
+  createGraphicsPipeline();
 
 }
 
@@ -679,6 +680,61 @@ void HelloTriangleApp::createImageViews() {
     }
 
   }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::createGraphicsPipeline() {
+
+  // Different pipelines has to be created for different render options
+  // Not like in OpenGL where you can change glBlendFunc between objects
+  // Whole pipeline has to be created and changed to do this
+
+  // Load shaders
+  auto vert_shader_code = readFile("../../../resources/shaders_spirv/v_hello_triangle.spv");
+  auto frag_shader_code = readFile("../../../resources/shaders_spirv/f_hello_triangle.spv");
+
+  VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
+  VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
+
+  VkPipelineShaderStageCreateInfo vert_shader_stage_info{};
+  vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vert_shader_stage_info.module = vert_shader_module;
+  vert_shader_stage_info.pName = "main";
+  vert_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
+
+  VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
+  frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  frag_shader_stage_info.module = frag_shader_module;
+  frag_shader_stage_info.pName = "main";
+  frag_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
+
+  VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
+
+  vkDestroyShaderModule(logical_device_, vert_shader_module, nullptr);
+  vkDestroyShaderModule(logical_device_, frag_shader_module, nullptr);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+VkShaderModule HelloTriangleApp::createShaderModule(const std::vector<char>& bytecode) {
+  
+  VkShaderModuleCreateInfo create_info{};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = bytecode.size();
+  create_info.pCode = reinterpret_cast<const uint32_t*>(bytecode.data());
+
+  VkShaderModule shader_module;
+
+  if (vkCreateShaderModule(logical_device_, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create the shader module.");
+  }
+
+  return shader_module;
 
 }
 

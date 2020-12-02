@@ -55,6 +55,8 @@ project "ParticleEditor"
 		"./include/**.h",
 		"./src/**.cpp",
 		"./tests/**.cpp", 
+		"./resources/**.vert", 
+		"./resources/**.frag", 
 
 		-- Vulkan
 		--"D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",

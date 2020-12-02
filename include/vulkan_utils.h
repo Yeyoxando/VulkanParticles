@@ -12,6 +12,7 @@
 #define __VULKAN_UTILS_H__
 
 #include <Vulkan/vulkan.h>
+#include <fstream>
 
 // ------------------------------------------------------------------------- // 
 
@@ -44,6 +45,29 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
   if (function != nullptr) {
     function(instance, debugMessenger, pAllocator);
   }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+// Read files in binary format (Useful for spir-v shaders) (Would be good to do it with C file management (C++ sucks a bit))
+static std::vector<char> readFile(const char* file_name) {
+
+  std::ifstream file(file_name, std::ios::ate, std::ios::binary);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open shader file.");
+  }
+
+  size_t file_size = (size_t)file.tellg();
+  std::vector<char> buffer(file_size);
+
+  file.seekg(0);
+  file.read(buffer.data(), file_size);
+
+  file.close();
+
+  return buffer;
 
 }
 
