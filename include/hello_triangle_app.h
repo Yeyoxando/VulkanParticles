@@ -90,6 +90,8 @@ private:
   void createSwapChain();
   // Create the image views for he swap chain images
   void createImageViews();
+  // Creates the render pass for the graphics pipeline
+  void createRenderPass();
   // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
   void createGraphicsPipeline();
   // Create a shader module with the given bytecode
@@ -116,6 +118,7 @@ private:
   VkFormat swap_chain_image_format_;
   VkExtent2D swap_chain_extent_;
   std::vector<VkImageView> swap_chain_image_views_;
+  VkRenderPass render_pass_;
   VkPipelineLayout pipeline_layout_;
 
 };
