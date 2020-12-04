@@ -98,6 +98,10 @@ private:
   VkShaderModule createShaderModule(const std::vector<char>& bytecode);
   // Creates the framebuffers used for rendering
   void createFramebuffers();
+  // Creates a command pool for manage the memory of the command buffers 
+  void createCommandPool();
+  // Creates the command buffers for each swap chain framebuffer
+  void createCommandBuffers();
 
 
   // VARIABLES
@@ -124,6 +128,8 @@ private:
   VkPipelineLayout pipeline_layout_;
   VkPipeline  graphics_pipeline_;
   std::vector<VkFramebuffer> swap_chain_framebuffers_;
+  VkCommandPool command_pool_;
+  std::vector<VkCommandBuffer> command_buffers_;
 
 };
 
