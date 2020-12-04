@@ -85,6 +85,7 @@ void HelloTriangleApp::initVulkan() {
   createFramebuffers();
   createCommandPool();
   createCommandBuffers();
+  createSemaphores();
 
 }
 
@@ -96,9 +97,12 @@ void HelloTriangleApp::renderLoop() {
     
     glfwPollEvents();
 
-    // Draw things
+    drawFrame(); // All praise the triangle! Hallelujah!!!
 
   }
+
+  // Wait until the device is on idle so we can clean up resources without being in use
+  vkDeviceWaitIdle(logical_device_);
 
 }
 
@@ -107,6 +111,9 @@ void HelloTriangleApp::renderLoop() {
 void HelloTriangleApp::close() {
 
   // Vulkan cleanup (reverse creation order)
+  vkDestroySemaphore(logical_device_, available_image_semaphore_, nullptr);
+  vkDestroySemaphore(logical_device_, finished_render_semaphore_, nullptr);
+
   vkDestroyCommandPool(logical_device_, command_pool_, nullptr);
 
   for (int i = 0; i < swap_chain_framebuffers_.size(); i++) {
@@ -726,6 +733,15 @@ void HelloTriangleApp::createRenderPass() {
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_attachment_ref; // layout location = 0 in frag shader
 
+  // Dependency for the render pass to start (Until color attachment is finished)
+  VkSubpassDependency subpass_dependency{};
+  subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependency.dstSubpass = 0;
+  subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependency.srcAccessMask = 0;
+  subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
   // Create the render pass
   VkRenderPassCreateInfo render_pass_info{};
   render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -733,6 +749,8 @@ void HelloTriangleApp::createRenderPass() {
   render_pass_info.pAttachments = &color_attachment;
   render_pass_info.subpassCount = 1;
   render_pass_info.pSubpasses = &subpass;
+  render_pass_info.dependencyCount = 1;
+  render_pass_info.pDependencies = &subpass_dependency;
 
   if (vkCreateRenderPass(logical_device_, &render_pass_info, nullptr, &render_pass_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create the render pass");
@@ -1027,6 +1045,64 @@ void HelloTriangleApp::createCommandBuffers() {
       throw std::runtime_error("Failed to end command buffer recording.");
     }
   }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::createSemaphores() {
+
+  VkSemaphoreCreateInfo semaphore_info{};
+  semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+  if (vkCreateSemaphore(logical_device_, &semaphore_info, nullptr, &available_image_semaphore_) ||
+    vkCreateSemaphore(logical_device_, &semaphore_info, nullptr, &finished_render_semaphore_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create semaphores.");
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void HelloTriangleApp::drawFrame() {
+
+  // Acquire an image from the swap chain
+  uint32_t image_index;
+  vkAcquireNextImageKHR(logical_device_, swap_chain_, UINT64_MAX, available_image_semaphore_,
+    VK_NULL_HANDLE, &image_index); // UINT64_MAX stands for no timeout
+
+  // Execute the command buffer with that image as attachment in the framebuffer
+  VkSubmitInfo submit_info{};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  VkSemaphore wait_semaphores[] = { available_image_semaphore_ };
+  VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  submit_info.waitSemaphoreCount = 1;
+  submit_info.pWaitSemaphores = wait_semaphores;
+  submit_info.pWaitDstStageMask = wait_stages;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &command_buffers_[image_index];
+  VkSemaphore signal_semaphores[] = { finished_render_semaphore_ };
+  submit_info.signalSemaphoreCount = 1;
+  submit_info.pSignalSemaphores = signal_semaphores;
+
+  if (vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to submit draw command buffer.");
+  }
+
+  // Return the image to the swap chain for presentation
+  VkPresentInfoKHR present_info{};
+  present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  present_info.waitSemaphoreCount = 1;
+  present_info.pWaitSemaphores = signal_semaphores;
+  VkSwapchainKHR swap_chains[] = { swap_chain_ };
+  present_info.swapchainCount = 1;
+  present_info.pSwapchains = swap_chains;
+  present_info.pImageIndices = &image_index;
+  present_info.pResults = nullptr;
+
+  vkQueuePresentKHR(graphics_queue_, &present_info);
+
+  vkQueueWaitIdle(graphics_queue_);
 
 }
 

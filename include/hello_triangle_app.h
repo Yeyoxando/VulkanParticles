@@ -102,6 +102,11 @@ private:
   void createCommandPool();
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
+  // Creates the semaphores needed for rendering
+  void createSemaphores();
+
+  // Draw using the recorded command buffers
+  void drawFrame();
 
 
   // VARIABLES
@@ -130,6 +135,8 @@ private:
   std::vector<VkFramebuffer> swap_chain_framebuffers_;
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
+  VkSemaphore available_image_semaphore_;
+  VkSemaphore finished_render_semaphore_;
 
 };
 
