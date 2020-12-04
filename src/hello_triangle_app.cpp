@@ -103,6 +103,8 @@ void HelloTriangleApp::renderLoop() {
 void HelloTriangleApp::close() {
 
   // Vulkan cleanup (reverse creation order)
+  vkDestroyPipelineLayout(logical_device_, pipeline_layout_, nullptr);
+
   for (int i = 0; i < swap_chain_image_views_.size(); i++) {
     vkDestroyImageView(logical_device_, swap_chain_image_views_[i], nullptr);
   }
@@ -712,7 +714,118 @@ void HelloTriangleApp::createGraphicsPipeline() {
   frag_shader_stage_info.pName = "main";
   frag_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
 
-  VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
+  VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
+
+  // Set vertex input format (Empty for now)
+  VkPipelineVertexInputStateCreateInfo vertex_input_info{};
+  vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input_info.vertexBindingDescriptionCount = 0;
+  vertex_input_info.pVertexBindingDescriptions = nullptr;
+  vertex_input_info.vertexAttributeDescriptionCount = 0;
+  vertex_input_info.pVertexAttributeDescriptions = nullptr;
+
+  // Set input assembly settings
+  VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
+  input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  input_assembly_info.primitiveRestartEnable = VK_FALSE; // True to use index buffers with triangle strip
+
+  // Create viewport area to draw
+  VkViewport viewport{};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float)swap_chain_extent_.width;
+  viewport.height = (float)swap_chain_extent_.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+
+  // Create scissor rectangle with extent size
+  VkRect2D scissor{};
+  scissor.offset = { 0, 0 };
+  scissor.extent = swap_chain_extent_;
+
+  VkPipelineViewportStateCreateInfo viewport_state_info{};
+  viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state_info.viewportCount = 1;
+  viewport_state_info.pViewports = &viewport;
+  viewport_state_info.scissorCount = 1;
+  viewport_state_info.pScissors = &scissor;
+
+  // Create the rasterizer settings
+  VkPipelineRasterizationStateCreateInfo rasterizer_state_info{};
+  rasterizer_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer_state_info.depthClampEnable = VK_FALSE;
+  rasterizer_state_info.rasterizerDiscardEnable = VK_FALSE;
+  rasterizer_state_info.polygonMode = VK_POLYGON_MODE_FILL; // Line to draw wireframe but require a GPU feature
+  rasterizer_state_info.lineWidth = 1.0f;
+  rasterizer_state_info.cullMode = VK_CULL_MODE_BACK_BIT;
+  rasterizer_state_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer_state_info.depthBiasEnable = VK_FALSE;
+  rasterizer_state_info.depthBiasClamp = 0.0f;
+  rasterizer_state_info.depthBiasConstantFactor = 0.0f;
+  rasterizer_state_info.depthBiasSlopeFactor = 0.0f;
+
+  // Create multi sampling settings
+  VkPipelineMultisampleStateCreateInfo multisample_state_info{};
+  multisample_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisample_state_info.sampleShadingEnable = VK_FALSE;
+  multisample_state_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  multisample_state_info.minSampleShading = 1.0f;
+  multisample_state_info.pSampleMask = nullptr;
+  multisample_state_info.alphaToCoverageEnable = VK_FALSE;
+  multisample_state_info.alphaToOneEnable = VK_FALSE;
+
+  // Create depth and stencil settings for the framebuffer (Null for now)
+
+
+  // Create color blend settings
+  VkPipelineColorBlendAttachmentState color_blend_attachment{};
+  color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+    VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  color_blend_attachment.blendEnable = VK_FALSE;
+  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+  // Alpha blending
+  //color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  //color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+  color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+  color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+  color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+  VkPipelineColorBlendStateCreateInfo blend_state_info{};
+  blend_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  blend_state_info.logicOpEnable = VK_FALSE;
+  blend_state_info.logicOp = VK_LOGIC_OP_COPY;
+  blend_state_info.attachmentCount = 1;
+  blend_state_info.pAttachments = &color_blend_attachment;
+  blend_state_info.blendConstants[0] = 0.0f;
+  blend_state_info.blendConstants[1] = 0.0f;
+  blend_state_info.blendConstants[2] = 0.0f;
+  blend_state_info.blendConstants[3] = 0.0f;
+
+  // Create dynamic settings of the pipeline
+  VkDynamicState dynamic_states[] = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_LINE_WIDTH,
+  };
+
+  VkPipelineDynamicStateCreateInfo dynamic_state_info{};
+  dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamic_state_info.dynamicStateCount = 2;
+  dynamic_state_info.pDynamicStates = dynamic_states;
+
+  // Create pipeline state layout (Uniforms)
+  VkPipelineLayoutCreateInfo layout_info{};
+  layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  layout_info.setLayoutCount = 0;
+  layout_info.pSetLayouts = nullptr;
+  layout_info.pushConstantRangeCount = 0;
+  layout_info.pPushConstantRanges = nullptr;
+
+  if (vkCreatePipelineLayout(logical_device_, &layout_info, nullptr, &pipeline_layout_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create pipeline layout");
+  }
 
   vkDestroyShaderModule(logical_device_, vert_shader_module, nullptr);
   vkDestroyShaderModule(logical_device_, frag_shader_module, nullptr);
