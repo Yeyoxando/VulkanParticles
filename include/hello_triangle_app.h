@@ -120,6 +120,7 @@ private:
   std::vector<VkImageView> swap_chain_image_views_;
   VkRenderPass render_pass_;
   VkPipelineLayout pipeline_layout_;
+  VkPipeline  graphics_pipeline_;
 
 };
 

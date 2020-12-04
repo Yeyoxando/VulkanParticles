@@ -104,6 +104,8 @@ void HelloTriangleApp::renderLoop() {
 void HelloTriangleApp::close() {
 
   // Vulkan cleanup (reverse creation order)
+  vkDestroyPipeline(logical_device_, graphics_pipeline_, nullptr);
+
   vkDestroyPipelineLayout(logical_device_, pipeline_layout_, nullptr);
 
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
@@ -868,7 +870,31 @@ void HelloTriangleApp::createGraphicsPipeline() {
   layout_info.pPushConstantRanges = nullptr;
 
   if (vkCreatePipelineLayout(logical_device_, &layout_info, nullptr, &pipeline_layout_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create pipeline layout");
+    throw std::runtime_error("Failed to create pipeline layout.");
+  }
+
+  // Create the actual graphics pipeline
+  VkGraphicsPipelineCreateInfo graphics_pipeline_info{};
+  graphics_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  graphics_pipeline_info.stageCount = 2;
+  graphics_pipeline_info.pStages = shader_stages;
+  graphics_pipeline_info.pVertexInputState = &vertex_input_info;
+  graphics_pipeline_info.pInputAssemblyState = &input_assembly_info;
+  graphics_pipeline_info.pViewportState = &viewport_state_info;
+  graphics_pipeline_info.pRasterizationState = &rasterizer_state_info;
+  graphics_pipeline_info.pMultisampleState = &multisample_state_info;
+  graphics_pipeline_info.pDepthStencilState = nullptr;
+  graphics_pipeline_info.pColorBlendState = &blend_state_info;
+  graphics_pipeline_info.pDynamicState = nullptr;
+  graphics_pipeline_info.layout = pipeline_layout_;
+  graphics_pipeline_info.renderPass = render_pass_;
+  graphics_pipeline_info.subpass = 0;
+  graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // derive from other graphics pipeline with flags VK_PIPELINE_CREATE_DERIVATIVE_BIT
+  graphics_pipeline_info.basePipelineIndex = -1;
+
+  if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
+    nullptr, &graphics_pipeline_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create the graphics pipeline.");
   }
 
   vkDestroyShaderModule(logical_device_, vert_shader_module, nullptr);
