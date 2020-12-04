@@ -96,6 +96,8 @@ private:
   void createGraphicsPipeline();
   // Create a shader module with the given bytecode
   VkShaderModule createShaderModule(const std::vector<char>& bytecode);
+  // Creates the framebuffers used for rendering
+  void createFramebuffers();
 
 
   // VARIABLES
@@ -121,6 +123,7 @@ private:
   VkRenderPass render_pass_;
   VkPipelineLayout pipeline_layout_;
   VkPipeline  graphics_pipeline_;
+  std::vector<VkFramebuffer> swap_chain_framebuffers_;
 
 };
 
