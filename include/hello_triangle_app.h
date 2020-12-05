@@ -108,6 +108,12 @@ private:
   // Draw using the recorded command buffers
   void drawFrame();
 
+  // Recreate the swap chain to make it compatible with the current requirements
+  void recreateSwapChain();
+  // Cleans all the swapchain objects
+  void cleanupSwapChain();
+  // GLFW callback for window resize
+  static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
   // VARIABLES
   // Window variables
@@ -140,6 +146,7 @@ private:
   std::vector<VkFence> in_flight_fences_;
   std::vector<VkFence> images_in_flight_;
   int current_frame_;
+  bool resized_framebuffer_;
 
 };
 
