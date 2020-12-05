@@ -35,6 +35,9 @@ const std::vector<const char*> kDeviceExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
+// Vulkan runtime
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 // ------------------------------------------------------------------------- // 
 
 #endif //__COMMON_DEF_H__

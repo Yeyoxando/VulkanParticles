@@ -103,7 +103,7 @@ private:
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
   // Creates the semaphores needed for rendering
-  void createSemaphores();
+  void createSyncObjects();
 
   // Draw using the recorded command buffers
   void drawFrame();
@@ -135,8 +135,11 @@ private:
   std::vector<VkFramebuffer> swap_chain_framebuffers_;
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
-  VkSemaphore available_image_semaphore_;
-  VkSemaphore finished_render_semaphore_;
+  std::vector<VkSemaphore> available_image_semaphores_;
+  std::vector<VkSemaphore> finished_render_semaphores_;
+  std::vector<VkFence> in_flight_fences_;
+  std::vector<VkFence> images_in_flight_;
+  int current_frame_;
 
 };
 
