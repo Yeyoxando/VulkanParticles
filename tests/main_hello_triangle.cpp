@@ -9,11 +9,25 @@
 #include "common_def.h"
 #ifdef MAIN_HELLO_TRIANGLE
 
+#include <iostream>
+#include <stdexcept>
+#include <cstdlib>
 
+#include "hello_triangle_app.h"
 
 int main(){
-	
-  return 0;
+
+  HelloTriangleApp hello_triangle;
+
+  try {
+    hello_triangle.run();
+  }
+  catch(const std::exception& e) {
+    printf(e.what());
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
   
 }
 
