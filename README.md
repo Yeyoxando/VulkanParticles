@@ -5,5 +5,6 @@ The project is about researching and implement a modular particle system editor 
 
 Trello link: https://trello.com/b/MPq0ILAt/technical-computing
 
-**Hello Triangle!** <br>
+### Milestones
+**Hello Triangle! (05/12/2020)** <br>
 <img src="https://trello-attachments.s3.amazonaws.com/5fbea45c40820a7b2f14a86c/797x636/49dd1e7b405b85f74410bc870abc569c/image.png" width="400">
