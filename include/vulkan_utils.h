@@ -17,7 +17,7 @@
 // ------------------------------------------------------------------------- // 
 
 // Extension function that is not loaded by default, so it has to be created specifically
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
   const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
   const VkAllocationCallbacks* pAllocator,
   VkDebugUtilsMessengerEXT* pDebugMessenger) {
@@ -37,7 +37,7 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 // ------------------------------------------------------------------------- // 
 
 // Extension function that is not loaded by default, so it has to be created specifically
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, 
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, 
   VkDebugUtilsMessengerEXT debugMessenger, 
   const VkAllocationCallbacks* pAllocator) {
 

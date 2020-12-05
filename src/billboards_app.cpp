@@ -1,12 +1,12 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 25/11/2020
+ *  Date: 05/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
 // ------------------------------------------------------------------------- // 
 
-#include "hello_triangle_app.h"
+#include "billboards_app.h"
 #include "vulkan_utils.h"
 
 #include <stdexcept>
@@ -16,7 +16,7 @@
 
 // ------------------------------------------------------------------------- // 
 
-HelloTriangleApp::HelloTriangleApp() {
+BillboardsApp::BillboardsApp() {
 
   window_ = nullptr;
   window_width_ = 0;
@@ -44,13 +44,13 @@ HelloTriangleApp::HelloTriangleApp() {
 
 // ------------------------------------------------------------------------- // 
 
-HelloTriangleApp::~HelloTriangleApp() {
+BillboardsApp::~BillboardsApp() {
 
 }
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::run() {
+void BillboardsApp::run() {
 
   initWindow();
 
@@ -62,7 +62,7 @@ void HelloTriangleApp::run() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
+void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwInit();
 
@@ -82,7 +82,7 @@ void HelloTriangleApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::initVulkan() {
+void BillboardsApp::initVulkan() {
 
   createInstance();
   setupDebugMessenger();
@@ -102,7 +102,7 @@ void HelloTriangleApp::initVulkan() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::renderLoop() {
+void BillboardsApp::renderLoop() {
 
   while (!glfwWindowShouldClose(window_)) {
     
@@ -119,7 +119,7 @@ void HelloTriangleApp::renderLoop() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::close() {
+void BillboardsApp::close() {
 
   // Vulkan cleanup (reverse creation order)
   cleanupSwapChain();
@@ -150,7 +150,7 @@ void HelloTriangleApp::close() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createInstance() {
+void BillboardsApp::createInstance() {
 
   // Check for validation layers
   if (kEnableValidationLayers && !checkValidationLayerSupport()) {
@@ -209,7 +209,7 @@ void HelloTriangleApp::createInstance() {
 
 // ------------------------------------------------------------------------- // 
 
-std::vector<const char*> HelloTriangleApp::getRequiredExtensions() {
+std::vector<const char*> BillboardsApp::getRequiredExtensions() {
 
   // Get supported extensions
   uint32_t glfw_extension_count = 0;
@@ -229,7 +229,7 @@ std::vector<const char*> HelloTriangleApp::getRequiredExtensions() {
 
 // ------------------------------------------------------------------------- // 
 
-bool HelloTriangleApp::checkValidationLayerSupport() {
+bool BillboardsApp::checkValidationLayerSupport() {
 
   // Count available layers
   uint32_t layers_count = 0;
@@ -261,7 +261,7 @@ bool HelloTriangleApp::checkValidationLayerSupport() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::setupDebugMessenger() {
+void BillboardsApp::setupDebugMessenger() {
 
   if (!kEnableValidationLayers) return;
 
@@ -276,7 +276,7 @@ void HelloTriangleApp::setupDebugMessenger() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
+void BillboardsApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
   
   create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -294,7 +294,7 @@ void HelloTriangleApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCre
 
 // ------------------------------------------------------------------------- // 
 
-VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(
+VKAPI_ATTR VkBool32 VKAPI_CALL BillboardsApp::debugCallback(
   VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
   VkDebugUtilsMessageTypeFlagsEXT messageType, 
   const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
@@ -322,7 +322,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createSurface() {
+void BillboardsApp::createSurface() {
 
   if (glfwCreateWindowSurface(instance_, window_, nullptr, &surface_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface.");
@@ -332,7 +332,7 @@ void HelloTriangleApp::createSurface() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::pickPhysicalDevice() {
+void BillboardsApp::pickPhysicalDevice() {
 
   // Request available physical devices (graphics cards)
   uint32_t device_count = 0;
@@ -360,7 +360,7 @@ void HelloTriangleApp::pickPhysicalDevice() {
 
 // ------------------------------------------------------------------------- // 
 
-bool HelloTriangleApp::isDeviceSuitable(VkPhysicalDevice device) {
+bool BillboardsApp::isDeviceSuitable(VkPhysicalDevice device) {
 
   // Basic device properties
   VkPhysicalDeviceProperties device_properties;
@@ -396,7 +396,7 @@ bool HelloTriangleApp::isDeviceSuitable(VkPhysicalDevice device) {
 
 // ------------------------------------------------------------------------- // 
 
-bool HelloTriangleApp::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool BillboardsApp::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
   // Get supported device properties
   uint32_t extension_count;
@@ -419,7 +419,7 @@ bool HelloTriangleApp::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
 // ------------------------------------------------------------------------- // 
 
-QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices BillboardsApp::findQueueFamilies(VkPhysicalDevice device) {
   
   QueueFamilyIndices indices;
 
@@ -455,7 +455,7 @@ QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device) 
 
 // ------------------------------------------------------------------------- // 
 
-SwapChainSupportDetails HelloTriangleApp::querySwapChainSupportDetails(VkPhysicalDevice device) {
+SwapChainSupportDetails BillboardsApp::querySwapChainSupportDetails(VkPhysicalDevice device) {
 
   SwapChainSupportDetails details;
 
@@ -484,7 +484,7 @@ SwapChainSupportDetails HelloTriangleApp::querySwapChainSupportDetails(VkPhysica
 
 // ------------------------------------------------------------------------- // 
 
-VkSurfaceFormatKHR HelloTriangleApp::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
+VkSurfaceFormatKHR BillboardsApp::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
 
   // Search if any of the available formats has the desired features
   for (int i = 0; i < available_formats.size(); i++) {
@@ -504,7 +504,7 @@ VkSurfaceFormatKHR HelloTriangleApp::chooseSwapChainSurfaceFormat(const std::vec
 
 // ------------------------------------------------------------------------- // 
 
-VkPresentModeKHR HelloTriangleApp::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
+VkPresentModeKHR BillboardsApp::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
 
   // Search if any of the available present modes are mailbox (triple buffering support)
   for (int i = 0; i < available_present_modes.size(); i++) {
@@ -520,7 +520,7 @@ VkPresentModeKHR HelloTriangleApp::chooseSwapChainPresentMode(const std::vector<
 
 // ------------------------------------------------------------------------- // 
 
-VkExtent2D HelloTriangleApp::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D BillboardsApp::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 
   if (capabilities.currentExtent.width != UINT32_MAX) {
     // Some window managers set this by default, if is not equal to this it can be modified
@@ -549,7 +549,7 @@ VkExtent2D HelloTriangleApp::chooseSwapChainExtent(const VkSurfaceCapabilitiesKH
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createLogicalDevice() {
+void BillboardsApp::createLogicalDevice() {
 
   // Create needed queues
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
@@ -606,7 +606,7 @@ void HelloTriangleApp::createLogicalDevice() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createSwapChain() {
+void BillboardsApp::createSwapChain() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -676,7 +676,7 @@ void HelloTriangleApp::createSwapChain() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createImageViews() {
+void BillboardsApp::createImageViews() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -712,7 +712,7 @@ void HelloTriangleApp::createImageViews() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createRenderPass() {
+void BillboardsApp::createRenderPass() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -766,7 +766,7 @@ void HelloTriangleApp::createRenderPass() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createGraphicsPipeline() {
+void BillboardsApp::createGraphicsPipeline() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -939,7 +939,7 @@ void HelloTriangleApp::createGraphicsPipeline() {
 
 // ------------------------------------------------------------------------- // 
 
-VkShaderModule HelloTriangleApp::createShaderModule(const std::vector<char>& bytecode) {
+VkShaderModule BillboardsApp::createShaderModule(const std::vector<char>& bytecode) {
   
   VkShaderModuleCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -958,7 +958,7 @@ VkShaderModule HelloTriangleApp::createShaderModule(const std::vector<char>& byt
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createFramebuffers() {
+void BillboardsApp::createFramebuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -987,7 +987,7 @@ void HelloTriangleApp::createFramebuffers() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createCommandPool() {
+void BillboardsApp::createCommandPool() {
 
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
 
@@ -1004,7 +1004,7 @@ void HelloTriangleApp::createCommandPool() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createCommandBuffers() {
+void BillboardsApp::createCommandBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1062,7 +1062,7 @@ void HelloTriangleApp::createCommandBuffers() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::createSyncObjects() {
+void BillboardsApp::createSyncObjects() {
 
   available_image_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
   finished_render_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1089,7 +1089,7 @@ void HelloTriangleApp::createSyncObjects() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::drawFrame() {
+void BillboardsApp::drawFrame() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1164,7 +1164,7 @@ void HelloTriangleApp::drawFrame() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::recreateSwapChain() {
+void BillboardsApp::recreateSwapChain() {
 
   int width = 0;
   int height = 0;
@@ -1189,7 +1189,7 @@ void HelloTriangleApp::recreateSwapChain() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::cleanupSwapChain() {
+void BillboardsApp::cleanupSwapChain() {
 
   for (int i = 0; i < swap_chain_framebuffers_.size(); i++) {
     vkDestroyFramebuffer(logical_device_, swap_chain_framebuffers_[i], nullptr);
@@ -1214,9 +1214,9 @@ void HelloTriangleApp::cleanupSwapChain() {
 
 // ------------------------------------------------------------------------- // 
 
-void HelloTriangleApp::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+void BillboardsApp::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 
-  auto app = reinterpret_cast<HelloTriangleApp*>(glfwGetWindowUserPointer(window));
+  auto app = reinterpret_cast<BillboardsApp*>(glfwGetWindowUserPointer(window));
   app->resized_framebuffer_ = true;
   app->window_width_ = width;
   app->window_height_ = height;
