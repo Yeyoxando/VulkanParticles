@@ -23,6 +23,7 @@
 // Vulkan validation layers
 const std::vector<const char*> kVkValidationLayers = {
   "VK_LAYER_KHRONOS_validation",
+  "VK_LAYER_LUNARG_monitor"
 };
 
 #ifdef DEBUG

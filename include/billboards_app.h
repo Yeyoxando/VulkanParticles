@@ -130,8 +130,13 @@ private:
   void createFramebuffers();
   // Creates a command pool for manage the memory of the command buffers 
   void createCommandPool();
-  // Creates the vertex buffers for the app
+  // Creates a buffer and allocate its memory
+  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, 
+    VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
+  // Creates the vertex buffers for the app and map their memory to the GPU
   void createVertexBuffers();
+  // Copy a buffer from the cpu to the device local memory through a staging buffer
+  void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
   // Creates the semaphores needed for rendering

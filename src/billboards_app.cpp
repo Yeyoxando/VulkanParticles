@@ -1017,46 +1017,116 @@ void BillboardsApp::createCommandPool() {
 
 // ------------------------------------------------------------------------- // 
 
-void BillboardsApp::createVertexBuffers() {
+void BillboardsApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
 
-  // Create the vertex buffer
-  VkBufferCreateInfo vertex_buffer_info{};
-  vertex_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  vertex_buffer_info.flags = 0;
-  vertex_buffer_info.size = sizeof(vertices_[0]) * vertices_.size();
-  vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  vertex_buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  // Create the  buffer
+  VkBufferCreateInfo buffer_info{};
+  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_info.flags = 0;
+  buffer_info.size = size;
+  buffer_info.usage = usage;
+  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  if (vkCreateBuffer(logical_device_, &vertex_buffer_info, nullptr, &vertex_buffer_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create vertex buffer.");
+  if (vkCreateBuffer(logical_device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create buffer.");
   }
 
   // Find memory requirements and allocate memory
   VkMemoryRequirements mem_requirements;
-  vkGetBufferMemoryRequirements(logical_device_, vertex_buffer_, &mem_requirements);
+  vkGetBufferMemoryRequirements(logical_device_, buffer, &mem_requirements);
 
   VkMemoryAllocateInfo allocate_info{};
   allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocate_info.allocationSize = mem_requirements.size;
-  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits, properties);
 
-  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &vertex_buffer_memory_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate device memory for vertex buffer.");
+  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate device memory for buffer.");
   }
 
   // Bind buffer and memory together
-  vkBindBufferMemory(logical_device_, vertex_buffer_, vertex_buffer_memory_, 0);
+  vkBindBufferMemory(logical_device_, buffer, memory, 0);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createVertexBuffers() {
+
+  // Create a staging buffer and allocate its memory
+  VkDeviceSize buffer_size = sizeof(vertices_[0]) * vertices_.size();
+  VkBuffer staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
+  
+  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    staging_buffer, staging_buffer_memory);
 
   // Map the memory from the CPU to GPU
   void* data;
-  vkMapMemory(logical_device_, vertex_buffer_memory_, 0, vertex_buffer_info.size, 0, &data);
-  memcpy(data, vertices_.data(), (size_t)vertex_buffer_info.size);
-  vkUnmapMemory(logical_device_, vertex_buffer_memory_);
+  vkMapMemory(logical_device_, staging_buffer_memory, 0, buffer_size, 0, &data);
+  memcpy(data, vertices_.data(), (size_t)buffer_size);
+  vkUnmapMemory(logical_device_, staging_buffer_memory);
 
   // The memory is not copied instantly, but it should be before the next call to vkQueueSubmit
   // This could cause performance decreases and it could be done with a host coherent memory heap
   // or using vkFlushMappedMemoryRanges after writing to mapped memory and vkInvalidateMappedMemoryRanges before reading
+
+
+  // Create the actual vertex buffer
+  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_, vertex_buffer_memory_);
+
+  // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
+  copyBuffer(staging_buffer, vertex_buffer_, buffer_size);
+
+  // Delete and free the staging buffer
+  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
+  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
+
+  // Temporary command buffer to perform the operations
+  VkCommandBufferAllocateInfo temp_cmd_buffer_info{};
+  temp_cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  temp_cmd_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  temp_cmd_buffer_info.commandPool = command_pool_;
+  temp_cmd_buffer_info.commandBufferCount = 1;
+
+  VkCommandBuffer temp_command_buffer;
+  vkAllocateCommandBuffers(logical_device_, &temp_cmd_buffer_info, &temp_command_buffer);
+
+  // Start recording the cmd buffer
+  VkCommandBufferBeginInfo begin_info{};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBuffer(temp_command_buffer, &begin_info);
+
+  VkBufferCopy copy_region{};
+  copy_region.srcOffset = 0;
+  copy_region.dstOffset = 0;
+  copy_region.size = size;
+  vkCmdCopyBuffer(temp_command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+
+  // Finish recording command buffer
+  vkEndCommandBuffer(temp_command_buffer);
+
+  // Submit the buffer to execution
+  VkSubmitInfo submit_info{};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &temp_command_buffer;
+
+  // Graphics queue support transfer commands, not necessary to have a separated queue
+  vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphics_queue_);
+
+  // Free the temp command buffer
+  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &temp_command_buffer);
 
 }
 
