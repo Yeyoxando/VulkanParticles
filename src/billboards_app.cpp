@@ -13,6 +13,9 @@
 #include <cstring>
 #include <vector>
 #include <set>
+#include <chrono>
+
+#include <glm/gtc/matrix_transform.hpp>
 
 // ------------------------------------------------------------------------- // 
 
@@ -101,11 +104,15 @@ void BillboardsApp::initVulkan() {
   createSwapChain();
   createImageViews();
   createRenderPass();
+  createDescriptorSetLayout();
   createGraphicsPipeline();
   createFramebuffers();
   createCommandPool();
   createVertexBuffers();
   createIndexBuffers();
+  createUniformBuffers();
+  createDescriptorPool();
+  createDescriptorSets();
   createCommandBuffers();
   createSyncObjects();
 
@@ -119,7 +126,7 @@ void BillboardsApp::renderLoop() {
     
     glfwPollEvents();
 
-    drawFrame(); // All praise the triangle! Hallelujah!!!
+    drawFrame();
 
   }
 
@@ -132,8 +139,10 @@ void BillboardsApp::renderLoop() {
 
 void BillboardsApp::close() {
 
-  // Vulkan cleanup (reverse creation order)
+  // Vulkan cleanup
   cleanupSwapChain();
+
+  vkDestroyDescriptorSetLayout(logical_device_, descriptor_set_layout_, nullptr);
 
   vkDestroyBuffer(logical_device_, index_buffer_, nullptr);
   vkFreeMemory(logical_device_, index_buffer_memory_, nullptr);
@@ -783,6 +792,30 @@ void BillboardsApp::createRenderPass() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::createDescriptorSetLayout() {
+
+  // Create the binding for the vertex shader MVP matrices
+  VkDescriptorSetLayoutBinding ubo_layout_binding{};
+  ubo_layout_binding.binding = 0;
+  ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  ubo_layout_binding.descriptorCount = 1;
+  ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  ubo_layout_binding.pImmutableSamplers = nullptr;
+
+  // Create the descriptor set
+  VkDescriptorSetLayoutCreateInfo create_info{};
+  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  create_info.bindingCount = 1;
+  create_info.pBindings = &ubo_layout_binding;
+
+  if (vkCreateDescriptorSetLayout(logical_device_, &create_info, nullptr, &descriptor_set_layout_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create descriptor set layout.");
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::createGraphicsPipeline() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -860,7 +893,7 @@ void BillboardsApp::createGraphicsPipeline() {
   rasterizer_state_info.polygonMode = VK_POLYGON_MODE_FILL; // Line to draw wireframe but require a GPU feature
   rasterizer_state_info.lineWidth = 1.0f;
   rasterizer_state_info.cullMode = VK_CULL_MODE_BACK_BIT;
-  rasterizer_state_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rasterizer_state_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Turned counter-clockwise due to glm y clip flip on the projection matrix
   rasterizer_state_info.depthBiasEnable = VK_FALSE;
   rasterizer_state_info.depthBiasClamp = 0.0f;
   rasterizer_state_info.depthBiasConstantFactor = 0.0f;
@@ -919,8 +952,8 @@ void BillboardsApp::createGraphicsPipeline() {
   // Create pipeline state layout (Uniforms)
   VkPipelineLayoutCreateInfo layout_info{};
   layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  layout_info.setLayoutCount = 0;
-  layout_info.pSetLayouts = nullptr;
+  layout_info.setLayoutCount = 1;
+  layout_info.pSetLayouts = &descriptor_set_layout_;
   layout_info.pushConstantRangeCount = 0;
   layout_info.pPushConstantRanges = nullptr;
 
@@ -1131,6 +1164,86 @@ void BillboardsApp::createIndexBuffers() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::createUniformBuffers() {
+
+  if (window_width_ == 0 || window_height_ == 0) return;
+
+  uniform_buffers_.resize(swap_chain_images_.size());
+  uniform_buffers_memory_.resize(swap_chain_images_.size());
+
+  VkDeviceSize buffer_size = sizeof(UniformBufferObject);
+
+  for (int i = 0; i < swap_chain_images_.size(); i++) {
+    createBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+      uniform_buffers_[i], uniform_buffers_memory_[i]);
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createDescriptorPool() {
+
+  // Create descriptor pool
+  VkDescriptorPoolSize pool_size{};
+  pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  pool_size.descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+
+  VkDescriptorPoolCreateInfo create_info{};
+  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  create_info.poolSizeCount = 1;
+  create_info.pPoolSizes = &pool_size;
+  create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
+
+  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &descriptor_pool_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create descriptor pool.");
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createDescriptorSets() {
+
+  // Allocate the descriptor sets
+  std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), descriptor_set_layout_);
+  VkDescriptorSetAllocateInfo allocate_info{};
+  allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocate_info.descriptorPool = descriptor_pool_;
+  allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
+  allocate_info.pSetLayouts = descriptor_set_layouts.data();
+
+  descriptor_sets_.resize(swap_chain_images_.size());
+  if (vkAllocateDescriptorSets(logical_device_, &allocate_info, descriptor_sets_.data()) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create descriptor sets.");
+  }
+
+  // Populate the descriptors
+  for (int i = 0; i < swap_chain_images_.size(); i++) {
+    VkDescriptorBufferInfo buffer_info{};
+    buffer_info.buffer = uniform_buffers_[i];
+    buffer_info.offset = 0;
+    buffer_info.range = sizeof(UniformBufferObject);
+
+    VkWriteDescriptorSet write_descriptor{};
+    write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor.dstSet = descriptor_sets_[i];
+    write_descriptor.dstBinding = 0;
+    write_descriptor.dstArrayElement = 0;
+    write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor.descriptorCount = 1;
+    write_descriptor.pBufferInfo = &buffer_info;
+    write_descriptor.pImageInfo = nullptr; // Image data
+    write_descriptor.pTexelBufferView = nullptr; // Buffer views
+
+    vkUpdateDescriptorSets(logical_device_, 1, &write_descriptor, 0, nullptr);
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
 
   // Temporary command buffer to perform the operations
@@ -1225,8 +1338,10 @@ void BillboardsApp::createCommandBuffers() {
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
     
     vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT16);
+    
+    vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+      pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
 
-    //vkCmdDraw(command_buffers_[i], static_cast<uint32_t>(vertices_.size()), 1, 0, 0);
     vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -1267,6 +1382,39 @@ void BillboardsApp::createSyncObjects() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
+
+  // Calculate time since rendering started
+  static auto start_time = std::chrono::high_resolution_clock::now();
+
+  auto current_time = std::chrono::high_resolution_clock::now();
+
+  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+
+  // Update the uniform buffer to make the object spin
+  UniformBufferObject ubo{};
+  ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), 
+    glm::vec3(0.0f, 0.0f, 1.0f));
+
+  ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+    glm::vec3(0.0f, 0.0f, 1.0f));
+
+  ubo.projection = glm::perspective(glm::radians(90.0f),
+    swap_chain_extent_.width / (float)swap_chain_extent_.height, 0.1f, 10.0f);
+  // Invert clip Y due to GLM works with OpenGL and its inverted
+  ubo.projection[1][1] *= -1;
+
+  // Map the memory from the CPU to GPU
+  void* data;
+  vkMapMemory(logical_device_, uniform_buffers_memory_[current_image], 0,
+    sizeof(ubo), 0, &data);
+  memcpy(data, &ubo, sizeof(ubo));
+  vkUnmapMemory(logical_device_, uniform_buffers_memory_[current_image]);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::drawFrame() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -1294,6 +1442,8 @@ void BillboardsApp::drawFrame() {
   // Mark the image as used in this frame
   images_in_flight_[image_index] = in_flight_fences_[current_frame_];
 
+  // Update the uniform buffers
+  updateUniformBuffers(image_index);
 
   // Execute the command buffer with that image as attachment in the framebuffer
   VkSubmitInfo submit_info{};
@@ -1361,6 +1511,9 @@ void BillboardsApp::recreateSwapChain() {
   createRenderPass();
   createGraphicsPipeline();
   createFramebuffers();
+  createUniformBuffers();
+  createDescriptorPool();
+  createDescriptorSets();
   createCommandBuffers();
 
 }
@@ -1381,6 +1534,13 @@ void BillboardsApp::cleanupSwapChain() {
   vkDestroyPipelineLayout(logical_device_, pipeline_layout_, nullptr);
 
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
+
+  for (int i = 0; i < swap_chain_images_.size(); i++) {
+    vkDestroyBuffer(logical_device_, uniform_buffers_[i], nullptr);
+    vkFreeMemory(logical_device_, uniform_buffers_memory_[i], nullptr);
+  }
+
+  vkDestroyDescriptorPool(logical_device_, descriptor_pool_, nullptr);
 
   for (int i = 0; i < swap_chain_image_views_.size(); i++) {
     vkDestroyImageView(logical_device_, swap_chain_image_views_[i], nullptr);

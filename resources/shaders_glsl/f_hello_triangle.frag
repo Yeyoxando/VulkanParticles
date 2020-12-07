@@ -2,7 +2,7 @@
  *	Author: Diego Ochando Torres
  *  Date: 02/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
- *  Description: Fragment shader for drawing the first triangle with Vulkan
+ *  Description: Fragment shader to learn how Vulkan works
  */
 
 #version 450

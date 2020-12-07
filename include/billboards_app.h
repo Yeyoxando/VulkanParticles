@@ -58,6 +58,27 @@ struct Vertex {
   }
 };
 
+struct UniformBufferObject {
+  glm::mat4x4 model;
+  glm::mat4x4 view;
+  glm::mat4x4 projection;
+
+  /*
+   * Scalars have to be aligned by N (= 4 bytes given 32 bit floats).
+   * A vec2 must be aligned by 2N (= 8 bytes)
+   * A vec3 or vec4 must be aligned by 4N (= 16 bytes)
+   * A nested structure must be aligned by the base alignment of its members rounded up to a multiple of 16.
+   * A mat4 matrix must have the same alignment as a vec4.
+   * alignas(bytes) could be used to fix this but better nope
+   */
+
+  /*
+   * For binding multiple descriptors, for example per object or shared descriptors
+   * look at the final section of the Vulkan tutorial chapter 'descriptor pool and sets'
+   */
+
+};
+
 class BillboardsApp {
 public:
   BillboardsApp();
@@ -122,6 +143,8 @@ private:
   void createImageViews();
   // Creates the render pass for the graphics pipeline
   void createRenderPass();
+  // Creates the descriptor layout to upload uniforms to the shader
+  void createDescriptorSetLayout();
   // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
   void createGraphicsPipeline();
   // Create a shader module with the given bytecode
@@ -137,6 +160,12 @@ private:
   void createVertexBuffers();
   // Creates the index buffers for the app and map their memory to the GPU
   void createIndexBuffers();
+  // Creates the uniform buffers for the app
+  void createUniformBuffers();
+  // Creates a descriptor pool to allocate the descriptor sets for the uniforms
+  void createDescriptorPool();
+  // Creates the descriptor sets for the uniform buffers
+  void createDescriptorSets();
   // Copy a buffer from the cpu to the device local memory through a staging buffer
   void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
   // Creates the command buffers for each swap chain framebuffer
@@ -144,6 +173,8 @@ private:
   // Creates the semaphores needed for rendering
   void createSyncObjects();
 
+  // Updates the uniform buffers and map their memory
+  void updateUniformBuffers(uint32_t current_image);
   // Draw using the recorded command buffers
   void drawFrame();
 
@@ -177,6 +208,7 @@ private:
   VkExtent2D swap_chain_extent_;
   std::vector<VkImageView> swap_chain_image_views_;
   VkRenderPass render_pass_;
+  VkDescriptorSetLayout descriptor_set_layout_;
   VkPipelineLayout pipeline_layout_;
   VkPipeline  graphics_pipeline_;
   std::vector<VkFramebuffer> swap_chain_framebuffers_;
@@ -195,6 +227,10 @@ private:
   std::vector<uint16_t> indices_;
   VkBuffer index_buffer_;
   VkDeviceMemory index_buffer_memory_;
+  std::vector<VkBuffer> uniform_buffers_;
+  std::vector<VkDeviceMemory> uniform_buffers_memory_;
+  VkDescriptorPool descriptor_pool_;
+  std::vector<VkDescriptorSet> descriptor_sets_;
 
 };
 

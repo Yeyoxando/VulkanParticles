@@ -84,6 +84,7 @@ project "ParticleEditor"
 		"WIN32",
 		"_WIN32",
 		"_WINDOWS",
+		"GLM_FORCE_RADIANS",
 	}	 
 	
 	links{
