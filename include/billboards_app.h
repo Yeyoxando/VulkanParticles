@@ -12,6 +12,8 @@
 #include "common_def.h"
 #include <GLFW/glfw3.h>
 #include <optional>
+#include <array>
+#include <glm/glm.hpp>
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphics_family;
@@ -26,6 +28,34 @@ struct SwapChainSupportDetails {
   VkSurfaceCapabilitiesKHR capabilities;
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> present_modes;
+};
+
+struct Vertex {
+  glm::vec2 position;
+  glm::vec3 color;
+
+  static VkVertexInputBindingDescription getBindingDescription() {
+    VkVertexInputBindingDescription binding_desc{};
+    binding_desc.binding = 0;
+    binding_desc.stride = sizeof(Vertex);
+    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return binding_desc;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescription() {
+    std::array<VkVertexInputAttributeDescription, 2> attribute_descs{};
+    attribute_descs[0].binding = 0;
+    attribute_descs[0].location = 0;
+    attribute_descs[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descs[0].offset = offsetof(Vertex, position);
+    attribute_descs[1].binding = 0;
+    attribute_descs[1].location = 1;
+    attribute_descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descs[1].offset = offsetof(Vertex, color);
+
+    return attribute_descs;
+  }
 };
 
 class BillboardsApp {
@@ -100,6 +130,8 @@ private:
   void createFramebuffers();
   // Creates a command pool for manage the memory of the command buffers 
   void createCommandPool();
+  // Creates the vertex buffers for the app
+  void createVertexBuffers();
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
   // Creates the semaphores needed for rendering
@@ -114,6 +146,8 @@ private:
   void cleanupSwapChain();
   // GLFW callback for window resize
   static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+  uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
   // VARIABLES
   // Window variables
@@ -147,6 +181,10 @@ private:
   std::vector<VkFence> images_in_flight_;
   int current_frame_;
   bool resized_framebuffer_;
+
+  std::vector<Vertex> vertices_;
+  VkBuffer vertex_buffer_;
+  VkDeviceMemory vertex_buffer_memory_;
 
 };
 

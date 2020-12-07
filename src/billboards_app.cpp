@@ -84,6 +84,12 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
 void BillboardsApp::initVulkan() {
 
+  vertices_ = { 
+    {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+  };
+
   createInstance();
   setupDebugMessenger();
   createSurface();
@@ -95,6 +101,7 @@ void BillboardsApp::initVulkan() {
   createGraphicsPipeline();
   createFramebuffers();
   createCommandPool();
+  createVertexBuffers();
   createCommandBuffers();
   createSyncObjects();
 
@@ -123,6 +130,9 @@ void BillboardsApp::close() {
 
   // Vulkan cleanup (reverse creation order)
   cleanupSwapChain();
+
+  vkDestroyBuffer(logical_device_, vertex_buffer_, nullptr);
+  vkFreeMemory(logical_device_, vertex_buffer_memory_, nullptr);
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(logical_device_, available_image_semaphores_[i], nullptr);
@@ -797,13 +807,16 @@ void BillboardsApp::createGraphicsPipeline() {
 
   VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
 
-  // Set vertex input format (Empty for now)
+  // Set vertex input format
+  auto binding_desc = Vertex::getBindingDescription();
+  auto attribute_desc = Vertex::getAttributeDescription();
+
   VkPipelineVertexInputStateCreateInfo vertex_input_info{};
   vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertex_input_info.vertexBindingDescriptionCount = 0;
-  vertex_input_info.pVertexBindingDescriptions = nullptr;
-  vertex_input_info.vertexAttributeDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions = nullptr;
+  vertex_input_info.vertexBindingDescriptionCount = 1;
+  vertex_input_info.pVertexBindingDescriptions = &binding_desc;
+  vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_desc.size());
+  vertex_input_info.pVertexAttributeDescriptions = attribute_desc.data();
 
   // Set input assembly settings
   VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
@@ -1004,6 +1017,51 @@ void BillboardsApp::createCommandPool() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::createVertexBuffers() {
+
+  // Create the vertex buffer
+  VkBufferCreateInfo vertex_buffer_info{};
+  vertex_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  vertex_buffer_info.flags = 0;
+  vertex_buffer_info.size = sizeof(vertices_[0]) * vertices_.size();
+  vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  vertex_buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateBuffer(logical_device_, &vertex_buffer_info, nullptr, &vertex_buffer_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create vertex buffer.");
+  }
+
+  // Find memory requirements and allocate memory
+  VkMemoryRequirements mem_requirements;
+  vkGetBufferMemoryRequirements(logical_device_, vertex_buffer_, &mem_requirements);
+
+  VkMemoryAllocateInfo allocate_info{};
+  allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocate_info.allocationSize = mem_requirements.size;
+  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &vertex_buffer_memory_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate device memory for vertex buffer.");
+  }
+
+  // Bind buffer and memory together
+  vkBindBufferMemory(logical_device_, vertex_buffer_, vertex_buffer_memory_, 0);
+
+  // Map the memory from the CPU to GPU
+  void* data;
+  vkMapMemory(logical_device_, vertex_buffer_memory_, 0, vertex_buffer_info.size, 0, &data);
+  memcpy(data, vertices_.data(), (size_t)vertex_buffer_info.size);
+  vkUnmapMemory(logical_device_, vertex_buffer_memory_);
+
+  // The memory is not copied instantly, but it should be before the next call to vkQueueSubmit
+  // This could cause performance decreases and it could be done with a host coherent memory heap
+  // or using vkFlushMappedMemoryRanges after writing to mapped memory and vkInvalidateMappedMemoryRanges before reading
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::createCommandBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -1049,7 +1107,11 @@ void BillboardsApp::createCommandBuffers() {
 
     vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
 
-    vkCmdDraw(command_buffers_[i], 3, 1, 0, 0);
+    VkBuffer vertex_buffers[] = { vertex_buffer_ };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
+
+    vkCmdDraw(command_buffers_[i], static_cast<uint32_t>(vertices_.size()), 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffers_[i]);
 
@@ -1220,6 +1282,26 @@ void BillboardsApp::framebufferResizeCallback(GLFWwindow* window, int width, int
   app->resized_framebuffer_ = true;
   app->window_width_ = width;
   app->window_height_ = height;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+uint32_t BillboardsApp::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+
+  // Request supported memory properties from the graphics card
+  VkPhysicalDeviceMemoryProperties mem_properties;
+  vkGetPhysicalDeviceMemoryProperties(physical_device_, &mem_properties);
+
+  // Find a suitable memory type (Mask memory type bit and property flags)
+  for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+    if (type_filter & (1 << i) && 
+      (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("Failed to find a suitable memory type.");
 
 }
 
