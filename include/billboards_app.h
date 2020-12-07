@@ -135,6 +135,8 @@ private:
     VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
   // Creates the vertex buffers for the app and map their memory to the GPU
   void createVertexBuffers();
+  // Creates the index buffers for the app and map their memory to the GPU
+  void createIndexBuffers();
   // Copy a buffer from the cpu to the device local memory through a staging buffer
   void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
   // Creates the command buffers for each swap chain framebuffer
@@ -190,6 +192,9 @@ private:
   std::vector<Vertex> vertices_;
   VkBuffer vertex_buffer_;
   VkDeviceMemory vertex_buffer_memory_;
+  std::vector<uint16_t> indices_;
+  VkBuffer index_buffer_;
+  VkDeviceMemory index_buffer_memory_;
 
 };
 

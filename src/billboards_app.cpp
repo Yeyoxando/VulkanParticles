@@ -85,10 +85,13 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 void BillboardsApp::initVulkan() {
 
   vertices_ = { 
-    {{ 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}}
   };
+
+  indices_ = {0, 1, 2, 2, 3, 0};
 
   createInstance();
   setupDebugMessenger();
@@ -102,6 +105,7 @@ void BillboardsApp::initVulkan() {
   createFramebuffers();
   createCommandPool();
   createVertexBuffers();
+  createIndexBuffers();
   createCommandBuffers();
   createSyncObjects();
 
@@ -130,6 +134,9 @@ void BillboardsApp::close() {
 
   // Vulkan cleanup (reverse creation order)
   cleanupSwapChain();
+
+  vkDestroyBuffer(logical_device_, index_buffer_, nullptr);
+  vkFreeMemory(logical_device_, index_buffer_memory_, nullptr);
 
   vkDestroyBuffer(logical_device_, vertex_buffer_, nullptr);
   vkFreeMemory(logical_device_, vertex_buffer_memory_, nullptr);
@@ -1053,6 +1060,10 @@ void BillboardsApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, Vk
 
 void BillboardsApp::createVertexBuffers() {
 
+  // Driver developers says that buffers should be created in only one VkBuffer
+  // and use them with the offset properties that are in the functions
+  // this will allow cache optimizations known as aliasing
+
   // Create a staging buffer and allocate its memory
   VkDeviceSize buffer_size = sizeof(vertices_[0]) * vertices_.size();
   VkBuffer staging_buffer;
@@ -1079,6 +1090,38 @@ void BillboardsApp::createVertexBuffers() {
 
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
   copyBuffer(staging_buffer, vertex_buffer_, buffer_size);
+
+  // Delete and free the staging buffer
+  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
+  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createIndexBuffers() {
+
+  // Create a staging buffer and allocate its memory
+  VkDeviceSize buffer_size = sizeof(indices_[0]) * indices_.size();
+  VkBuffer staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
+
+  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    staging_buffer, staging_buffer_memory);
+
+  // Map the memory from the CPU to GPU
+  void* data;
+  vkMapMemory(logical_device_, staging_buffer_memory, 0, buffer_size, 0, &data);
+  memcpy(data, indices_.data(), (size_t)buffer_size);
+  vkUnmapMemory(logical_device_, staging_buffer_memory);
+
+  // Create the actual vertex buffer
+  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer_, index_buffer_memory_);
+
+  // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
+  copyBuffer(staging_buffer, index_buffer_, buffer_size);
 
   // Delete and free the staging buffer
   vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
@@ -1180,8 +1223,11 @@ void BillboardsApp::createCommandBuffers() {
     VkBuffer vertex_buffers[] = { vertex_buffer_ };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
+    
+    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdDraw(command_buffers_[i], static_cast<uint32_t>(vertices_.size()), 1, 0, 0);
+    //vkCmdDraw(command_buffers_[i], static_cast<uint32_t>(vertices_.size()), 1, 0, 0);
+    vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffers_[i]);
 
