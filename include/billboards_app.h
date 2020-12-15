@@ -139,6 +139,8 @@ private:
   void createLogicalDevice();
   // Creates the swap chain
   void createSwapChain();
+  // create a image view resource
+  VkImageView createImageView(VkImage image, VkFormat format);
   // Create the image views for he swap chain images
   void createImageViews();
   // Creates the render pass for the graphics pipeline
@@ -155,6 +157,10 @@ private:
   void createCommandPool();
   // Creates an image from a texture
   void createTextureImage();
+  // Creates the image view for the texture
+  void createTextureImageView();
+  // Creates the sampler for texture filtering and shader reading
+  void createTextureSampler();
   // Creates a vulkan image
   void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
     VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory);
@@ -246,6 +252,8 @@ private:
   std::vector<VkDescriptorSet> descriptor_sets_;
   VkImage texture_image_;
   VkDeviceMemory texture_image_memory_;
+  VkImageView texture_image_view_;
+  VkSampler texture_sampler_;
 
 };
 

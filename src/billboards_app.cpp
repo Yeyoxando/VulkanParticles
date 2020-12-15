@@ -111,6 +111,8 @@ void BillboardsApp::initVulkan() {
   createFramebuffers();
   createCommandPool();
   createTextureImage();
+  createTextureImageView();
+  createTextureSampler();
   createVertexBuffers();
   createIndexBuffers();
   createUniformBuffers();
@@ -145,6 +147,8 @@ void BillboardsApp::close() {
   // Vulkan cleanup
   cleanupSwapChain();
 
+  vkDestroySampler(logical_device_, texture_sampler_, nullptr);
+  vkDestroyImageView(logical_device_, texture_image_view_, nullptr);
   vkDestroyImage(logical_device_, texture_image_, nullptr);
   vkFreeMemory(logical_device_, texture_image_memory_, nullptr);
 
@@ -402,10 +406,10 @@ bool BillboardsApp::isDeviceSuitable(VkPhysicalDevice device) {
   VkPhysicalDeviceFeatures device_features;
   vkGetPhysicalDeviceFeatures(device, &device_features);
 
-  // Example if card don't support geometry shader
-  /*if (!device_features.geometryShader) {
+  // Return false if a requested feature isnot supported
+  if (!device_features.samplerAnisotropy) {
     return false;
-  }*/
+  }
 
   // Check if device supports graphic and present queues
   QueueFamilyIndices indices = findQueueFamilies(device);
@@ -604,7 +608,7 @@ void BillboardsApp::createLogicalDevice() {
 
   // Set needed vulkan features
   VkPhysicalDeviceFeatures device_features{};
-  //device_features.geometryShader = true; // For example
+  device_features.samplerAnisotropy = VK_TRUE;
 
   // Create the device
   VkDeviceCreateInfo device_create_info{};
@@ -708,6 +712,38 @@ void BillboardsApp::createSwapChain() {
 
 // ------------------------------------------------------------------------- // 
 
+VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format) {
+
+  VkImageViewCreateInfo create_info{};
+  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  create_info.image = image;
+  create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  create_info.format = format;
+
+  // Remapping components (Set to default)
+  create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+  create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+  create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+  // Image usage (color bit for those)
+  create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  create_info.subresourceRange.baseMipLevel = 0;
+  create_info.subresourceRange.levelCount = 1;
+  create_info.subresourceRange.baseArrayLayer = 0;
+  create_info.subresourceRange.layerCount = 1;
+
+  VkImageView image_view;
+  if (vkCreateImageView(logical_device_, &create_info, nullptr, &image_view) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create texture image view.");
+  }
+
+  return image_view;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::createImageViews() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -715,29 +751,7 @@ void BillboardsApp::createImageViews() {
   swap_chain_image_views_.resize(swap_chain_images_.size());
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    VkImageViewCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    create_info.image = swap_chain_images_[i];
-    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    create_info.format = swap_chain_image_format_;
-    
-    // Remapping components (Set to default)
-    create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    
-    // Image usage (color bit for those)
-    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    create_info.subresourceRange.baseMipLevel = 0;
-    create_info.subresourceRange.levelCount = 1;
-    create_info.subresourceRange.baseArrayLayer = 0;
-    create_info.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(logical_device_, &create_info, nullptr, &swap_chain_image_views_[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create image views.");
-    }
-
+    swap_chain_image_views_[i] = createImageView(swap_chain_images_[i], swap_chain_image_format_);
   }
 
 }
@@ -1110,6 +1124,47 @@ void BillboardsApp::createTextureImage() {
 
   vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
   vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createTextureImageView() {
+
+  texture_image_view_ = createImageView(texture_image_, VK_FORMAT_R8G8B8A8_SRGB);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createTextureSampler() {
+
+  VkSamplerCreateInfo sampler_info{};
+  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_info.minFilter = VK_FILTER_LINEAR;
+  sampler_info.magFilter = VK_FILTER_LINEAR;
+
+  sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+  sampler_info.anisotropyEnable = VK_TRUE;
+  VkPhysicalDeviceProperties properties{};
+  vkGetPhysicalDeviceProperties(physical_device_, &properties);
+  sampler_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+
+  sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  sampler_info.unnormalizedCoordinates = VK_FALSE;
+  sampler_info.compareEnable = VK_FALSE;
+  sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+  sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+  sampler_info.mipLodBias = 0.0f;
+  sampler_info.minLod = 0.0f;
+  sampler_info.maxLod = 0.0f;
+
+  if (vkCreateSampler(logical_device_, &sampler_info, nullptr, &texture_sampler_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create texture sampler");
+  }
 
 }
 
