@@ -17,6 +17,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <stb_image.h>
+
 // ------------------------------------------------------------------------- // 
 
 BillboardsApp::BillboardsApp() {
@@ -108,6 +110,7 @@ void BillboardsApp::initVulkan() {
   createGraphicsPipeline();
   createFramebuffers();
   createCommandPool();
+  createTextureImage();
   createVertexBuffers();
   createIndexBuffers();
   createUniformBuffers();
@@ -141,6 +144,9 @@ void BillboardsApp::close() {
 
   // Vulkan cleanup
   cleanupSwapChain();
+
+  vkDestroyImage(logical_device_, texture_image_, nullptr);
+  vkFreeMemory(logical_device_, texture_image_memory_, nullptr);
 
   vkDestroyDescriptorSetLayout(logical_device_, descriptor_set_layout_, nullptr);
 
@@ -1057,6 +1063,101 @@ void BillboardsApp::createCommandPool() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::createTextureImage() {
+
+  int tex_width;
+  int tex_height;
+  int tex_channels;
+
+  // Load any texture with 4 channels with STBI_rgb_alpha
+  stbi_uc* pixels = stbi_load("../../../resources/textures/numerical_grid.jpg",
+    &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+
+  VkDeviceSize image_size = tex_width * tex_height * 4;
+
+  if (!pixels) {
+    throw std::runtime_error("Failed to load texture.");
+  }
+
+  // Create a staging buffer to transfer it to the device memory
+  VkBuffer staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
+
+  createBuffer(image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    staging_buffer, staging_buffer_memory);
+
+  // Copy values to the buffer
+  void* data;
+  vkMapMemory(logical_device_, staging_buffer_memory, 0, image_size, 0, &data);
+  memcpy(data, pixels, static_cast<size_t>(image_size));
+  vkUnmapMemory(logical_device_, staging_buffer_memory);
+
+  stbi_image_free(pixels);
+
+  // Create the texture image
+
+  createImage(tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
+    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture_image_, texture_image_memory_);
+
+  transitionImageLayout(texture_image_, VK_FORMAT_R8G8B8A8_SRGB,
+    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  copyBufferToImage(staging_buffer, texture_image_,
+    static_cast<uint32_t>(tex_width), static_cast<uint32_t>(tex_height));
+  transitionImageLayout(texture_image_, VK_FORMAT_R8G8B8A8_SRGB,
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
+  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+  VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory) {
+
+  VkImageCreateInfo image_info{};
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.extent.width = width;
+  image_info.extent.height = height;
+  image_info.extent.depth = 1;
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.format = format;
+  image_info.tiling = tiling;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.usage = usage;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_info.flags = 0;
+
+  if (vkCreateImage(logical_device_, &image_info, nullptr, &image) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create texture image.");
+  }
+
+  // Request memory requeriments
+  VkMemoryRequirements requirements;
+  vkGetImageMemoryRequirements(logical_device_, image, &requirements);
+
+  VkMemoryAllocateInfo alloc_info{};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = requirements.size;
+  alloc_info.memoryTypeIndex = findMemoryType(requirements.memoryTypeBits, properties);
+
+  if (vkAllocateMemory(logical_device_, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate image memory.");
+  }
+
+  vkBindImageMemory(logical_device_, image, image_memory, 0);
+
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
 
   // Create the  buffer
@@ -1246,6 +1347,22 @@ void BillboardsApp::createDescriptorSets() {
 
 void BillboardsApp::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
 
+  VkCommandBuffer command_buffer = beginSingleTimeCommands();
+
+  VkBufferCopy copy_region{};
+  copy_region.srcOffset = 0;
+  copy_region.dstOffset = 0;
+  copy_region.size = size;
+  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+
+  endSingleTimeCommands(command_buffer);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+VkCommandBuffer BillboardsApp::beginSingleTimeCommands() {
+
   // Temporary command buffer to perform the operations
   VkCommandBufferAllocateInfo temp_cmd_buffer_info{};
   temp_cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1262,27 +1379,101 @@ void BillboardsApp::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDevic
   begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
   vkBeginCommandBuffer(temp_command_buffer, &begin_info);
 
-  VkBufferCopy copy_region{};
-  copy_region.srcOffset = 0;
-  copy_region.dstOffset = 0;
-  copy_region.size = size;
-  vkCmdCopyBuffer(temp_command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+  return temp_command_buffer;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::endSingleTimeCommands(VkCommandBuffer cmd_buffer) {
 
   // Finish recording command buffer
-  vkEndCommandBuffer(temp_command_buffer);
+  vkEndCommandBuffer(cmd_buffer);
 
   // Submit the buffer to execution
   VkSubmitInfo submit_info{};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &temp_command_buffer;
+  submit_info.pCommandBuffers = &cmd_buffer;
 
   // Graphics queue support transfer commands, not necessary to have a separated queue
   vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE);
   vkQueueWaitIdle(graphics_queue_);
 
   // Free the temp command buffer
-  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &temp_command_buffer);
+  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &cmd_buffer);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
+
+  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
+
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = old_layout;
+  barrier.newLayout = new_layout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkPipelineStageFlags source_stage;
+  VkPipelineStageFlags destination_stage;
+
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0; 
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; 
+    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; 
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; 
+    source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else {
+    throw std::runtime_error("Unsupported layout transition.");
+  }
+
+  vkCmdPipelineBarrier(cmd_buffer, source_stage, destination_stage,
+    0, 0, nullptr,
+    0, nullptr, 1, &barrier);
+
+  endSingleTimeCommands(cmd_buffer);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+
+  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
+
+  VkBufferImageCopy region{};
+  region.bufferOffset = 0;
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+
+  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+
+  region.imageOffset = { 0, 0, 0 };
+  region.imageExtent = { width, height, 1 };
+
+  vkCmdCopyBufferToImage(cmd_buffer, buffer, image,
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+  endSingleTimeCommands(cmd_buffer);
 
 }
 

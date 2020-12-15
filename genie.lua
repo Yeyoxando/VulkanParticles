@@ -47,6 +47,7 @@ project "ParticleEditor"
 	  "D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
 	  "D:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
 	  "D:/VSLibraries/glm/",
+	  "D:/VSLibraries/SingleHeaderFiles/stb_image/",
 	}
 
 	--Common files
@@ -85,6 +86,7 @@ project "ParticleEditor"
 		"_WIN32",
 		"_WINDOWS",
 		"GLM_FORCE_RADIANS",
+		"STB_IMAGE_IMPLEMENTATION ",
 	}	 
 	
 	links{

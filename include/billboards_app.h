@@ -153,6 +153,11 @@ private:
   void createFramebuffers();
   // Creates a command pool for manage the memory of the command buffers 
   void createCommandPool();
+  // Creates an image from a texture
+  void createTextureImage();
+  // Creates a vulkan image
+  void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+    VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory);
   // Creates a buffer and allocate its memory
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, 
     VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
@@ -168,6 +173,14 @@ private:
   void createDescriptorSets();
   // Copy a buffer from the cpu to the device local memory through a staging buffer
   void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+  // Begin a list of single time commands and return it
+  VkCommandBuffer beginSingleTimeCommands();
+  // end the list of single time commands
+  void endSingleTimeCommands(VkCommandBuffer cmd_buffer);
+  // Handles layout transitions
+  void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
+  //
+  void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
   // Creates the semaphores needed for rendering
@@ -231,6 +244,8 @@ private:
   std::vector<VkDeviceMemory> uniform_buffers_memory_;
   VkDescriptorPool descriptor_pool_;
   std::vector<VkDescriptorSet> descriptor_sets_;
+  VkImage texture_image_;
+  VkDeviceMemory texture_image_memory_;
 
 };
 
