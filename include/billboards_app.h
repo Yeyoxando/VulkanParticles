@@ -33,6 +33,7 @@ struct SwapChainSupportDetails {
 struct Vertex {
   glm::vec2 position;
   glm::vec3 color;
+  glm::vec2 tex_coord;
 
   static VkVertexInputBindingDescription getBindingDescription() {
     VkVertexInputBindingDescription binding_desc{};
@@ -43,16 +44,22 @@ struct Vertex {
     return binding_desc;
   }
 
-  static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescription() {
-    std::array<VkVertexInputAttributeDescription, 2> attribute_descs{};
+  static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription() {
+    std::array<VkVertexInputAttributeDescription, 3> attribute_descs{};
     attribute_descs[0].binding = 0;
     attribute_descs[0].location = 0;
     attribute_descs[0].format = VK_FORMAT_R32G32_SFLOAT;
     attribute_descs[0].offset = offsetof(Vertex, position);
+
     attribute_descs[1].binding = 0;
     attribute_descs[1].location = 1;
     attribute_descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     attribute_descs[1].offset = offsetof(Vertex, color);
+
+    attribute_descs[2].binding = 0;
+    attribute_descs[2].location = 2;
+    attribute_descs[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descs[2].offset = offsetof(Vertex, tex_coord);
 
     return attribute_descs;
   }

@@ -90,10 +90,10 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 void BillboardsApp::initVulkan() {
 
   vertices_ = { 
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
   };
 
   indices_ = {0, 1, 2, 2, 3, 0};
@@ -822,11 +822,19 @@ void BillboardsApp::createDescriptorSetLayout() {
   ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   ubo_layout_binding.pImmutableSamplers = nullptr;
 
+  VkDescriptorSetLayoutBinding sampler_layout_binding{};
+  sampler_layout_binding.binding = 1;
+  sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  sampler_layout_binding.descriptorCount = 1;
+  sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  sampler_layout_binding.pImmutableSamplers = nullptr;
+
   // Create the descriptor set
+  std::array<VkDescriptorSetLayoutBinding, 2> bindings = { ubo_layout_binding, sampler_layout_binding };
   VkDescriptorSetLayoutCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  create_info.bindingCount = 1;
-  create_info.pBindings = &ubo_layout_binding;
+  create_info.bindingCount = static_cast<uint32_t>(bindings.size());
+  create_info.pBindings = bindings.data();
 
   if (vkCreateDescriptorSetLayout(logical_device_, &create_info, nullptr, &descriptor_set_layout_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create descriptor set layout.");
@@ -1342,14 +1350,16 @@ void BillboardsApp::createUniformBuffers() {
 void BillboardsApp::createDescriptorPool() {
 
   // Create descriptor pool
-  VkDescriptorPoolSize pool_size{};
-  pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  pool_size.descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+  std::array<VkDescriptorPoolSize, 2> pool_sizes{};
+  pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+  pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  pool_sizes[1].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
 
   VkDescriptorPoolCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  create_info.poolSizeCount = 1;
-  create_info.pPoolSizes = &pool_size;
+  create_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
+  create_info.pPoolSizes = pool_sizes.data();
   create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 
   if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &descriptor_pool_) != VK_SUCCESS) {
@@ -1382,18 +1392,34 @@ void BillboardsApp::createDescriptorSets() {
     buffer_info.offset = 0;
     buffer_info.range = sizeof(UniformBufferObject);
 
-    VkWriteDescriptorSet write_descriptor{};
-    write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_descriptor.dstSet = descriptor_sets_[i];
-    write_descriptor.dstBinding = 0;
-    write_descriptor.dstArrayElement = 0;
-    write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    write_descriptor.descriptorCount = 1;
-    write_descriptor.pBufferInfo = &buffer_info;
-    write_descriptor.pImageInfo = nullptr; // Image data
-    write_descriptor.pTexelBufferView = nullptr; // Buffer views
+    VkDescriptorImageInfo image_info{};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = texture_image_view_;
+    image_info.sampler = texture_sampler_;
 
-    vkUpdateDescriptorSets(logical_device_, 1, &write_descriptor, 0, nullptr);
+    std::array<VkWriteDescriptorSet, 2> write_descriptors{};
+    write_descriptors[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptors[0].dstSet = descriptor_sets_[i];
+    write_descriptors[0].dstBinding = 0;
+    write_descriptors[0].dstArrayElement = 0;
+    write_descriptors[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptors[0].descriptorCount = 1;
+    write_descriptors[0].pBufferInfo = &buffer_info;
+    write_descriptors[0].pImageInfo = nullptr; // Image data
+    write_descriptors[0].pTexelBufferView = nullptr; // Buffer views
+
+    write_descriptors[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptors[1].dstSet = descriptor_sets_[i];
+    write_descriptors[1].dstBinding = 1;
+    write_descriptors[1].dstArrayElement = 0;
+    write_descriptors[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_descriptors[1].descriptorCount = 1;
+    write_descriptors[1].pBufferInfo = nullptr; // Buffer data
+    write_descriptors[1].pImageInfo = &image_info; 
+    write_descriptors[1].pTexelBufferView = nullptr; // Buffer views
+
+    vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()), 
+      write_descriptors.data(), 0, nullptr);
   }
 
 }
