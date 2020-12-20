@@ -86,7 +86,8 @@ project "ParticleEditor"
 		"_WIN32",
 		"_WINDOWS",
 		"GLM_FORCE_RADIANS",
-		"STB_IMAGE_IMPLEMENTATION ",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"STB_IMAGE_IMPLEMENTATION",
 	}	 
 	
 	links{

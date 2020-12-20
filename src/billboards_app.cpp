@@ -90,13 +90,19 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 void BillboardsApp::initVulkan() {
 
   vertices_ = { 
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{ 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
   };
 
-  indices_ = {0, 1, 2, 2, 3, 0};
+  indices_ = {0, 1, 2, 2, 3, 0,
+              4, 5, 6, 6, 7, 4 };
 
   createInstance();
   setupDebugMessenger();
@@ -108,8 +114,9 @@ void BillboardsApp::initVulkan() {
   createRenderPass();
   createDescriptorSetLayout();
   createGraphicsPipeline();
-  createFramebuffers();
   createCommandPool();
+  createDepthResources();
+  createFramebuffers();
   createTextureImage();
   createTextureImageView();
   createTextureSampler();
@@ -712,7 +719,7 @@ void BillboardsApp::createSwapChain() {
 
 // ------------------------------------------------------------------------- // 
 
-VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format) {
+VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
 
   VkImageViewCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -727,7 +734,7 @@ VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format) {
   create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
   // Image usage (color bit for those)
-  create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  create_info.subresourceRange.aspectMask = aspect_flags;
   create_info.subresourceRange.baseMipLevel = 0;
   create_info.subresourceRange.levelCount = 1;
   create_info.subresourceRange.baseArrayLayer = 0;
@@ -751,7 +758,7 @@ void BillboardsApp::createImageViews() {
   swap_chain_image_views_.resize(swap_chain_images_.size());
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    swap_chain_image_views_[i] = createImageView(swap_chain_images_[i], swap_chain_image_format_);
+    swap_chain_image_views_[i] = createImageView(swap_chain_images_[i], swap_chain_image_format_, VK_IMAGE_ASPECT_COLOR_BIT);
   }
 
 }
@@ -762,7 +769,7 @@ void BillboardsApp::createRenderPass() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
-  // How to load and store the received info
+  // How to load and store the received info for color
   VkAttachmentDescription color_attachment{};
   color_attachment.format = swap_chain_image_format_;
   color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -775,30 +782,50 @@ void BillboardsApp::createRenderPass() {
   color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-  // Subpasses (only 1 for now)
   VkAttachmentReference color_attachment_ref{};
   color_attachment_ref.attachment = 0;
   color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+  // How to load and store the received info for depth
+  VkAttachmentDescription depth_attachment{};
+  depth_attachment.format = findDepthFormat();
+  depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  VkAttachmentReference depth_attachment_ref{};
+  depth_attachment_ref.attachment = 1;
+  depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+  // Subpasses (only 1 for now)
   VkSubpassDescription subpass{};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_attachment_ref; // layout location = 0 in frag shader
+  subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
   // Dependency for the render pass to start (Until color attachment is finished)
   VkSubpassDependency subpass_dependency{};
   subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
   subpass_dependency.dstSubpass = 0;
-  subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
   subpass_dependency.srcAccessMask = 0;
-  subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
+    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
   // Create the render pass
+  std::array<VkAttachmentDescription, 2> attachments = { color_attachment, depth_attachment };
   VkRenderPassCreateInfo render_pass_info{};
   render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  render_pass_info.attachmentCount = 1;
-  render_pass_info.pAttachments = &color_attachment;
+  render_pass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+  render_pass_info.pAttachments = attachments.data();
   render_pass_info.subpassCount = 1;
   render_pass_info.pSubpasses = &subpass;
   render_pass_info.dependencyCount = 1;
@@ -937,8 +964,18 @@ void BillboardsApp::createGraphicsPipeline() {
   multisample_state_info.alphaToCoverageEnable = VK_FALSE;
   multisample_state_info.alphaToOneEnable = VK_FALSE;
 
-  // Create depth and stencil settings for the framebuffer (Null for now)
-
+  // Create depth and stencil settings for the framebuffer
+  VkPipelineDepthStencilStateCreateInfo depth_stencil_info{};
+  depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depth_stencil_info.depthTestEnable = VK_TRUE;
+  depth_stencil_info.depthWriteEnable = VK_TRUE;
+  depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
+  depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
+  depth_stencil_info.minDepthBounds = 0.0f;
+  depth_stencil_info.maxDepthBounds = 1.0f;
+  depth_stencil_info.stencilTestEnable = VK_FALSE;
+  depth_stencil_info.front = {};
+  depth_stencil_info.back = {};
 
   // Create color blend settings
   VkPipelineColorBlendAttachmentState color_blend_attachment{};
@@ -999,7 +1036,7 @@ void BillboardsApp::createGraphicsPipeline() {
   graphics_pipeline_info.pViewportState = &viewport_state_info;
   graphics_pipeline_info.pRasterizationState = &rasterizer_state_info;
   graphics_pipeline_info.pMultisampleState = &multisample_state_info;
-  graphics_pipeline_info.pDepthStencilState = nullptr;
+  graphics_pipeline_info.pDepthStencilState = &depth_stencil_info;
   graphics_pipeline_info.pColorBlendState = &blend_state_info;
   graphics_pipeline_info.pDynamicState = nullptr;
   graphics_pipeline_info.layout = pipeline_layout_;
@@ -1046,15 +1083,16 @@ void BillboardsApp::createFramebuffers() {
   swap_chain_framebuffers_.resize(swap_chain_image_views_.size());
 
   for (int i = 0; i < swap_chain_image_views_.size(); i++) {
-    VkImageView attachments[] = {
-      swap_chain_image_views_[i]
+    std::array<VkImageView, 2> attachments = {
+      swap_chain_image_views_[i],
+      depth_image_view_
     };
   
     VkFramebufferCreateInfo framebuffer_info{};
     framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_info.renderPass = render_pass_;
-    framebuffer_info.attachmentCount = 1;
-    framebuffer_info.pAttachments = attachments;
+    framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebuffer_info.pAttachments = attachments.data();
     framebuffer_info.width = swap_chain_extent_.width;
     framebuffer_info.height = swap_chain_extent_.height;
     framebuffer_info.layers = 1;
@@ -1080,6 +1118,22 @@ void BillboardsApp::createCommandPool() {
   if (vkCreateCommandPool(logical_device_, &command_pool_info, nullptr, &command_pool_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create command pool.");
   }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::createDepthResources() {
+
+  VkFormat format = findDepthFormat();
+
+  createImage(swap_chain_extent_.width, swap_chain_extent_.height, format,
+    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_image_, depth_image_memory_);
+
+  depth_image_view_ = createImageView(depth_image_, format, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+  transitionImageLayout(depth_image_, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 }
 
@@ -1139,7 +1193,7 @@ void BillboardsApp::createTextureImage() {
 
 void BillboardsApp::createTextureImageView() {
 
-  texture_image_view_ = createImageView(texture_image_, VK_FORMAT_R8G8B8A8_SRGB);
+  texture_image_view_ = createImageView(texture_image_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
 }
 
@@ -1201,7 +1255,7 @@ void BillboardsApp::createImage(uint32_t width, uint32_t height, VkFormat format
     throw std::runtime_error("Failed to create texture image.");
   }
 
-  // Request memory requeriments
+  // Request memory requirements
   VkMemoryRequirements requirements;
   vkGetImageMemoryRequirements(logical_device_, image, &requirements);
 
@@ -1508,6 +1562,17 @@ void BillboardsApp::transitionImageLayout(VkImage image, VkFormat format, VkImag
   VkPipelineStageFlags source_stage;
   VkPipelineStageFlags destination_stage;
 
+  if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (hasStencilComponent(format)) {
+      barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+  }
+  else {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  }
+
+
   if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0; 
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; 
@@ -1519,6 +1584,13 @@ void BillboardsApp::transitionImageLayout(VkImage image, VkFormat format, VkImag
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; 
     source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
   }
   else {
     throw std::runtime_error("Unsupported layout transition.");
@@ -1596,9 +1668,11 @@ void BillboardsApp::createCommandBuffers() {
     render_pass_begin.framebuffer = swap_chain_framebuffers_[i];
     render_pass_begin.renderArea.offset = { 0, 0 };
     render_pass_begin.renderArea.extent = swap_chain_extent_;
-    VkClearValue clear_color = { 0.0f, 0.0f, 0.0f, 1.0f }; // Black
-    render_pass_begin.clearValueCount = 1;
-    render_pass_begin.pClearValues = &clear_color;
+    std::array<VkClearValue, 2> clear_values{};
+    clear_values[0].color = { 0.0f, 0.0f, 0.0f, 1.0f }; // Black
+    clear_values[1].depthStencil = { 1.0f, 0 };
+    render_pass_begin.clearValueCount = static_cast<uint32_t>(clear_values.size());
+    render_pass_begin.pClearValues = clear_values.data();
 
     // Record the commands on the command buffer
     vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -1782,6 +1856,7 @@ void BillboardsApp::recreateSwapChain() {
   createImageViews();
   createRenderPass();
   createGraphicsPipeline();
+  createDepthResources();
   createFramebuffers();
   createUniformBuffers();
   createDescriptorPool();
@@ -1793,6 +1868,10 @@ void BillboardsApp::recreateSwapChain() {
 // ------------------------------------------------------------------------- // 
 
 void BillboardsApp::cleanupSwapChain() {
+
+  vkDestroyImage(logical_device_, depth_image_, nullptr);
+  vkDestroyImageView(logical_device_, depth_image_view_, nullptr);
+  vkFreeMemory(logical_device_, depth_image_memory_, nullptr);
 
   for (int i = 0; i < swap_chain_framebuffers_.size(); i++) {
     vkDestroyFramebuffer(logical_device_, swap_chain_framebuffers_[i], nullptr);
@@ -1850,6 +1929,42 @@ uint32_t BillboardsApp::findMemoryType(uint32_t type_filter, VkMemoryPropertyFla
   }
 
   throw std::runtime_error("Failed to find a suitable memory type.");
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+VkFormat BillboardsApp::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+
+  for (uint32_t i = 0; i < candidates.size(); i++) {
+    VkFormatProperties properties;
+    vkGetPhysicalDeviceFormatProperties(physical_device_, candidates[i], &properties);
+
+    if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
+      return candidates[i];
+    }
+    else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
+      return candidates[i];
+    }
+  }
+
+  throw std::runtime_error("Failed to find a supported a format.");
+
+}
+// ------------------------------------------------------------------------- // 
+
+VkFormat BillboardsApp::findDepthFormat() {
+
+  return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+bool BillboardsApp::hasStencilComponent(VkFormat format) {
+
+  return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 
 }
 
