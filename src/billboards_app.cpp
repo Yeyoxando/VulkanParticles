@@ -67,6 +67,10 @@ BillboardsApp::BillboardsApp() {
 
   current_frame_ = 0;
   resized_framebuffer_ = false;
+  close_window_ = false;
+
+  camera_ = new Camera();
+  input_ = new InputManager();
 
 }
 
@@ -105,6 +109,7 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwSetWindowUserPointer(window_, this);
   glfwSetFramebufferSizeCallback(window_, framebufferResizeCallback);
+  glfwSetInputMode(window_, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 
 }
 
@@ -154,15 +159,19 @@ void BillboardsApp::initVulkan() {
   createCommandBuffers();
   createSyncObjects();
 
+  input_->init(window_);
+
 }
 
 // ------------------------------------------------------------------------- // 
 
 void BillboardsApp::renderLoop() {
 
-  while (!glfwWindowShouldClose(window_)) {
+  while (!glfwWindowShouldClose(window_) && !close_window_) {
     
     glfwPollEvents();
+
+    updateFrame();
 
     drawFrame();
 
@@ -176,6 +185,10 @@ void BillboardsApp::renderLoop() {
 // ------------------------------------------------------------------------- // 
 
 void BillboardsApp::close() {
+
+  // Program cleanup
+  delete input_;
+  delete camera_;
 
   // Vulkan cleanup
   cleanupSwapChain();
@@ -1834,6 +1847,38 @@ void BillboardsApp::createSyncObjects() {
 
 // ------------------------------------------------------------------------- // 
 
+void BillboardsApp::updateFrame() {
+
+  // Calculate time since rendering started
+  static auto start_time = std::chrono::high_resolution_clock::now();
+
+  auto current_time = std::chrono::high_resolution_clock::now();
+
+  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+
+  // INPUTS
+  if (input_->getState()->right_click_action_ == GLFW_PRESS) {
+    camera_->updateViewMatrix(input_->getMousePos());
+    glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_RIGHT);
+  }
+  if (input_->getState()->right_click_action_ == GLFW_RELEASE) {
+    camera_->setRotating(false);
+    glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+  }
+  if (input_->getState()->wheel_offset > 0.05f ||
+    input_->getState()->wheel_offset < -0.05f) {
+      camera_->moveFront(input_->getState()->wheel_offset * 0.05f);
+      input_->getState()->wheel_offset = 0.0f;
+  }
+  if (input_->getState()->escape_key_action == GLFW_PRESS) {
+    close_window_ = true;
+  }
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
 
   // Calculate time since rendering started
@@ -1845,11 +1890,10 @@ void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
 
   // Update the uniform buffer to make the object spin
   UniformBufferObject ubo{};
-  ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(9.0f), 
+  ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f/*time * glm::radians(9.0f)*/, 
     glm::vec3(0.0f, 0.0f, 1.0f));
 
-  ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-    glm::vec3(0.0f, 0.0f, 1.0f));
+  ubo.view = camera_->getViewMatrix();
 
   ubo.projection = glm::perspective(glm::radians(90.0f),
     swap_chain_extent_.width / (float)swap_chain_extent_.height, 0.1f, 10.0f);

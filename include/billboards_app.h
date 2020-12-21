@@ -10,6 +10,9 @@
 #define __BILLBOARDS_APP_H__
 
 #include "common_def.h"
+#include "camera.h"
+#include "input.h"
+
 #include <GLFW/glfw3.h>
 #include <optional>
 #include <array>
@@ -224,6 +227,8 @@ private:
   // Creates the semaphores needed for rendering
   void createSyncObjects();
 
+  // Updates frame logic
+  void updateFrame();
   // Updates the uniform buffers and map their memory
   void updateUniformBuffers(uint32_t current_image);
   // Draw using the recorded command buffers
@@ -281,6 +286,7 @@ private:
   std::vector<VkFence> images_in_flight_;
   int current_frame_;
   bool resized_framebuffer_;
+  bool close_window_;
 
   std::vector<Vertex> vertices_;
   std::vector<uint32_t> indices_;
@@ -305,6 +311,10 @@ private:
   VkImage color_image_;
   VkDeviceMemory color_image_memory_;
   VkImageView color_image_view_;
+
+  // Camera
+  Camera* camera_;
+  InputManager* input_;
 
 };
 
