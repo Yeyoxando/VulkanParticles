@@ -1868,21 +1868,20 @@ void BillboardsApp::updateFrame() {
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
 
   // INPUTS
-  if (input_->getState()->right_click_action_ == GLFW_PRESS) {
+  if (input_->getMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
     camera_->updateViewMatrix(input_->getMousePos());
     glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_RIGHT);
   }
-  if (input_->getState()->right_click_action_ == GLFW_RELEASE) {
+  if (!input_->getMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
     camera_->setRotating(false);
     glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   }
-  if (input_->getState()->wheel_offset > 0.05f ||
-    input_->getState()->wheel_offset < -0.05f) {
+  if (input_->getMouseScroll() > 0.05f || input_->getMouseScroll() < -0.05f) {
       camera_->moveFront(input_->getState()->wheel_offset * 0.05f);
       input_->getState()->wheel_offset = 0.0f;
   }
-  if (input_->getState()->escape_key_action == GLFW_PRESS) {
+  if (input_->getKeyPressed(GLFW_KEY_ESCAPE)) {
     close_window_ = true;
   }
 
@@ -1896,12 +1895,12 @@ void BillboardsApp::updateFrame() {
 void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
 
   // Calculate time since rendering started
-  static auto start_time = std::chrono::high_resolution_clock::now();
+  /*static auto start_time = std::chrono::high_resolution_clock::now();
 
   auto current_time = std::chrono::high_resolution_clock::now();
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
-
+  */
   // Update the uniform buffer to make the object spin
   UniformBufferObject ubo{};
   ubo.model = glm::mat4(1.0f);

@@ -12,7 +12,8 @@
 
 ParticleSystem::ParticleSystem() {
 
-
+  burst_ = false;
+  alive_particles_ = 0;
 
 }
 
