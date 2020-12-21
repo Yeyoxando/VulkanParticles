@@ -14,10 +14,12 @@
 #include <vector>
 #include <set>
 #include <chrono>
+#include <unordered_map>
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <stb_image.h>
+#include <tiny_obj_loader.h>
 
 // ------------------------------------------------------------------------- // 
 
@@ -76,7 +78,7 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-  window_ = glfwCreateWindow(width, height, "Hello Triangle", nullptr, nullptr);
+  window_ = glfwCreateWindow(width, height, "Hello Billboards", nullptr, nullptr);
   window_width_ = width;
   window_height_ = height;
 
@@ -117,9 +119,11 @@ void BillboardsApp::initVulkan() {
   createCommandPool();
   createDepthResources();
   createFramebuffers();
-  createTextureImage();
+  //createTextureImage("../../../resources/textures/numerical_grid.jpg");
+  createTextureImage("../../../resources/textures/viking_room.png");
   createTextureImageView();
   createTextureSampler();
+  loadModel("../../../resources/models/viking_room.obj");
   createVertexBuffers();
   createIndexBuffers();
   createUniformBuffers();
@@ -880,8 +884,8 @@ void BillboardsApp::createGraphicsPipeline() {
   // Whole pipeline has to be created and changed to do this
 
   // Load shaders
-  auto vert_shader_code = readFile("../../../resources/shaders_spirv/v_hello_triangle.spv");
-  auto frag_shader_code = readFile("../../../resources/shaders_spirv/f_hello_triangle.spv");
+  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_triangle.spv");
+  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
 
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
@@ -1139,14 +1143,14 @@ void BillboardsApp::createDepthResources() {
 
 // ------------------------------------------------------------------------- // 
 
-void BillboardsApp::createTextureImage() {
+void BillboardsApp::createTextureImage(const char* texture_path) {
 
   int tex_width;
   int tex_height;
   int tex_channels;
 
   // Load any texture with 4 channels with STBI_rgb_alpha
-  stbi_uc* pixels = stbi_load("../../../resources/textures/numerical_grid.jpg",
+  stbi_uc* pixels = stbi_load(texture_path,
     &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
 
   VkDeviceSize image_size = tex_width * tex_height * 4;
@@ -1304,6 +1308,55 @@ void BillboardsApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, Vk
 
   // Bind buffer and memory together
   vkBindBufferMemory(logical_device_, buffer, memory, 0);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void BillboardsApp::loadModel(const char* model_path) {
+
+  // Load model from file
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string warn, err;
+
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_path)) {
+    throw std::runtime_error(warn + err);
+  }
+
+  // TODO: Provisional!!!!
+  vertices_.clear();
+  indices_.clear();
+
+  // Create the model with indices
+  std::unordered_map<Vertex, uint32_t> unique_vertices{};
+
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      Vertex vertex{};
+
+      vertex.position = {
+        attrib.vertices[3 * index.vertex_index + 0],
+        attrib.vertices[3 * index.vertex_index + 1],
+        attrib.vertices[3 * index.vertex_index + 2]
+      };
+
+      vertex.tex_coord = {
+        attrib.texcoords[2 * index.texcoord_index + 0],
+        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+      };
+
+      vertex.color = { 1.0f, 1.0f, 1.0f };
+
+      if (unique_vertices.count(vertex) == 0) {
+        unique_vertices[vertex] = static_cast<uint32_t>(vertices_.size());
+        vertices_.push_back(vertex);
+      }
+
+      indices_.push_back(unique_vertices[vertex]);
+    }
+  }
 
 }
 
@@ -1683,7 +1736,7 @@ void BillboardsApp::createCommandBuffers() {
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
     
-    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT32);
     
     vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, 
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);

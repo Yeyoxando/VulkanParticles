@@ -72,5 +72,9 @@ static std::vector<char> readFile(const char* file_name) {
 }
 
 // ------------------------------------------------------------------------- // 
+// Expand an unordered map feature to accept Vertex structure
+
+
+// ------------------------------------------------------------------------- // 
 
 #endif // __VULKAN_UTILS_H__

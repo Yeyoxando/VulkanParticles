@@ -14,6 +14,7 @@
 #include <optional>
 #include <array>
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphics_family;
@@ -31,6 +32,7 @@ struct SwapChainSupportDetails {
 };
 
 struct Vertex {
+
   glm::vec3 position;
   glm::vec3 color;
   glm::vec2 tex_coord;
@@ -63,8 +65,25 @@ struct Vertex {
 
     return attribute_descs;
   }
+
+  bool operator ==(const Vertex& other) const {
+    return position == other.position && color == other.color && tex_coord == other.tex_coord;
+  }
+
 };
 
+// Custom implementation for adding compatibility with Vertex struct and unordered maps
+namespace std {
+  template<> struct hash<Vertex> {
+    size_t operator()(Vertex const& vertex) const {
+      return ((hash<glm::vec3>()(vertex.position) ^
+        (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+        (hash<glm::vec2>()(vertex.tex_coord) << 1);
+    }
+  };
+};
+
+// Example for Uniforms for the shaders
 struct UniformBufferObject {
   glm::mat4x4 model;
   glm::mat4x4 view;
@@ -165,7 +184,7 @@ private:
   // Creates the depth resources for depth testing
   void createDepthResources();
   // Creates an image from a texture
-  void createTextureImage();
+  void createTextureImage(const char* texture_path);
   // Creates the image view for the texture
   void createTextureImageView();
   // Creates the sampler for texture filtering and shader reading
@@ -176,6 +195,8 @@ private:
   // Creates a buffer and allocate its memory
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, 
     VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
+  // Loads a OBJ model
+  void loadModel(const char* model_path);
   // Creates the vertex buffers for the app and map their memory to the GPU
   void createVertexBuffers();
   // Creates the index buffers for the app and map their memory to the GPU
@@ -257,9 +278,9 @@ private:
   bool resized_framebuffer_;
 
   std::vector<Vertex> vertices_;
+  std::vector<uint32_t> indices_;
   VkBuffer vertex_buffer_;
   VkDeviceMemory vertex_buffer_memory_;
-  std::vector<uint16_t> indices_;
   VkBuffer index_buffer_;
   VkDeviceMemory index_buffer_memory_;
   std::vector<VkBuffer> uniform_buffers_;
