@@ -4,8 +4,8 @@
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
-#ifndef _INPUT_MANAGER_H__
-#define _INPUT_MANAGER_H__
+#ifndef __INPUT_MANAGER_H__
+#define __INPUT_MANAGER_H__
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -43,4 +43,4 @@ private:
 
 };
 
-#endif // _INPUT_MANAGER_H__
+#endif // __INPUT_MANAGER_H__

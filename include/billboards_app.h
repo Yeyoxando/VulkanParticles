@@ -12,6 +12,7 @@
 #include "common_def.h"
 #include "camera.h"
 #include "input.h"
+#include "particles_test/particle_system.h"
 
 #include <GLFW/glfw3.h>
 #include <optional>
@@ -315,6 +316,7 @@ private:
   // Camera
   Camera* camera_;
   InputManager* input_;
+  ParticleSystem* particle_system_;
 
 };
 

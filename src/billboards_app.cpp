@@ -71,6 +71,7 @@ BillboardsApp::BillboardsApp() {
 
   camera_ = new Camera();
   input_ = new InputManager();
+  particle_system_ = new ParticleSystem();
 
 }
 
@@ -122,15 +123,16 @@ void BillboardsApp::initVulkan() {
     {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
     {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+// 
+//     {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+//     {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+//     {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+//     {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
   };
 
   indices_ = {0, 1, 2, 2, 3, 0,
-              4, 5, 6, 6, 7, 4 };
+  //            4, 5, 6, 6, 7, 4 
+  };
 
   createInstance();
   setupDebugMessenger();
@@ -146,11 +148,11 @@ void BillboardsApp::initVulkan() {
   createColorResources();
   createDepthResources();
   createFramebuffers();
-  //createTextureImage("../../../resources/textures/numerical_grid.jpg");
-  createTextureImage("../../../resources/textures/viking_room.png");
+  createTextureImage("../../../resources/textures/numerical_grid.jpg");
+  //createTextureImage("../../../resources/textures/viking_room.png");
   createTextureImageView();
   createTextureSampler();
-  loadModel("../../../resources/models/viking_room.obj");
+  //loadModel("../../../resources/models/viking_room.obj");
   createVertexBuffers();
   createIndexBuffers();
   createUniformBuffers();
@@ -160,6 +162,7 @@ void BillboardsApp::initVulkan() {
   createSyncObjects();
 
   input_->init(window_);
+  particle_system_->init(600);
 
 }
 
@@ -187,6 +190,7 @@ void BillboardsApp::renderLoop() {
 void BillboardsApp::close() {
 
   // Program cleanup
+  delete particle_system_;
   delete input_;
   delete camera_;
 
@@ -1806,8 +1810,15 @@ void BillboardsApp::createCommandBuffers() {
     
     vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, 
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
-
+    
+    // For each alive particle, pass a uniform buffer with the positions and do the rest on shader
     vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
+
+    for (auto particle : particle_system_->particles_) {
+      if (particle.alive_) {
+        vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
+      }
+    }
 
     vkCmdEndRenderPass(command_buffers_[i]);
 
@@ -1875,6 +1886,9 @@ void BillboardsApp::updateFrame() {
     close_window_ = true;
   }
 
+  particle_system_->emit();
+  particle_system_->update(time);
+
 }
 
 // ------------------------------------------------------------------------- // 
@@ -1890,8 +1904,7 @@ void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
 
   // Update the uniform buffer to make the object spin
   UniformBufferObject ubo{};
-  ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f/*time * glm::radians(9.0f)*/, 
-    glm::vec3(0.0f, 0.0f, 1.0f));
+  ubo.model = glm::mat4(1.0f);
 
   ubo.view = camera_->getViewMatrix();
 
