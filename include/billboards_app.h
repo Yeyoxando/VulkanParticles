@@ -181,6 +181,8 @@ private:
   void createFramebuffers();
   // Creates a command pool for manage the memory of the command buffers 
   void createCommandPool();
+  // Creates the color framebuffer resources for multi-sampling
+  void createColorResources();
   // Creates the depth resources for depth testing
   void createDepthResources();
   // Creates an image from a texture
@@ -190,7 +192,7 @@ private:
   // Creates the sampler for texture filtering and shader reading
   void createTextureSampler();
   // Creates a vulkan image
-  void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+  void createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling,
     VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory);
   // Creates a buffer and allocate its memory
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, 
@@ -243,6 +245,9 @@ private:
   // Return true if the selected depth format has a stencil component
   bool hasStencilComponent(VkFormat format);
 
+  // Get the maximum number of samples supported by physical device
+  VkSampleCountFlagBits getMaxUsableSampleCount();
+
   // VARIABLES
   // Window variables
   GLFWwindow* window_;
@@ -294,6 +299,12 @@ private:
   VkImage depth_image_;
   VkDeviceMemory depth_image_memory_;
   VkImageView depth_image_view_;
+
+  // MSAA
+  VkSampleCountFlagBits msaa_samples_;
+  VkImage color_image_;
+  VkDeviceMemory color_image_memory_;
+  VkImageView color_image_view_;
 
 };
 

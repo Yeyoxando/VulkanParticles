@@ -39,6 +39,7 @@ const std::vector<const char*> kDeviceExtensions = {
 
 // Vulkan runtime
 const int MAX_FRAMES_IN_FLIGHT = 2;
+const bool ENABLE_MSAA = true;
 
 // ------------------------------------------------------------------------- // 
 
