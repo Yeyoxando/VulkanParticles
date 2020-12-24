@@ -82,9 +82,10 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
     is_rotating_ = true;
   }
 
+  last_mouse_pos_ = new_mouse_pos;
+  
   position_ = glm::vec3(camera_distance_ * cos(dist_x), 
     camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
-  last_mouse_pos_ = new_mouse_pos;
 
   view_ = glm::lookAt(position_, target_, up_);
 

@@ -21,6 +21,8 @@
 #include <stb_image.h>
 #include <tiny_obj_loader.h>
 
+//#define LOAD_BILLBOARD 1
+
 // ------------------------------------------------------------------------- // 
 
 BillboardsApp::BillboardsApp() {
@@ -71,7 +73,6 @@ BillboardsApp::BillboardsApp() {
 
   camera_ = new Camera();
   input_ = new InputManager();
-  particle_system_ = new ParticleSystem();
 
 }
 
@@ -148,11 +149,18 @@ void BillboardsApp::initVulkan() {
   createColorResources();
   createDepthResources();
   createFramebuffers();
-  createTextureImage("../../../resources/textures/numerical_grid.jpg");
-  //createTextureImage("../../../resources/textures/viking_room.png");
+#ifdef LOAD_BILLBOARD
+  createTextureImage("../../../resources/textures/smoke_texture_trasnparency.png");
+#else
+  createTextureImage("../../../resources/textures/viking_room.png");
+#endif
   createTextureImageView();
   createTextureSampler();
-  //loadModel("../../../resources/models/viking_room.obj");
+#ifdef LOAD_BILLBOARD
+
+#else
+  loadModel("../../../resources/models/viking_room.obj");
+#endif
   createVertexBuffers();
   createIndexBuffers();
   createUniformBuffers();
@@ -162,7 +170,6 @@ void BillboardsApp::initVulkan() {
   createSyncObjects();
 
   input_->init(window_);
-  particle_system_->init(600);
 
 }
 
@@ -190,7 +197,6 @@ void BillboardsApp::renderLoop() {
 void BillboardsApp::close() {
 
   // Program cleanup
-  delete particle_system_;
   delete input_;
   delete camera_;
 
@@ -940,9 +946,14 @@ void BillboardsApp::createGraphicsPipeline() {
   // Whole pipeline has to be created and changed to do this
 
   // Load shaders
+#ifdef LOAD_BILLBOARD
+  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_billboard.spv");
+  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
+#else
   auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_triangle.spv");
   auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
-
+#endif
+  
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
 
@@ -1041,12 +1052,16 @@ void BillboardsApp::createGraphicsPipeline() {
   VkPipelineColorBlendAttachmentState color_blend_attachment{};
   color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
     VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+#ifdef LOAD_BILLBOARD
+  color_blend_attachment.blendEnable = VK_TRUE;
+#else
   color_blend_attachment.blendEnable = VK_FALSE;
+#endif
   color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
   color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
   // Alpha blending
-  //color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-  //color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
   color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
   color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
@@ -1811,14 +1826,7 @@ void BillboardsApp::createCommandBuffers() {
     vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, 
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
     
-    // For each alive particle, pass a uniform buffer with the positions and do the rest on shader
     vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
-
-    for (auto particle : particle_system_->particles_) {
-      if (particle.alive_) {
-        vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
-      }
-    }
 
     vkCmdEndRenderPass(command_buffers_[i]);
 
@@ -1884,9 +1892,6 @@ void BillboardsApp::updateFrame() {
   if (input_->getKeyPressed(GLFW_KEY_ESCAPE)) {
     close_window_ = true;
   }
-
-  particle_system_->emit();
-  particle_system_->update(time);
 
 }
 

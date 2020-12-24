@@ -1,6 +1,6 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 02/12/2020
+ *  Date: 24/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  *  Description: Vertex shader to learn how Vulkan works
  */
@@ -26,6 +26,14 @@ void main(){
 	frag_color = in_color;
 	frag_tex_coord = in_tex_coord;
 
-	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_position, 1.0f);
+	vec3 cam_right_world = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
+	vec3 cam_up_world = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
+	vec3 particle_center = vec3(0.0f);
+
+	vec3 vertex_pos = particle_center + 
+	cam_right_world * in_position.x + 
+	cam_up_world * in_position.y;
+	
+	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(vertex_pos, 1.0f);
 
 }
