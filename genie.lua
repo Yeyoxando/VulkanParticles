@@ -47,6 +47,8 @@ project "ParticleEditor"
 	  "D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
 	  "D:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
 	  "D:/VSLibraries/glm/",
+	  "D:/VSLibraries/SingleHeaderFiles/stb_image/",
+	  "D:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/",
 	}
 
 	--Common files
@@ -61,18 +63,6 @@ project "ParticleEditor"
 		-- Vulkan
 		--"D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
 		
-		--GLFW
-		--"./src/deps/GLFW/src/context.c",
-		--"./src/deps/GLFW/src/init.c",
-		--"./src/deps/GLFW/src/input.c",
-		--"./src/deps/GLFW/src/monitor.c",
-		--"./src/deps/GLFW/src/vulkan.c",
-		--"./src/deps/GLFW/src/window.c",
-		--"./src/deps/GLFW/src/internal.h",
-		--"./src/deps/GLFW/src/mappings.h",
-		--"./src/deps/GLFW/include/GLFW/glfw3.h",
-		--"./src/deps/GLFW/include/GLFW/glfw3native.h",
-
 		--GLM
 		--"./deps/glm/*.h",
 		--"./deps/glm/*.hpp",
@@ -84,6 +74,11 @@ project "ParticleEditor"
 		"WIN32",
 		"_WIN32",
 		"_WINDOWS",
+		"GLM_FORCE_RADIANS",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"GLM_ENABLE_EXPERIMENTAL",
+		"STB_IMAGE_IMPLEMENTATION",
+		"TINYOBJLOADER_IMPLEMENTATION",
 	}	 
 	
 	links{

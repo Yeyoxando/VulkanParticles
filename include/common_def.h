@@ -15,13 +15,15 @@
 // Comment and uncomment those defines to select which main test will be executed
 
 //#define MAIN_WINDOW_TEST
-#define MAIN_HELLO_TRIANGLE
+//#define MAIN_HELLO_TRIANGLE
+#define MAIN_BILLBOARDS
 
 // ------------------------------------------------------------------------- // 
 
 // Vulkan validation layers
 const std::vector<const char*> kVkValidationLayers = {
   "VK_LAYER_KHRONOS_validation",
+  "VK_LAYER_LUNARG_monitor"
 };
 
 #ifdef DEBUG
@@ -37,6 +39,7 @@ const std::vector<const char*> kDeviceExtensions = {
 
 // Vulkan runtime
 const int MAX_FRAMES_IN_FLIGHT = 2;
+const bool ENABLE_MSAA = true;
 
 // ------------------------------------------------------------------------- // 
 

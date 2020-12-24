@@ -1,4 +1,5 @@
-rmdir /s /q build
+rmdir /s /q build/ParticleEditor
+rm build/VulkanParticles.sln
 
 .\tools\genie.exe vs2019
 

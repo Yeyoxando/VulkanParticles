@@ -30,6 +30,12 @@ HelloTriangleApp::HelloTriangleApp() {
   present_queue_ = VK_NULL_HANDLE;
   surface_ = VK_NULL_HANDLE;
   swap_chain_ = VK_NULL_HANDLE;
+  swap_chain_image_format_ = {};
+  swap_chain_extent_ = {};
+  render_pass_ = VK_NULL_HANDLE;
+  pipeline_layout_ = VK_NULL_HANDLE;
+  graphics_pipeline_ = VK_NULL_HANDLE;
+  command_pool_ = VK_NULL_HANDLE;
 
   current_frame_ = 0;
   resized_framebuffer_ = false;
