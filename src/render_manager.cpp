@@ -1,34 +1,34 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 23/12/2020
+ *  Date: 30/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
 // ------------------------------------------------------------------------- //
 
-#include "resource_manager.h"
+#include "render_manager.h"
 
 // ------------------------------------------------------------------------- //
 
-ResourceManager::ResourceManager() {
+RenderManager::RenderManager() {
 
 }
 
 // ------------------------------------------------------------------------- //
 
-ResourceManager::~ResourceManager() {
+RenderManager::~RenderManager() {
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ResourceManager::init() {
+void RenderManager::init() {
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ResourceManager::shutDown() {
+void RenderManager::shutDown() {
 
 }
 

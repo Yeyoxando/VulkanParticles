@@ -1,34 +1,49 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 23/12/2020
+ *  Date: 30/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
 // ------------------------------------------------------------------------- //
 
-#include "resource_manager.h"
+#include "basic_ps_app.h"
 
 // ------------------------------------------------------------------------- //
 
-ResourceManager::ResourceManager() {
+BasicPSApp::BasicPSApp() {
+
+  render_manager_ = nullptr;
+  resource_manager_ = nullptr;
 
 }
 
 // ------------------------------------------------------------------------- //
 
-ResourceManager::~ResourceManager() {
+BasicPSApp::~BasicPSApp() {
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ResourceManager::init() {
+void BasicPSApp::init() {
+
+  resource_manager_ = new ResourceManager();
+  render_manager_ = new RenderManager();
+
+  resource_manager_->init();
+  render_manager_->init();
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ResourceManager::shutDown() {
+void BasicPSApp::shutDown() {
+
+  render_manager_->shutDown();
+  resource_manager_->shutDown();
+
+  delete render_manager_;
+  delete resource_manager_;
 
 }
 

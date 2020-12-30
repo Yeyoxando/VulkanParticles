@@ -5,4 +5,4 @@ rm build/VulkanParticles.sln
 
 .\build\VulkanParticles.sln
 
-pause
+exit
