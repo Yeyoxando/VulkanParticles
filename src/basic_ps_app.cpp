@@ -25,6 +25,23 @@ BasicPSApp::~BasicPSApp() {
 
 // ------------------------------------------------------------------------- //
 
+void BasicPSApp::run() {
+
+  init();
+
+  // Render Loop
+  {
+    input();
+    update();
+    render();
+  }
+
+  shutDown();
+
+}
+
+// ------------------------------------------------------------------------- //
+
 void BasicPSApp::init() {
 
   resource_manager_ = new ResourceManager();
@@ -44,6 +61,24 @@ void BasicPSApp::shutDown() {
 
   delete render_manager_;
   delete resource_manager_;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::input() {
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::update() {
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::render() {
 
 }
 

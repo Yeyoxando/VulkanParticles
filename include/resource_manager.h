@@ -90,19 +90,4 @@ private:
 
 // ------------------------------------------------------------------------- // 
 
- /* Other classes to create
-Scene
- - ...
- - ...
-
-Object?
- - Different to particles, to represent a model or another geometry with a simple material
- - ...
- 
-Editor
- - ImGUI
- - Scene mode and editor mode 
-
-*/
-
 #endif // __RESOURCE_MANAGER_H__

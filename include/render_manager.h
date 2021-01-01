@@ -12,6 +12,12 @@
 // Includes
 
 // ------------------------------------------------------------------------- // 
+/*
+ - Change uniforms by object (One set changed by object), 
+   and by world, one time for scene (as camera mat or lights)
+ -
+   
+*/
 
 class RenderManager {
 public:
