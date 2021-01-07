@@ -1,26 +1,24 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 25/11/2020
+ *  Date: 05/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
  
 // ------------------------------------------------------------------------- // 
 
 #include "common_def.h"
-#ifdef MAIN_HELLO_TRIANGLE
+#ifdef MAIN_BILLBOARDS
 
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 
-#include "hello_triangle_app.h"
+#include "basic_ps_app.h"
 
 int main(){
 
-  HelloTriangleApp hello_triangle;
-
   try {
-    hello_triangle.run();
+    BasicPSApp::instance().run();
   }
   catch(const std::exception& e) {
     printf(e.what());

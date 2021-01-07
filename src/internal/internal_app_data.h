@@ -1,14 +1,21 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 05/12/2020
+ *  Date: 07/01/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
-// ------------------------------------------------------------------------- // 
+#ifndef __INTERNAL_APP_DATA_H__
+#define __INTERNAL_APP_DATA_H__
 
-#include "billboards_app.h"
+// ------------------------------------------------------------------------- //
+
+#include "common_def.h"
 #include "vulkan_utils.h"
 
+#include <GLFW/glfw3.h>
+
+#include <optional>
+#include <array>
 #include <stdexcept>
 #include <cstring>
 #include <vector>
@@ -16,6 +23,8 @@
 #include <chrono>
 #include <unordered_map>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <stb_image.h>
@@ -23,9 +32,325 @@
 
 //#define LOAD_BILLBOARD 1
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-BillboardsApp::BillboardsApp() {
+struct QueueFamilyIndices {
+  std::optional<uint32_t> graphics_family;
+  std::optional<uint32_t> present_family;
+
+  bool isComplete() {
+    return graphics_family.has_value() && present_family.has_value();
+  }
+};
+
+// ------------------------------------------------------------------------- //
+
+struct SwapChainSupportDetails {
+  VkSurfaceCapabilitiesKHR capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> present_modes;
+};
+
+// ------------------------------------------------------------------------- //
+
+struct Vertex {
+
+  glm::vec3 position;
+  glm::vec3 color;
+  glm::vec2 tex_coord;
+
+  static VkVertexInputBindingDescription getBindingDescription() {
+    VkVertexInputBindingDescription binding_desc{};
+    binding_desc.binding = 0;
+    binding_desc.stride = sizeof(Vertex);
+    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return binding_desc;
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription() {
+    std::array<VkVertexInputAttributeDescription, 3> attribute_descs{};
+    attribute_descs[0].binding = 0;
+    attribute_descs[0].location = 0;
+    attribute_descs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descs[0].offset = offsetof(Vertex, position);
+
+    attribute_descs[1].binding = 0;
+    attribute_descs[1].location = 1;
+    attribute_descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descs[1].offset = offsetof(Vertex, color);
+
+    attribute_descs[2].binding = 0;
+    attribute_descs[2].location = 2;
+    attribute_descs[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attribute_descs[2].offset = offsetof(Vertex, tex_coord);
+
+    return attribute_descs;
+  }
+
+  bool operator ==(const Vertex& other) const {
+    return position == other.position && color == other.color && tex_coord == other.tex_coord;
+  }
+
+};
+
+// ------------------------------------------------------------------------- //
+
+// Custom implementation for adding compatibility with Vertex struct and unordered maps
+namespace std {
+  template<> struct hash<Vertex> {
+    size_t operator()(Vertex const& vertex) const {
+      return ((hash<glm::vec3>()(vertex.position) ^
+        (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+        (hash<glm::vec2>()(vertex.tex_coord) << 1);
+    }
+  };
+};
+
+// ------------------------------------------------------------------------- //
+
+// Example for Uniforms for the shaders
+struct UniformBufferObject {
+  glm::mat4x4 model;
+  glm::mat4x4 view;
+  glm::mat4x4 projection;
+
+  /*
+   * Scalars have to be aligned by N (= 4 bytes given 32 bit floats).
+   * A vec2 must be aligned by 2N (= 8 bytes)
+   * A vec3 or vec4 must be aligned by 4N (= 16 bytes)
+   * A nested structure must be aligned by the base alignment of its members rounded up to a multiple of 16.
+   * A mat4 matrix must have the same alignment as a vec4.
+   * alignas(bytes) could be used to fix this but better nope
+   */
+
+   /*
+    * For binding multiple descriptors, for example per object or shared descriptors
+    * look at the final section of the Vulkan tutorial chapter 'descriptor pool and sets'
+    */
+
+};
+
+// ------------------------------------------------------------------------- //
+
+// All data used in the application, the majority are Vulkan elements
+
+struct BasicPSApp::AppData {
+  // - Order variables in good order: resources, render, and structure
+
+  // -- Window variables --
+  GLFWwindow* window_;
+
+  int window_width_;
+  int window_height_;
+
+  // -- Vulkan variables --
+  VkInstance instance_;
+  VkDebugUtilsMessengerEXT debug_messenger_;
+  VkPhysicalDevice physical_device_; // GPU
+  VkDevice logical_device_;
+  VkQueue graphics_queue_;
+  VkQueue present_queue_;
+  VkSurfaceKHR surface_; //Abstract window
+  VkSwapchainKHR swap_chain_;
+  std::vector<VkImage> swap_chain_images_;
+  VkFormat swap_chain_image_format_;
+  VkExtent2D swap_chain_extent_;
+  std::vector<VkImageView> swap_chain_image_views_;
+  VkRenderPass render_pass_;
+  VkDescriptorSetLayout descriptor_set_layout_;
+  VkPipelineLayout pipeline_layout_;
+  VkPipeline  graphics_pipeline_;
+  std::vector<VkFramebuffer> swap_chain_framebuffers_;
+  VkCommandPool command_pool_;
+  std::vector<VkCommandBuffer> command_buffers_;
+  std::vector<VkSemaphore> available_image_semaphores_;
+  std::vector<VkSemaphore> finished_render_semaphores_;
+  std::vector<VkFence> in_flight_fences_;
+  std::vector<VkFence> images_in_flight_;
+  int current_frame_;
+  bool resized_framebuffer_;
+  bool close_window_;
+
+  std::vector<Vertex> vertices_;
+  std::vector<uint32_t> indices_;
+  VkBuffer vertex_buffer_;
+  VkDeviceMemory vertex_buffer_memory_;
+  VkBuffer index_buffer_;
+  VkDeviceMemory index_buffer_memory_;
+  std::vector<VkBuffer> uniform_buffers_;
+  std::vector<VkDeviceMemory> uniform_buffers_memory_;
+  VkDescriptorPool descriptor_pool_;
+  std::vector<VkDescriptorSet> descriptor_sets_;
+  VkImage texture_image_;
+  VkDeviceMemory texture_image_memory_;
+  VkImageView texture_image_view_;
+  VkSampler texture_sampler_;
+  VkImage depth_image_;
+  VkDeviceMemory depth_image_memory_;
+  VkImageView depth_image_view_;
+
+  // -- Resource variables --
+  // buffers, images, etc
+
+  // -- MSAA --
+  VkSampleCountFlagBits msaa_samples_;
+  VkImage color_image_;
+  VkDeviceMemory color_image_memory_;
+  VkImageView color_image_view_;
+
+  // -- Constructor --
+  AppData();
+
+  // -- Init and close --
+  // Initializes GLFW and creates a window
+  void initWindow(int width = 800, int height = 600);
+  // Allocates all the necessary vulkan resources
+  void initVulkan();
+  // Waits for the device to finish, call it after render loop finishes
+  void renderLoopEnd();
+  // Frees all the allocated resources and close the app
+  void closeVulkan();
+
+  // -- VULKAN SETUP --
+  // Creates a Vulkan instance and checks for extensions support
+  void createInstance();
+  // Creates a surface handle for the current window
+  void createSurface();
+  // Select a physical device that supports the requested features
+  void pickPhysicalDevice();
+  // Creates a logical device for the selected physical device
+  void createLogicalDevice();
+  // Creates the swap chain
+  void createSwapChain();
+  // create a image view resource
+  VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
+  // Create the image views for he swap chain images
+  void createImageViews();
+  // Creates the render pass for the graphics pipeline
+  void createRenderPass();
+  // Creates the descriptor layout to upload uniforms to the shader
+  void createDescriptorSetLayout();
+  // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
+  void createGraphicsPipeline();
+  // Create a shader module with the given bytecode
+  VkShaderModule createShaderModule(const std::vector<char>& bytecode);
+  // Creates the framebuffers used for rendering
+  void createFramebuffers();
+  // Creates a command pool for manage the memory of the command buffers 
+  void createCommandPool();
+  // Creates the color framebuffer resources for multi-sampling
+  void createColorResources();
+  // Creates the depth resources for depth testing
+  void createDepthResources();
+  // Creates an image from a texture
+  void createTextureImage(const char* texture_path);
+  // Creates the image view for the texture
+  void createTextureImageView();
+  // Creates the sampler for texture filtering and shader reading
+  void createTextureSampler();
+  // Loads a OBJ model
+  void loadModel(const char* model_path);
+  // Creates the vertex buffers for the app and map their memory to the GPU
+  void createVertexBuffers();
+  // Creates the index buffers for the app and map their memory to the GPU
+  void createIndexBuffers();
+  // Creates the uniform buffers for the app
+  void createUniformBuffers();
+  // Creates a descriptor pool to allocate the descriptor sets for the uniforms
+  void createDescriptorPool();
+  // Creates the descriptor sets for the uniform buffers
+  void createDescriptorSets();
+  // Creates the command buffers for each swap chain framebuffer
+  void createCommandBuffers();
+  // Creates the semaphores needed for rendering
+  void createSyncObjects();
+
+  // -- Vulkan Resources --
+  // Creates a vulkan image
+  void createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling,
+    VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory);
+  // Creates a buffer and allocate its memory
+  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
+  // Copy a buffer from the cpu to the device local memory through a staging buffer
+  void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+  // Copies a buffer into an image
+  void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+  // -- Frame --
+  // Updates frame logic
+  void updateFrame();
+  // Updates the uniform buffers and map their memory
+  void updateUniformBuffers(uint32_t current_image);
+  // Draw using the recorded command buffers
+  void drawFrame();
+
+  // -- Swap chain recreation --
+  // Recreate the swap chain to make it compatible with the current requirements
+  void recreateSwapChain();
+  // Cleans all the swapchain objects
+  void cleanupSwapChain();
+  // GLFW callback for window resize
+  static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+  // -- Helper functions --
+  // Check if the device fits with the necessary operations
+  bool isDeviceSuitable(VkPhysicalDevice device);
+  // Return true if the selected depth format has a stencil component
+  bool hasStencilComponent(VkFormat format);
+  // Queries which swap chain details are supported on the device
+  SwapChainSupportDetails querySwapChainSupportDetails(VkPhysicalDevice device);
+  // Chooses the best swap chain surface formats from the available
+  VkSurfaceFormatKHR chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats);
+  // Chooses the best swap chain surface present mode from the available
+  VkPresentModeKHR  chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes);
+  // Choose a swap chain extent (resolution) with the device capabilities
+  VkExtent2D chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+  // Get GLFW required extensions
+  std::vector<const char*> getRequiredExtensions();
+  // Checks if the selected validation layers are supported
+  bool checkValidationLayerSupport();
+  // Creates a custom debug messenger
+  void setupDebugMessenger();
+  // Fills the messenger info struct
+  void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
+  // Debug callback to interpret validation layers messages
+  static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData);
+  // Begin a list of single time commands and return it
+  VkCommandBuffer beginSingleTimeCommands();
+  // end the list of single time commands
+  void endSingleTimeCommands(VkCommandBuffer cmd_buffer);
+  // Handles layout transitions
+  void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
+  // Find the memory type for the given type filter
+  uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
+  // Find a supported image format with a list of candidates
+  VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+  // Check if the extensions are supported on the device
+  bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+  // Checks which queue families are supported on the device
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+  // Find a depth format
+  VkFormat findDepthFormat();
+
+// -- MSAA -- 
+  // Get the maximum number of samples supported by physical device
+  VkSampleCountFlagBits getMaxUsableSampleCount();
+
+};
+
+// ------------------------------------------------------------------------- //
+
+// ------------------------------------------------------------------------- //
+
+// ----------------------- Functions definition ---------------------------- //
+
+BasicPSApp::AppData::AppData() {
 
   window_ = nullptr;
   window_width_ = 0;
@@ -45,14 +370,14 @@ BillboardsApp::BillboardsApp() {
   pipeline_layout_ = VK_NULL_HANDLE;
   graphics_pipeline_ = VK_NULL_HANDLE;
   command_pool_ = VK_NULL_HANDLE;
-  
+
   vertex_buffer_ = VK_NULL_HANDLE;
   vertex_buffer_memory_ = VK_NULL_HANDLE;
   index_buffer_ = VK_NULL_HANDLE;
   index_buffer_memory_ = VK_NULL_HANDLE;
-  
+
   descriptor_pool_ = VK_NULL_HANDLE;
-  
+
   texture_image_ = VK_NULL_HANDLE;
   texture_image_memory_ = VK_NULL_HANDLE;;
   texture_image_view_ = VK_NULL_HANDLE;
@@ -71,32 +396,11 @@ BillboardsApp::BillboardsApp() {
   resized_framebuffer_ = false;
   close_window_ = false;
 
-  camera_ = new Camera();
-  input_ = new InputManager();
-
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-BillboardsApp::~BillboardsApp() {
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::run() {
-
-  initWindow();
-
-  initVulkan();
-  renderLoop();
-  close();
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
+void BasicPSApp::AppData::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwInit();
 
@@ -105,7 +409,7 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-  window_ = glfwCreateWindow(width, height, "Hello Billboards", nullptr, nullptr);
+  window_ = glfwCreateWindow(width, height, "Hello Particles", nullptr, nullptr);
   window_width_ = width;
   window_height_ = height;
 
@@ -115,24 +419,24 @@ void BillboardsApp::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::initVulkan() {
+void BasicPSApp::AppData::initVulkan() {
 
-  vertices_ = { 
+  vertices_ = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
     {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-// 
-//     {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-//     {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-//     {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-//     {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+    // 
+    //     {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    //     {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    //     {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    //     {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
   };
 
-  indices_ = {0, 1, 2, 2, 3, 0,
-  //            4, 5, 6, 6, 7, 4 
+  indices_ = { 0, 1, 2, 2, 3, 0,
+    //            4, 5, 6, 6, 7, 4 
   };
 
   createInstance();
@@ -169,36 +473,20 @@ void BillboardsApp::initVulkan() {
   createCommandBuffers();
   createSyncObjects();
 
-  input_->init(window_);
-
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::renderLoop() {
-
-  while (!glfwWindowShouldClose(window_) && !close_window_) {
-    
-    glfwPollEvents();
-
-    updateFrame();
-
-    drawFrame();
-
-  }
+void BasicPSApp::AppData::renderLoopEnd() {
 
   // Wait until the device is on idle so we can clean up resources without being in use
   vkDeviceWaitIdle(logical_device_);
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::close() {
-
-  // Program cleanup
-  delete input_;
-  delete camera_;
+void BasicPSApp::AppData::closeVulkan() {
 
   // Vulkan cleanup
   cleanupSwapChain();
@@ -225,7 +513,7 @@ void BillboardsApp::close() {
   vkDestroyCommandPool(logical_device_, command_pool_, nullptr);
 
   vkDestroyDevice(logical_device_, nullptr);
-  
+
   vkDestroySurfaceKHR(instance_, surface_, nullptr);
 
   if (kEnableValidationLayers) {
@@ -240,9 +528,9 @@ void BillboardsApp::close() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createInstance() {
+void BasicPSApp::AppData::createInstance() {
 
   // Check for validation layers
   if (kEnableValidationLayers && !checkValidationLayerSupport()) {
@@ -271,10 +559,10 @@ void BillboardsApp::createInstance() {
   if (kEnableValidationLayers) {
     create_info.enabledLayerCount = static_cast<uint32_t>(kVkValidationLayers.size());
     create_info.ppEnabledLayerNames = kVkValidationLayers.data();
-    
+
     // Enable debug messenger for the instance
     populateDebugMessengerCreateInfo(debug_create_info);
-    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debug_create_info;
+    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
   }
   else {
     create_info.enabledLayerCount = 0;
@@ -288,7 +576,7 @@ void BillboardsApp::createInstance() {
   // Report available vulkan extensions
   uint32_t available_extensions = 0;
   vkEnumerateInstanceExtensionProperties(nullptr, &available_extensions, nullptr);
-  
+
   std::vector<VkExtensionProperties> extension_properties(available_extensions);
   vkEnumerateInstanceExtensionProperties(nullptr, &available_extensions, extension_properties.data());
 
@@ -299,122 +587,9 @@ void BillboardsApp::createInstance() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-std::vector<const char*> BillboardsApp::getRequiredExtensions() {
-
-  // Get supported extensions
-  uint32_t glfw_extension_count = 0;
-  const char** glfw_extensions;
-  glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
-
-  std::vector<const char*> extensions(glfw_extensions, glfw_extensions + glfw_extension_count);
-
-  // Be sure to add EXT_DEBUG_UTILS if validation layers are enabled
-  if (kEnableValidationLayers) {
-    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-  }
-
-  return extensions;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-bool BillboardsApp::checkValidationLayerSupport() {
-
-  // Count available layers
-  uint32_t layers_count = 0;
-  vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
-
-  // Request available layers data
-  std::vector<VkLayerProperties> layer_properties(layers_count);
-  vkEnumerateInstanceLayerProperties(&layers_count, layer_properties.data());
-
-  // Iterate over requested layers and check if they are available
-  for (uint32_t i = 0; i < kVkValidationLayers.size(); ++i){
-    bool found_layer = false;
-
-    for (uint32_t l = 0; l < layers_count; ++l) {
-      if (strcmp(kVkValidationLayers[i], layer_properties[l].layerName) == 0) {
-        found_layer = true;
-        break;
-      }
-    }
-
-    if (!found_layer) {
-      return false;
-    }
-  }
-
-  return true;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::setupDebugMessenger() {
-
-  if (!kEnableValidationLayers) return;
-
-  VkDebugUtilsMessengerCreateInfoEXT messenger_info;
-  populateDebugMessengerCreateInfo(messenger_info);
-
-  if (CreateDebugUtilsMessengerEXT(instance_, &messenger_info, nullptr, &debug_messenger_) != VK_SUCCESS) {
-    throw std::runtime_error("Debug Messenger creation has failed.");
-  }
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
-  
-  create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  create_info.pfnUserCallback = debugCallback;
-  create_info.pUserData = nullptr;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VKAPI_ATTR VkBool32 VKAPI_CALL BillboardsApp::debugCallback(
-  VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
-  VkDebugUtilsMessageTypeFlagsEXT messageType, 
-  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
-  void* pUserData) {
-
-  // Not finished, it could show the information of other lot of things
-  // it could even show it trough a log in the app, which can be divided in different message sections
-
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-    //printf("\nValidation layer (VERBOSE): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    //printf("\nValidation layer (INFO): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    printf("\nValidation layer (WARNING): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    printf("\nValidation layer (ERROR): %s.", pCallbackData->pMessage);
-  }
-
-  return VK_FALSE;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::createSurface() {
+void BasicPSApp::AppData::createSurface() {
 
   if (glfwCreateWindowSurface(instance_, window_, nullptr, &surface_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface.");
@@ -422,14 +597,14 @@ void BillboardsApp::createSurface() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::pickPhysicalDevice() {
+void BasicPSApp::AppData::pickPhysicalDevice() {
 
   // Request available physical devices (graphics cards)
   uint32_t device_count = 0;
   vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
-  
+
   if (device_count == 0) {
     throw std::runtime_error("The device does not have any GPUs supporting Vulkan.");
   }
@@ -451,198 +626,9 @@ void BillboardsApp::pickPhysicalDevice() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-bool BillboardsApp::isDeviceSuitable(VkPhysicalDevice device) {
-
-  // Basic device properties
-  VkPhysicalDeviceProperties device_properties;
-  vkGetPhysicalDeviceProperties(device, &device_properties);
-
-  // Tex compression, 64-bit floats and multi-viewport rendering
-  VkPhysicalDeviceFeatures device_features;
-  vkGetPhysicalDeviceFeatures(device, &device_features);
-
-  // Return false if a requested feature isnot supported
-  if (!device_features.samplerAnisotropy) {
-    return false;
-  }
-
-  // Check if device supports graphic and present queues
-  QueueFamilyIndices indices = findQueueFamilies(device);
-
-  // Check if the required extensions are supported
-  bool extensions_supported = checkDeviceExtensionSupport(device);
-   
-  // Check if the swap chain details are adequate on the device
-  bool adequate_swap_chain = false;
-  if (extensions_supported) {
-    SwapChainSupportDetails details = querySwapChainSupportDetails(device);
-    adequate_swap_chain = !details.formats.empty() && !details.present_modes.empty();
-  }
-
-  // Expand this function with necessary features
-
-  return indices.isComplete() && extensions_supported && adequate_swap_chain;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-bool BillboardsApp::checkDeviceExtensionSupport(VkPhysicalDevice device) {
-
-  // Get supported device properties
-  uint32_t extension_count;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-
-  std::vector<VkExtensionProperties> available_extensions(extension_count);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
-
-  std::set<std::string> required_extensions(kDeviceExtensions.begin(), kDeviceExtensions.end());
-
-  // Delete the extension from the required extension vector if they are available
-  for (uint32_t i = 0; i < available_extensions.size(); i++) {
-    required_extensions.erase(available_extensions[i].extensionName);
-  }
-
-  // If the required extensions vector was emptied it means that they are supported
-  return required_extensions.empty();
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-QueueFamilyIndices BillboardsApp::findQueueFamilies(VkPhysicalDevice device) {
-  
-  QueueFamilyIndices indices;
-
-  // Get device family queue properties
-  uint32_t queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
-
-  std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
-
-  for (uint32_t i = 0; i < queue_families.size(); i++) {
-    // Check if graphics queue is supported
-    if (queue_families[i].queueFlags && VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphics_family = i;
-    }
-
-    // Check if present queue is supported
-    VkBool32 present_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present_support);
-    if (present_support) {
-      indices.present_family = i;
-    }
-
-    // Break if both are found
-    if (indices.isComplete()) {
-      break;
-    }
-  }
-
-  return indices;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-SwapChainSupportDetails BillboardsApp::querySwapChainSupportDetails(VkPhysicalDevice device) {
-
-  SwapChainSupportDetails details;
-
-  // Request device supported capabilities
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface_, &details.capabilities);
-
-  // Request device supported formats
-  uint32_t formats_count;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, nullptr);
-  if (formats_count != 0) {
-    details.formats.resize(formats_count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, details.formats.data());
-  }
-
-  // Request device supported present modes
-  uint32_t present_modes_count;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, nullptr);
-  if (present_modes_count != 0) {
-    details.present_modes.resize(present_modes_count);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, details.present_modes.data());
-  }
-
-  return details;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VkSurfaceFormatKHR BillboardsApp::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
-
-  // Search if any of the available formats has the desired features
-  for (int i = 0; i < available_formats.size(); i++) {
-    if (available_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
-      available_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-    
-      return available_formats[i];
-    
-    }
-  }
-
-  // If not fits we could tank the available formats to choose the better one
-  // Just pick the first one in this case
-  return available_formats[0];
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VkPresentModeKHR BillboardsApp::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
-
-  // Search if any of the available present modes are mailbox (triple buffering support)
-  for (int i = 0; i < available_present_modes.size(); i++) {
-    if (available_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-      return available_present_modes[i];
-    }
-  }
-
-  // Always available (double buffering)
-  return VK_PRESENT_MODE_FIFO_KHR;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VkExtent2D BillboardsApp::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-
-  if (capabilities.currentExtent.width != UINT32_MAX) {
-    // Some window managers set this by default, if is not equal to this it can be modified
-    return capabilities.currentExtent;
-  }
-  else {
-    // Choose best window resolution fit between the current and min/max image extent
-    int width;
-    int height;
-    glfwGetFramebufferSize(window_, &width, &height);
-
-    VkExtent2D window_extent = {
-      static_cast<uint32_t>(width),
-      static_cast<uint32_t>(height)
-    };
-
-    window_extent.width = std::max(capabilities.minImageExtent.width,
-      std::min(capabilities.maxImageExtent.width, window_extent.width));
-    window_extent.height = std::max(capabilities.minImageExtent.height,
-      std::min(capabilities.maxImageExtent.height, window_extent.height));
-
-    return window_extent;
-  }
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::createLogicalDevice() {
+void BasicPSApp::AppData::createLogicalDevice() {
 
   // Create needed queues
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
@@ -650,8 +636,8 @@ void BillboardsApp::createLogicalDevice() {
 
   // Store unique queues
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-  std::set<uint32_t> unique_queue_families = {indices.graphics_family.value(), 
-    indices.present_family.value()};
+  std::set<uint32_t> unique_queue_families = { indices.graphics_family.value(),
+    indices.present_family.value() };
 
   // Create unique queues create info
   for (uint32_t queue_family : unique_queue_families) {
@@ -697,9 +683,9 @@ void BillboardsApp::createLogicalDevice() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createSwapChain() {
+void BasicPSApp::AppData::createSwapChain() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -736,7 +722,7 @@ void BillboardsApp::createSwapChain() {
     create_info.queueFamilyIndexCount = 2; // Indicate number of shared families
     create_info.pQueueFamilyIndices = queue_family_indices; // Shared families
   }
-  else{
+  else {
     // Used exclusively in one queue
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     create_info.queueFamilyIndexCount = 0; // Optional
@@ -767,9 +753,9 @@ void BillboardsApp::createSwapChain() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
+VkImageView BasicPSApp::AppData::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
 
   VkImageViewCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -799,9 +785,9 @@ VkImageView BillboardsApp::createImageView(VkImage image, VkFormat format, VkIma
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createImageViews() {
+void BasicPSApp::AppData::createImageViews() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -813,9 +799,9 @@ void BillboardsApp::createImageViews() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createRenderPass() {
+void BasicPSApp::AppData::createRenderPass() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -883,7 +869,7 @@ void BillboardsApp::createRenderPass() {
   subpass_dependency.srcAccessMask = 0;
   subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
+  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
   // Create the render pass
@@ -903,9 +889,9 @@ void BillboardsApp::createRenderPass() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createDescriptorSetLayout() {
+void BasicPSApp::AppData::createDescriptorSetLayout() {
 
   // Create the binding for the vertex shader MVP matrices
   VkDescriptorSetLayoutBinding ubo_layout_binding{};
@@ -935,9 +921,9 @@ void BillboardsApp::createDescriptorSetLayout() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createGraphicsPipeline() {
+void BasicPSApp::AppData::createGraphicsPipeline() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -953,7 +939,7 @@ void BillboardsApp::createGraphicsPipeline() {
   auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_triangle.spv");
   auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
 #endif
-  
+
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
 
@@ -1130,10 +1116,10 @@ void BillboardsApp::createGraphicsPipeline() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-VkShaderModule BillboardsApp::createShaderModule(const std::vector<char>& bytecode) {
-  
+VkShaderModule BasicPSApp::AppData::createShaderModule(const std::vector<char>& bytecode) {
+
   VkShaderModuleCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   create_info.codeSize = bytecode.size();
@@ -1149,9 +1135,9 @@ VkShaderModule BillboardsApp::createShaderModule(const std::vector<char>& byteco
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createFramebuffers() {
+void BasicPSApp::AppData::createFramebuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1163,7 +1149,7 @@ void BillboardsApp::createFramebuffers() {
       depth_image_view_,
       swap_chain_image_views_[i],
     };
-  
+
     VkFramebufferCreateInfo framebuffer_info{};
     framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_info.renderPass = render_pass_;
@@ -1180,9 +1166,9 @@ void BillboardsApp::createFramebuffers() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createCommandPool() {
+void BasicPSApp::AppData::createCommandPool() {
 
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
 
@@ -1197,9 +1183,9 @@ void BillboardsApp::createCommandPool() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createColorResources() {
+void BasicPSApp::AppData::createColorResources() {
 
   VkFormat format = swap_chain_image_format_;
 
@@ -1210,9 +1196,9 @@ void BillboardsApp::createColorResources() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createDepthResources() {
+void BasicPSApp::AppData::createDepthResources() {
 
   VkFormat format = findDepthFormat();
 
@@ -1226,9 +1212,9 @@ void BillboardsApp::createDepthResources() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createTextureImage(const char* texture_path) {
+void BasicPSApp::AppData::createTextureImage(const char* texture_path) {
 
   int tex_width;
   int tex_height;
@@ -1278,17 +1264,17 @@ void BillboardsApp::createTextureImage(const char* texture_path) {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createTextureImageView() {
+void BasicPSApp::AppData::createTextureImageView() {
 
   texture_image_view_ = createImageView(texture_image_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createTextureSampler() {
+void BasicPSApp::AppData::createTextureSampler() {
 
   VkSamplerCreateInfo sampler_info{};
   sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1319,86 +1305,9 @@ void BillboardsApp::createTextureSampler() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling,
-  VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory) {
-
-  VkImageCreateInfo image_info{};
-  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.imageType = VK_IMAGE_TYPE_2D;
-  image_info.extent.width = width;
-  image_info.extent.height = height;
-  image_info.extent.depth = 1;
-  image_info.mipLevels = 1;
-  image_info.arrayLayers = 1;
-  image_info.format = format;
-  image_info.tiling = tiling;
-  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  image_info.usage = usage;
-  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_info.samples = samples_count;
-  image_info.flags = 0;
-
-  if (vkCreateImage(logical_device_, &image_info, nullptr, &image) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create texture image.");
-  }
-
-  // Request memory requirements
-  VkMemoryRequirements requirements;
-  vkGetImageMemoryRequirements(logical_device_, image, &requirements);
-
-  VkMemoryAllocateInfo alloc_info{};
-  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.allocationSize = requirements.size;
-  alloc_info.memoryTypeIndex = findMemoryType(requirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(logical_device_, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate image memory.");
-  }
-
-  vkBindImageMemory(logical_device_, image, image_memory, 0);
-
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
-
-  // Create the  buffer
-  VkBufferCreateInfo buffer_info{};
-  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buffer_info.flags = 0;
-  buffer_info.size = size;
-  buffer_info.usage = usage;
-  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  if (vkCreateBuffer(logical_device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create buffer.");
-  }
-
-  // Find memory requirements and allocate memory
-  VkMemoryRequirements mem_requirements;
-  vkGetBufferMemoryRequirements(logical_device_, buffer, &mem_requirements);
-
-  VkMemoryAllocateInfo allocate_info{};
-  allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocate_info.allocationSize = mem_requirements.size;
-  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate device memory for buffer.");
-  }
-
-  // Bind buffer and memory together
-  vkBindBufferMemory(logical_device_, buffer, memory, 0);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::loadModel(const char* model_path) {
+void BasicPSApp::AppData::loadModel(const char* model_path) {
 
   // Load model from file
   tinyobj::attrib_t attrib;
@@ -1445,9 +1354,9 @@ void BillboardsApp::loadModel(const char* model_path) {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createVertexBuffers() {
+void BasicPSApp::AppData::createVertexBuffers() {
 
   // Driver developers says that buffers should be created in only one VkBuffer
   // and use them with the offset properties that are in the functions
@@ -1457,7 +1366,7 @@ void BillboardsApp::createVertexBuffers() {
   VkDeviceSize buffer_size = sizeof(vertices_[0]) * vertices_.size();
   VkBuffer staging_buffer;
   VkDeviceMemory staging_buffer_memory;
-  
+
   createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     staging_buffer, staging_buffer_memory);
@@ -1486,9 +1395,9 @@ void BillboardsApp::createVertexBuffers() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createIndexBuffers() {
+void BasicPSApp::AppData::createIndexBuffers() {
 
   // Create a staging buffer and allocate its memory
   VkDeviceSize buffer_size = sizeof(indices_[0]) * indices_.size();
@@ -1518,9 +1427,9 @@ void BillboardsApp::createIndexBuffers() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createUniformBuffers() {
+void BasicPSApp::AppData::createUniformBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1537,9 +1446,9 @@ void BillboardsApp::createUniformBuffers() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createDescriptorPool() {
+void BasicPSApp::AppData::createDescriptorPool() {
 
   // Create descriptor pool
   std::array<VkDescriptorPoolSize, 2> pool_sizes{};
@@ -1560,9 +1469,9 @@ void BillboardsApp::createDescriptorPool() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createDescriptorSets() {
+void BasicPSApp::AppData::createDescriptorSets() {
 
   // Allocate the descriptor sets
   std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), descriptor_set_layout_);
@@ -1607,170 +1516,18 @@ void BillboardsApp::createDescriptorSets() {
     write_descriptors[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     write_descriptors[1].descriptorCount = 1;
     write_descriptors[1].pBufferInfo = nullptr; // Buffer data
-    write_descriptors[1].pImageInfo = &image_info; 
+    write_descriptors[1].pImageInfo = &image_info;
     write_descriptors[1].pTexelBufferView = nullptr; // Buffer views
 
-    vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()), 
+    vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()),
       write_descriptors.data(), 0, nullptr);
   }
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
-
-  VkCommandBuffer command_buffer = beginSingleTimeCommands();
-
-  VkBufferCopy copy_region{};
-  copy_region.srcOffset = 0;
-  copy_region.dstOffset = 0;
-  copy_region.size = size;
-  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
-
-  endSingleTimeCommands(command_buffer);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VkCommandBuffer BillboardsApp::beginSingleTimeCommands() {
-
-  // Temporary command buffer to perform the operations
-  VkCommandBufferAllocateInfo temp_cmd_buffer_info{};
-  temp_cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  temp_cmd_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  temp_cmd_buffer_info.commandPool = command_pool_;
-  temp_cmd_buffer_info.commandBufferCount = 1;
-
-  VkCommandBuffer temp_command_buffer;
-  vkAllocateCommandBuffers(logical_device_, &temp_cmd_buffer_info, &temp_command_buffer);
-
-  // Start recording the cmd buffer
-  VkCommandBufferBeginInfo begin_info{};
-  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  vkBeginCommandBuffer(temp_command_buffer, &begin_info);
-
-  return temp_command_buffer;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::endSingleTimeCommands(VkCommandBuffer cmd_buffer) {
-
-  // Finish recording command buffer
-  vkEndCommandBuffer(cmd_buffer);
-
-  // Submit the buffer to execution
-  VkSubmitInfo submit_info{};
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmd_buffer;
-
-  // Graphics queue support transfer commands, not necessary to have a separated queue
-  vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphics_queue_);
-
-  // Free the temp command buffer
-  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &cmd_buffer);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
-
-  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
-
-  VkImageMemoryBarrier barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout = old_layout;
-  barrier.newLayout = new_layout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = image;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = 1;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
-
-  VkPipelineStageFlags source_stage;
-  VkPipelineStageFlags destination_stage;
-
-  if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (hasStencilComponent(format)) {
-      barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-  }
-  else {
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  }
-
-
-  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    barrier.srcAccessMask = 0; 
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; 
-    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  }
-  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; 
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; 
-    source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  }
-  else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  }
-  else {
-    throw std::runtime_error("Unsupported layout transition.");
-  }
-
-  vkCmdPipelineBarrier(cmd_buffer, source_stage, destination_stage,
-    0, 0, nullptr,
-    0, nullptr, 1, &barrier);
-
-  endSingleTimeCommands(cmd_buffer);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-
-  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
-
-  VkBufferImageCopy region{};
-  region.bufferOffset = 0;
-  region.bufferRowLength = 0;
-  region.bufferImageHeight = 0;
-
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-
-  region.imageOffset = { 0, 0, 0 };
-  region.imageExtent = { width, height, 1 };
-
-  vkCmdCopyBufferToImage(cmd_buffer, buffer, image,
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-  endSingleTimeCommands(cmd_buffer);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void BillboardsApp::createCommandBuffers() {
+void BasicPSApp::AppData::createCommandBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1820,12 +1577,12 @@ void BillboardsApp::createCommandBuffers() {
     VkBuffer vertex_buffers[] = { vertex_buffer_ };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
-    
+
     vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT32);
-    
-    vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+
+    vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
-    
+
     vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -1837,9 +1594,9 @@ void BillboardsApp::createCommandBuffers() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::createSyncObjects() {
+void BasicPSApp::AppData::createSyncObjects() {
 
   available_image_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
   finished_render_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1856,7 +1613,7 @@ void BillboardsApp::createSyncObjects() {
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     if ((vkCreateSemaphore(logical_device_, &semaphore_info, nullptr, &available_image_semaphores_[i]) ||
       vkCreateSemaphore(logical_device_, &semaphore_info, nullptr, &finished_render_semaphores_[i]) ||
-      vkCreateFence(logical_device_, &fence_info, nullptr, &in_flight_fences_[i])) 
+      vkCreateFence(logical_device_, &fence_info, nullptr, &in_flight_fences_[i]))
       != VK_SUCCESS) {
       throw std::runtime_error("Failed to create synchronization objects for a frame.");
     }
@@ -1864,9 +1621,126 @@ void BillboardsApp::createSyncObjects() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::updateFrame() {
+void BasicPSApp::AppData::createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory) {
+
+  VkImageCreateInfo image_info{};
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.extent.width = width;
+  image_info.extent.height = height;
+  image_info.extent.depth = 1;
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.format = format;
+  image_info.tiling = tiling;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.usage = usage;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_info.samples = samples_count;
+  image_info.flags = 0;
+
+  if (vkCreateImage(logical_device_, &image_info, nullptr, &image) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create texture image.");
+  }
+
+  // Request memory requirements
+  VkMemoryRequirements requirements;
+  vkGetImageMemoryRequirements(logical_device_, image, &requirements);
+
+  VkMemoryAllocateInfo alloc_info{};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.allocationSize = requirements.size;
+  alloc_info.memoryTypeIndex = findMemoryType(requirements.memoryTypeBits, properties);
+
+  if (vkAllocateMemory(logical_device_, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate image memory.");
+  }
+
+  vkBindImageMemory(logical_device_, image, image_memory, 0);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
+
+  // Create the  buffer
+  VkBufferCreateInfo buffer_info{};
+  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_info.flags = 0;
+  buffer_info.size = size;
+  buffer_info.usage = usage;
+  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateBuffer(logical_device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create buffer.");
+  }
+
+  // Find memory requirements and allocate memory
+  VkMemoryRequirements mem_requirements;
+  vkGetBufferMemoryRequirements(logical_device_, buffer, &mem_requirements);
+
+  VkMemoryAllocateInfo allocate_info{};
+  allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocate_info.allocationSize = mem_requirements.size;
+  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits, properties);
+
+  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate device memory for buffer.");
+  }
+
+  // Bind buffer and memory together
+  vkBindBufferMemory(logical_device_, buffer, memory, 0);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
+
+  VkCommandBuffer command_buffer = beginSingleTimeCommands();
+
+  VkBufferCopy copy_region{};
+  copy_region.srcOffset = 0;
+  copy_region.dstOffset = 0;
+  copy_region.size = size;
+  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
+
+  endSingleTimeCommands(command_buffer);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+
+  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
+
+  VkBufferImageCopy region{};
+  region.bufferOffset = 0;
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+
+  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+
+  region.imageOffset = { 0, 0, 0 };
+  region.imageExtent = { width, height, 1 };
+
+  vkCmdCopyBufferToImage(cmd_buffer, buffer, image,
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+  endSingleTimeCommands(cmd_buffer);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::updateFrame() {
 
   // Calculate time since rendering started
   static auto start_time = std::chrono::high_resolution_clock::now();
@@ -1874,30 +1748,13 @@ void BillboardsApp::updateFrame() {
   auto current_time = std::chrono::high_resolution_clock::now();
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
-
-  // INPUTS
-  if (input_->getMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-    camera_->updateViewMatrix(input_->getMousePos());
-    glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_RIGHT);
-  }
-  if (!input_->getMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-    camera_->setRotating(false);
-    glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-  }
-  if (input_->getMouseScroll() > 0.05f || input_->getMouseScroll() < -0.05f) {
-      camera_->moveFront(input_->getState()->wheel_offset * 0.05f);
-      input_->getState()->wheel_offset = 0.0f;
-  }
-  if (input_->getKeyPressed(GLFW_KEY_ESCAPE)) {
-    close_window_ = true;
-  }
+  
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
+void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // Calculate time since rendering started
   /*static auto start_time = std::chrono::high_resolution_clock::now();
@@ -1910,7 +1767,7 @@ void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
   UniformBufferObject ubo{};
   ubo.model = glm::mat4(1.0f);
 
-  ubo.view = camera_->getViewMatrix();
+  ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
 
   ubo.projection = glm::perspective(glm::radians(90.0f),
     swap_chain_extent_.width / (float)swap_chain_extent_.height, 0.1f, 10.0f);
@@ -1926,9 +1783,9 @@ void BillboardsApp::updateUniformBuffers(uint32_t current_image) {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::drawFrame() {
+void BasicPSApp::AppData::drawFrame() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1962,7 +1819,7 @@ void BillboardsApp::drawFrame() {
   VkSubmitInfo submit_info{};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   VkSemaphore wait_semaphores[] = { available_image_semaphores_[current_frame_] };
-  VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
   submit_info.waitSemaphoreCount = 1;
   submit_info.pWaitSemaphores = wait_semaphores;
   submit_info.pWaitDstStageMask = wait_stages;
@@ -2003,9 +1860,9 @@ void BillboardsApp::drawFrame() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::recreateSwapChain() {
+void BasicPSApp::AppData::recreateSwapChain() {
 
   int width = 0;
   int height = 0;
@@ -2033,9 +1890,9 @@ void BillboardsApp::recreateSwapChain() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::cleanupSwapChain() {
+void BasicPSApp::AppData::cleanupSwapChain() {
 
   vkDestroyImage(logical_device_, color_image_, nullptr);
   vkDestroyImageView(logical_device_, color_image_view_, nullptr);
@@ -2049,7 +1906,7 @@ void BillboardsApp::cleanupSwapChain() {
     vkDestroyFramebuffer(logical_device_, swap_chain_framebuffers_[i], nullptr);
   }
 
-  vkFreeCommandBuffers(logical_device_, command_pool_, 
+  vkFreeCommandBuffers(logical_device_, command_pool_,
     static_cast<uint32_t>(command_buffers_.size()), command_buffers_.data());
 
   vkDestroyPipeline(logical_device_, graphics_pipeline_, nullptr);
@@ -2073,20 +1930,377 @@ void BillboardsApp::cleanupSwapChain() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-void BillboardsApp::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+void BasicPSApp::AppData::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 
-  auto app = reinterpret_cast<BillboardsApp*>(glfwGetWindowUserPointer(window));
+  auto app = reinterpret_cast<AppData*>(glfwGetWindowUserPointer(window));
   app->resized_framebuffer_ = true;
   app->window_width_ = width;
   app->window_height_ = height;
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-uint32_t BillboardsApp::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+bool BasicPSApp::AppData::isDeviceSuitable(VkPhysicalDevice device) {
+
+  // Basic device properties
+  VkPhysicalDeviceProperties device_properties;
+  vkGetPhysicalDeviceProperties(device, &device_properties);
+
+  // Tex compression, 64-bit floats and multi-viewport rendering
+  VkPhysicalDeviceFeatures device_features;
+  vkGetPhysicalDeviceFeatures(device, &device_features);
+
+  // Return false if a requested feature is not supported
+  if (!device_features.samplerAnisotropy) {
+    return false;
+  }
+
+  // Check if device supports graphic and present queues
+  QueueFamilyIndices indices = findQueueFamilies(device);
+
+  // Check if the required extensions are supported
+  bool extensions_supported = checkDeviceExtensionSupport(device);
+
+  // Check if the swap chain details are adequate on the device
+  bool adequate_swap_chain = false;
+  if (extensions_supported) {
+    SwapChainSupportDetails details = querySwapChainSupportDetails(device);
+    adequate_swap_chain = !details.formats.empty() && !details.present_modes.empty();
+  }
+
+  // Expand this function with necessary features
+
+  return indices.isComplete() && extensions_supported && adequate_swap_chain;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+bool BasicPSApp::AppData::hasStencilComponent(VkFormat format) {
+
+  return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+SwapChainSupportDetails BasicPSApp::AppData::querySwapChainSupportDetails(VkPhysicalDevice device) {
+
+  SwapChainSupportDetails details;
+
+  // Request device supported capabilities
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface_, &details.capabilities);
+
+  // Request device supported formats
+  uint32_t formats_count;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, nullptr);
+  if (formats_count != 0) {
+    details.formats.resize(formats_count);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, details.formats.data());
+  }
+
+  // Request device supported present modes
+  uint32_t present_modes_count;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, nullptr);
+  if (present_modes_count != 0) {
+    details.present_modes.resize(present_modes_count);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, details.present_modes.data());
+  }
+
+  return details;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VkSurfaceFormatKHR BasicPSApp::AppData::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
+
+  // Search if any of the available formats has the desired features
+  for (int i = 0; i < available_formats.size(); i++) {
+    if (available_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
+      available_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+
+      return available_formats[i];
+
+    }
+  }
+
+  // If not fits we could tank the available formats to choose the better one
+  // Just pick the first one in this case
+  return available_formats[0];
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VkPresentModeKHR BasicPSApp::AppData::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
+
+  // Search if any of the available present modes are mailbox (triple buffering support)
+  for (int i = 0; i < available_present_modes.size(); i++) {
+    if (available_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+      return available_present_modes[i];
+    }
+  }
+
+  // Always available (double buffering)
+  return VK_PRESENT_MODE_FIFO_KHR;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VkExtent2D BasicPSApp::AppData::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+
+  if (capabilities.currentExtent.width != UINT32_MAX) {
+    // Some window managers set this by default, if is not equal to this it can be modified
+    return capabilities.currentExtent;
+  }
+  else {
+    // Choose best window resolution fit between the current and min/max image extent
+    int width;
+    int height;
+    glfwGetFramebufferSize(window_, &width, &height);
+
+    VkExtent2D window_extent = {
+      static_cast<uint32_t>(width),
+      static_cast<uint32_t>(height)
+    };
+
+    window_extent.width = std::max(capabilities.minImageExtent.width,
+      std::min(capabilities.maxImageExtent.width, window_extent.width));
+    window_extent.height = std::max(capabilities.minImageExtent.height,
+      std::min(capabilities.maxImageExtent.height, window_extent.height));
+
+    return window_extent;
+  }
+
+}
+
+// ------------------------------------------------------------------------- //
+
+std::vector<const char*> BasicPSApp::AppData::getRequiredExtensions() {
+
+  // Get supported extensions
+  uint32_t glfw_extension_count = 0;
+  const char** glfw_extensions;
+  glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
+
+  std::vector<const char*> extensions(glfw_extensions, glfw_extensions + glfw_extension_count);
+
+  // Be sure to add EXT_DEBUG_UTILS if validation layers are enabled
+  if (kEnableValidationLayers) {
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
+
+  return extensions;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+bool BasicPSApp::AppData::checkValidationLayerSupport() {
+
+  // Count available layers
+  uint32_t layers_count = 0;
+  vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
+
+  // Request available layers data
+  std::vector<VkLayerProperties> layer_properties(layers_count);
+  vkEnumerateInstanceLayerProperties(&layers_count, layer_properties.data());
+
+  // Iterate over requested layers and check if they are available
+  for (uint32_t i = 0; i < kVkValidationLayers.size(); ++i) {
+    bool found_layer = false;
+
+    for (uint32_t l = 0; l < layers_count; ++l) {
+      if (strcmp(kVkValidationLayers[i], layer_properties[l].layerName) == 0) {
+        found_layer = true;
+        break;
+      }
+    }
+
+    if (!found_layer) {
+      return false;
+    }
+  }
+
+  return true;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::setupDebugMessenger() {
+
+  if (!kEnableValidationLayers) return;
+
+  VkDebugUtilsMessengerCreateInfoEXT messenger_info;
+  populateDebugMessengerCreateInfo(messenger_info);
+
+  if (CreateDebugUtilsMessengerEXT(instance_, &messenger_info, nullptr, &debug_messenger_) != VK_SUCCESS) {
+    throw std::runtime_error("Debug Messenger creation has failed.");
+  }
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
+
+  create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  create_info.pfnUserCallback = debugCallback;
+  create_info.pUserData = nullptr;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VKAPI_ATTR VkBool32 VKAPI_CALL BasicPSApp::AppData::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+
+  // Not finished, it could show the information of other lot of things
+  // it could even show it trough a log in the app, which can be divided in different message sections
+
+  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+    //printf("\nValidation layer (VERBOSE): %s.", pCallbackData->pMessage);
+  }
+  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    //printf("\nValidation layer (INFO): %s.", pCallbackData->pMessage);
+  }
+  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    printf("\nValidation layer (WARNING): %s.", pCallbackData->pMessage);
+  }
+  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    printf("\nValidation layer (ERROR): %s.", pCallbackData->pMessage);
+  }
+
+  return VK_FALSE;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VkCommandBuffer BasicPSApp::AppData::beginSingleTimeCommands() {
+
+  // Temporary command buffer to perform the operations
+  VkCommandBufferAllocateInfo temp_cmd_buffer_info{};
+  temp_cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  temp_cmd_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  temp_cmd_buffer_info.commandPool = command_pool_;
+  temp_cmd_buffer_info.commandBufferCount = 1;
+
+  VkCommandBuffer temp_command_buffer;
+  vkAllocateCommandBuffers(logical_device_, &temp_cmd_buffer_info, &temp_command_buffer);
+
+  // Start recording the cmd buffer
+  VkCommandBufferBeginInfo begin_info{};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  vkBeginCommandBuffer(temp_command_buffer, &begin_info);
+
+  return temp_command_buffer;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::endSingleTimeCommands(VkCommandBuffer cmd_buffer) {
+
+  // Finish recording command buffer
+  vkEndCommandBuffer(cmd_buffer);
+
+  // Submit the buffer to execution
+  VkSubmitInfo submit_info{};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &cmd_buffer;
+
+  // Graphics queue support transfer commands, not necessary to have a separated queue
+  vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphics_queue_);
+
+  // Free the temp command buffer
+  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &cmd_buffer);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
+
+  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
+
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = old_layout;
+  barrier.newLayout = new_layout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkPipelineStageFlags source_stage;
+  VkPipelineStageFlags destination_stage;
+
+  if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (hasStencilComponent(format)) {
+      barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+  }
+  else {
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  }
+
+
+  if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  }
+  else {
+    throw std::runtime_error("Unsupported layout transition.");
+  }
+
+  vkCmdPipelineBarrier(cmd_buffer, source_stage, destination_stage,
+    0, 0, nullptr,
+    0, nullptr, 1, &barrier);
+
+  endSingleTimeCommands(cmd_buffer);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+uint32_t BasicPSApp::AppData::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
 
   // Request supported memory properties from the graphics card
   VkPhysicalDeviceMemoryProperties mem_properties;
@@ -2094,7 +2308,7 @@ uint32_t BillboardsApp::findMemoryType(uint32_t type_filter, VkMemoryPropertyFla
 
   // Find a suitable memory type (Mask memory type bit and property flags)
   for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-    if (type_filter & (1 << i) && 
+    if (type_filter & (1 << i) &&
       (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
       return i;
     }
@@ -2104,9 +2318,9 @@ uint32_t BillboardsApp::findMemoryType(uint32_t type_filter, VkMemoryPropertyFla
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-VkFormat BillboardsApp::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+VkFormat BasicPSApp::AppData::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 
   for (uint32_t i = 0; i < candidates.size(); i++) {
     VkFormatProperties properties;
@@ -2123,26 +2337,78 @@ VkFormat BillboardsApp::findSupportedFormat(const std::vector<VkFormat>& candida
   throw std::runtime_error("Failed to find a supported a format.");
 
 }
-// ------------------------------------------------------------------------- // 
 
-VkFormat BillboardsApp::findDepthFormat() {
+// ------------------------------------------------------------------------- //
+
+bool BasicPSApp::AppData::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+
+  // Get supported device properties
+  uint32_t extension_count;
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
+
+  std::vector<VkExtensionProperties> available_extensions(extension_count);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
+
+  std::set<std::string> required_extensions(kDeviceExtensions.begin(), kDeviceExtensions.end());
+
+  // Delete the extension from the required extension vector if they are available
+  for (uint32_t i = 0; i < available_extensions.size(); i++) {
+    required_extensions.erase(available_extensions[i].extensionName);
+  }
+
+  // If the required extensions vector was emptied it means that they are supported
+  return required_extensions.empty();
+
+}
+
+// ------------------------------------------------------------------------- //
+
+QueueFamilyIndices BasicPSApp::AppData::findQueueFamilies(VkPhysicalDevice device) {
+
+  QueueFamilyIndices indices;
+
+  // Get device family queue properties
+  uint32_t queue_family_count = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
+
+  for (uint32_t i = 0; i < queue_families.size(); i++) {
+    // Check if graphics queue is supported
+    if (queue_families[i].queueFlags && VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphics_family = i;
+    }
+
+    // Check if present queue is supported
+    VkBool32 present_support = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present_support);
+    if (present_support) {
+      indices.present_family = i;
+    }
+
+    // Break if both are found
+    if (indices.isComplete()) {
+      break;
+    }
+  }
+
+  return indices;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+VkFormat BasicPSApp::AppData::findDepthFormat() {
 
   return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
     VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
-bool BillboardsApp::hasStencilComponent(VkFormat format) {
-
-  return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-VkSampleCountFlagBits BillboardsApp::getMaxUsableSampleCount() {
+VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
 
   VkPhysicalDeviceProperties phys_device_properties;
   vkGetPhysicalDeviceProperties(physical_device_, &phys_device_properties);
@@ -2163,4 +2429,6 @@ VkSampleCountFlagBits BillboardsApp::getMaxUsableSampleCount() {
 
 }
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
+
+#endif // __INTERNAL_APP_DATA_H__

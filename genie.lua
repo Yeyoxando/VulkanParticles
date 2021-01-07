@@ -56,6 +56,7 @@ project "ParticleEditor"
 		--ParticleEditor
 		"./include/**.h",
 		"./src/**.cpp",
+		"./src/internal/**.h",
 		"./tests/**.cpp", 
 		"./resources/**.vert", 
 		"./resources/**.frag", 

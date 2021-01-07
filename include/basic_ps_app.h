@@ -9,21 +9,27 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include "render_manager.h"
-#include "resource_manager.h"
+#include "input.h"
+#include "camera.h"
 
 // ------------------------------------------------------------------------- //
 
 class BasicPSApp {
 public:
-  BasicPSApp();
-  ~BasicPSApp();
 
-  // Main base app as a example of advanced and structured features
-  // Will have a reference to render and resource manager which will have some vulkan features in them.
-  // The rest of the Vulkan features that doesn't fit in a manager will be here for now.
+  // Main base app instance
+  static BasicPSApp& instance();
 
   void run();
+
+  Camera* getCamera();
+
+//   void loadModel(const char* model_path);
+//   void loadTexture(const char* texture_path);
+
+private:
+  BasicPSApp();
+  ~BasicPSApp();
 
   void init();
   void shutDown();
@@ -32,16 +38,15 @@ public:
   void update();
   void render();
 
-private:
-  RenderManager* render_manager_;
-  ResourceManager* resource_manager_;
-  // Other managers
-  // Vulkan things -> struct AppData? with internal.h
-
   // Particle system things
   // Scene things
-  // Camera things
   // Other logic things
+
+  InputManager* input_;
+  Camera* camera_;
+
+  struct AppData;
+  AppData* app_data_;
 
 };
 
