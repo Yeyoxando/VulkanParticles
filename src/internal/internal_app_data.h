@@ -11,6 +11,8 @@
 
 #include "common_def.h"
 #include "vulkan_utils.h"
+#include "internal/internal_gpu_resources.h"
+#include "internal/internal_commands.h"
 
 #include <GLFW/glfw3.h>
 
@@ -134,9 +136,7 @@ struct UniformBufferObject {
 // ------------------------------------------------------------------------- //
 
 // All data used in the application, the majority are Vulkan elements
-
 struct BasicPSApp::AppData {
-  // - Order variables in good order: resources, render, and structure
 
   // -- Window variables --
   GLFWwindow* window_;
@@ -153,15 +153,14 @@ struct BasicPSApp::AppData {
   VkQueue present_queue_;
   VkSurfaceKHR surface_; //Abstract window
   VkSwapchainKHR swap_chain_;
-  std::vector<VkImage> swap_chain_images_;
   VkFormat swap_chain_image_format_;
   VkExtent2D swap_chain_extent_;
-  std::vector<VkImageView> swap_chain_image_views_;
+  std::vector<Image*> swap_chain_images_;
+  std::vector<VkFramebuffer> swap_chain_framebuffers_;
   VkRenderPass render_pass_;
   VkDescriptorSetLayout descriptor_set_layout_;
   VkPipelineLayout pipeline_layout_;
-  VkPipeline  graphics_pipeline_;
-  std::vector<VkFramebuffer> swap_chain_framebuffers_;
+  VkPipeline graphics_pipeline_;
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
   std::vector<VkSemaphore> available_image_semaphores_;
@@ -172,32 +171,21 @@ struct BasicPSApp::AppData {
   bool resized_framebuffer_;
   bool close_window_;
 
-  std::vector<Vertex> vertices_;
-  std::vector<uint32_t> indices_;
-  VkBuffer vertex_buffer_;
-  VkDeviceMemory vertex_buffer_memory_;
-  VkBuffer index_buffer_;
-  VkDeviceMemory index_buffer_memory_;
-  std::vector<VkBuffer> uniform_buffers_;
-  std::vector<VkDeviceMemory> uniform_buffers_memory_;
   VkDescriptorPool descriptor_pool_;
   std::vector<VkDescriptorSet> descriptor_sets_;
-  VkImage texture_image_;
-  VkDeviceMemory texture_image_memory_;
-  VkImageView texture_image_view_;
-  VkSampler texture_sampler_;
-  VkImage depth_image_;
-  VkDeviceMemory depth_image_memory_;
-  VkImageView depth_image_view_;
+  std::vector<Vertex> vertices_;
+  std::vector<uint32_t> indices_;
 
   // -- Resource variables --
-  // buffers, images, etc
+  Buffer* vertex_buffer_;
+  Buffer* index_buffer_;
+  std::vector<Buffer*> uniform_buffers_;
+  Image* texture_image_;
+  Image* depth_image_;
+  Image* color_image_;
 
   // -- MSAA --
   VkSampleCountFlagBits msaa_samples_;
-  VkImage color_image_;
-  VkDeviceMemory color_image_memory_;
-  VkImageView color_image_view_;
 
   // -- Constructor --
   AppData();
@@ -223,10 +211,6 @@ struct BasicPSApp::AppData {
   void createLogicalDevice();
   // Creates the swap chain
   void createSwapChain();
-  // create a image view resource
-  VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
-  // Create the image views for he swap chain images
-  void createImageViews();
   // Creates the render pass for the graphics pipeline
   void createRenderPass();
   // Creates the descriptor layout to upload uniforms to the shader
@@ -245,10 +229,6 @@ struct BasicPSApp::AppData {
   void createDepthResources();
   // Creates an image from a texture
   void createTextureImage(const char* texture_path);
-  // Creates the image view for the texture
-  void createTextureImageView();
-  // Creates the sampler for texture filtering and shader reading
-  void createTextureSampler();
   // Loads a OBJ model
   void loadModel(const char* model_path);
   // Creates the vertex buffers for the app and map their memory to the GPU
@@ -265,18 +245,6 @@ struct BasicPSApp::AppData {
   void createCommandBuffers();
   // Creates the semaphores needed for rendering
   void createSyncObjects();
-
-  // -- Vulkan Resources --
-  // Creates a vulkan image
-  void createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling,
-    VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory);
-  // Creates a buffer and allocate its memory
-  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory);
-  // Copy a buffer from the cpu to the device local memory through a staging buffer
-  void copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
-  // Copies a buffer into an image
-  void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
   // -- Frame --
   // Updates frame logic
@@ -321,10 +289,6 @@ struct BasicPSApp::AppData {
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData);
-  // Begin a list of single time commands and return it
-  VkCommandBuffer beginSingleTimeCommands();
-  // end the list of single time commands
-  void endSingleTimeCommands(VkCommandBuffer cmd_buffer);
   // Handles layout transitions
   void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
   // Find the memory type for the given type filter
@@ -370,27 +334,15 @@ BasicPSApp::AppData::AppData() {
   pipeline_layout_ = VK_NULL_HANDLE;
   graphics_pipeline_ = VK_NULL_HANDLE;
   command_pool_ = VK_NULL_HANDLE;
-
-  vertex_buffer_ = VK_NULL_HANDLE;
-  vertex_buffer_memory_ = VK_NULL_HANDLE;
-  index_buffer_ = VK_NULL_HANDLE;
-  index_buffer_memory_ = VK_NULL_HANDLE;
-
   descriptor_pool_ = VK_NULL_HANDLE;
 
-  texture_image_ = VK_NULL_HANDLE;
-  texture_image_memory_ = VK_NULL_HANDLE;;
-  texture_image_view_ = VK_NULL_HANDLE;
-  texture_sampler_ = VK_NULL_HANDLE;
-
-  depth_image_ = VK_NULL_HANDLE;
-  depth_image_memory_ = VK_NULL_HANDLE;
-  depth_image_view_ = VK_NULL_HANDLE;
+  vertex_buffer_ = new Buffer(Buffer::kBufferType_Vertex);
+  index_buffer_ = new Buffer(Buffer::kBufferType_Index);
+  texture_image_ = nullptr;
+  depth_image_ = nullptr;
+  color_image_ = nullptr;
 
   msaa_samples_ = VK_SAMPLE_COUNT_1_BIT;
-  color_image_ = VK_NULL_HANDLE;
-  color_image_memory_ = VK_NULL_HANDLE;
-  color_image_view_ = VK_NULL_HANDLE;
 
   current_frame_ = 0;
   resized_framebuffer_ = false;
@@ -445,7 +397,6 @@ void BasicPSApp::AppData::initVulkan() {
   pickPhysicalDevice();
   createLogicalDevice();
   createSwapChain();
-  createImageViews();
   createRenderPass();
   createDescriptorSetLayout();
   createGraphicsPipeline();
@@ -458,8 +409,6 @@ void BasicPSApp::AppData::initVulkan() {
 #else
   createTextureImage("../../../resources/textures/viking_room.png");
 #endif
-  createTextureImageView();
-  createTextureSampler();
 #ifdef LOAD_BILLBOARD
 
 #else
@@ -491,18 +440,16 @@ void BasicPSApp::AppData::closeVulkan() {
   // Vulkan cleanup
   cleanupSwapChain();
 
-  vkDestroySampler(logical_device_, texture_sampler_, nullptr);
-  vkDestroyImageView(logical_device_, texture_image_view_, nullptr);
-  vkDestroyImage(logical_device_, texture_image_, nullptr);
-  vkFreeMemory(logical_device_, texture_image_memory_, nullptr);
+  texture_image_->clean(logical_device_);
+  delete texture_image_;
 
   vkDestroyDescriptorSetLayout(logical_device_, descriptor_set_layout_, nullptr);
 
-  vkDestroyBuffer(logical_device_, index_buffer_, nullptr);
-  vkFreeMemory(logical_device_, index_buffer_memory_, nullptr);
+  index_buffer_->clean(logical_device_);
+  delete index_buffer_;
 
-  vkDestroyBuffer(logical_device_, vertex_buffer_, nullptr);
-  vkFreeMemory(logical_device_, vertex_buffer_memory_, nullptr);
+  vertex_buffer_->clean(logical_device_);
+  delete vertex_buffer_;
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(logical_device_, available_image_semaphores_[i], nullptr);
@@ -745,56 +692,21 @@ void BasicPSApp::AppData::createSwapChain() {
   // Store image handles for render operation
   vkGetSwapchainImagesKHR(logical_device_, swap_chain_, &image_count, nullptr);
   swap_chain_images_.resize(image_count);
-  vkGetSwapchainImagesKHR(logical_device_, swap_chain_, &image_count, swap_chain_images_.data());
+  std::vector<VkImage> tmp_images;
+  tmp_images.resize(image_count);
+  vkGetSwapchainImagesKHR(logical_device_, swap_chain_, &image_count, tmp_images.data());
+  for (uint32_t i = 0; i < image_count; i++) {
+    swap_chain_images_[i] = new Image(Image::kImageType_Framebuffer);
+    swap_chain_images_[i]->image_ = tmp_images[i];
+  }
 
   // Store format and extent for future operations
   swap_chain_image_format_ = format.format;
   swap_chain_extent_ = extent;
 
-}
-
-// ------------------------------------------------------------------------- //
-
-VkImageView BasicPSApp::AppData::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
-
-  VkImageViewCreateInfo create_info{};
-  create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  create_info.image = image;
-  create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  create_info.format = format;
-
-  // Remapping components (Set to default)
-  create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-  create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-  create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-  // Image usage (color bit for those)
-  create_info.subresourceRange.aspectMask = aspect_flags;
-  create_info.subresourceRange.baseMipLevel = 0;
-  create_info.subresourceRange.levelCount = 1;
-  create_info.subresourceRange.baseArrayLayer = 0;
-  create_info.subresourceRange.layerCount = 1;
-
-  VkImageView image_view;
-  if (vkCreateImageView(logical_device_, &create_info, nullptr, &image_view) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create texture image view.");
-  }
-
-  return image_view;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createImageViews() {
-
-  if (window_width_ == 0 || window_height_ == 0) return;
-
-  swap_chain_image_views_.resize(swap_chain_images_.size());
-
+  // Create the image views
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    swap_chain_image_views_[i] = createImageView(swap_chain_images_[i], swap_chain_image_format_, VK_IMAGE_ASPECT_COLOR_BIT);
+    swap_chain_images_[i]->createImageView(logical_device_, swap_chain_image_format_, VK_IMAGE_ASPECT_COLOR_BIT);
   }
 
 }
@@ -1141,13 +1053,13 @@ void BasicPSApp::AppData::createFramebuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
-  swap_chain_framebuffers_.resize(swap_chain_image_views_.size());
+  swap_chain_framebuffers_.resize(swap_chain_images_.size());
 
-  for (int i = 0; i < swap_chain_image_views_.size(); i++) {
+  for (int i = 0; i < swap_chain_images_.size(); i++) {
     std::array<VkImageView, 3> attachments = {
-      color_image_view_,
-      depth_image_view_,
-      swap_chain_image_views_[i],
+      color_image_->image_view_,
+      depth_image_->image_view_,
+      swap_chain_images_[i]->image_view_,
     };
 
     VkFramebufferCreateInfo framebuffer_info{};
@@ -1189,11 +1101,13 @@ void BasicPSApp::AppData::createColorResources() {
 
   VkFormat format = swap_chain_image_format_;
 
-  createImage(swap_chain_extent_.width, swap_chain_extent_.height, msaa_samples_, format,
-    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, color_image_, color_image_memory_);
-  color_image_view_ = createImageView(color_image_, format, VK_IMAGE_ASPECT_COLOR_BIT);
-
+  color_image_ = new Image(Image::kImageType_Framebuffer);
+  color_image_->create(physical_device_, logical_device_, swap_chain_extent_.width,
+    swap_chain_extent_.height, msaa_samples_, format, VK_IMAGE_TILING_OPTIMAL,
+    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  color_image_->createImageView(logical_device_, format, VK_IMAGE_ASPECT_COLOR_BIT);
+  
 }
 
 // ------------------------------------------------------------------------- //
@@ -1202,13 +1116,14 @@ void BasicPSApp::AppData::createDepthResources() {
 
   VkFormat format = findDepthFormat();
 
-  createImage(swap_chain_extent_.width, swap_chain_extent_.height, msaa_samples_, format,
-    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_image_, depth_image_memory_);
+  depth_image_ = new Image(Image::kImageType_Framebuffer);
 
-  depth_image_view_ = createImageView(depth_image_, format, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-  transitionImageLayout(depth_image_, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+  depth_image_->create(physical_device_, logical_device_, swap_chain_extent_.width,
+    swap_chain_extent_.height, msaa_samples_, format, VK_IMAGE_TILING_OPTIMAL,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  depth_image_->createImageView(logical_device_, format, VK_IMAGE_ASPECT_DEPTH_BIT);
+  
+  transitionImageLayout(depth_image_->image_, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 }
 
@@ -1219,6 +1134,8 @@ void BasicPSApp::AppData::createTextureImage(const char* texture_path) {
   int tex_width;
   int tex_height;
   int tex_channels;
+
+  texture_image_ = new Image(Image::kImageType_Texture);
 
   // Load any texture with 4 channels with STBI_rgb_alpha
   stbi_uc* pixels = stbi_load(texture_path,
@@ -1231,77 +1148,36 @@ void BasicPSApp::AppData::createTextureImage(const char* texture_path) {
   }
 
   // Create a staging buffer to transfer it to the device memory
-  VkBuffer staging_buffer;
-  VkDeviceMemory staging_buffer_memory;
-
-  createBuffer(image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    staging_buffer, staging_buffer_memory);
+  Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Image);
+  staging_buffer->create(physical_device_, logical_device_, image_size,
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   // Copy values to the buffer
   void* data;
-  vkMapMemory(logical_device_, staging_buffer_memory, 0, image_size, 0, &data);
+  vkMapMemory(logical_device_, staging_buffer->buffer_memory_, 0, image_size, 0, &data);
   memcpy(data, pixels, static_cast<size_t>(image_size));
-  vkUnmapMemory(logical_device_, staging_buffer_memory);
+  vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
 
   stbi_image_free(pixels);
 
   // Create the texture image
-
-  createImage(tex_width, tex_height, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+  texture_image_->create(physical_device_, logical_device_, tex_width, tex_height, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
     VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, texture_image_, texture_image_memory_);
-
-  transitionImageLayout(texture_image_, VK_FORMAT_R8G8B8A8_SRGB,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  
+  transitionImageLayout(texture_image_->image_, VK_FORMAT_R8G8B8A8_SRGB,
     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  copyBufferToImage(staging_buffer, texture_image_,
+  texture_image_->copyFromBuffer(logical_device_, command_pool_, graphics_queue_, *staging_buffer,
     static_cast<uint32_t>(tex_width), static_cast<uint32_t>(tex_height));
-  transitionImageLayout(texture_image_, VK_FORMAT_R8G8B8A8_SRGB,
+  transitionImageLayout(texture_image_->image_, VK_FORMAT_R8G8B8A8_SRGB,
     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
-  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+  staging_buffer->clean(logical_device_);
+  delete staging_buffer;
 
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createTextureImageView() {
-
-  texture_image_view_ = createImageView(texture_image_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createTextureSampler() {
-
-  VkSamplerCreateInfo sampler_info{};
-  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  sampler_info.minFilter = VK_FILTER_LINEAR;
-  sampler_info.magFilter = VK_FILTER_LINEAR;
-
-  sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-  sampler_info.anisotropyEnable = VK_TRUE;
-  VkPhysicalDeviceProperties properties{};
-  vkGetPhysicalDeviceProperties(physical_device_, &properties);
-  sampler_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-
-  sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  sampler_info.unnormalizedCoordinates = VK_FALSE;
-  sampler_info.compareEnable = VK_FALSE;
-  sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-  sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  sampler_info.mipLodBias = 0.0f;
-  sampler_info.minLod = 0.0f;
-  sampler_info.maxLod = 0.0f;
-
-  if (vkCreateSampler(logical_device_, &sampler_info, nullptr, &texture_sampler_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create texture sampler");
-  }
+  texture_image_->createImageView(logical_device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+  texture_image_->createSampler(physical_device_, logical_device_);
 
 }
 
@@ -1364,18 +1240,15 @@ void BasicPSApp::AppData::createVertexBuffers() {
 
   // Create a staging buffer and allocate its memory
   VkDeviceSize buffer_size = sizeof(vertices_[0]) * vertices_.size();
-  VkBuffer staging_buffer;
-  VkDeviceMemory staging_buffer_memory;
-
-  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    staging_buffer, staging_buffer_memory);
+  Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Vertex);
+  staging_buffer->create(physical_device_, logical_device_, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   // Map the memory from the CPU to GPU
   void* data;
-  vkMapMemory(logical_device_, staging_buffer_memory, 0, buffer_size, 0, &data);
+  vkMapMemory(logical_device_, staging_buffer->buffer_memory_, 0, buffer_size, 0, &data);
   memcpy(data, vertices_.data(), (size_t)buffer_size);
-  vkUnmapMemory(logical_device_, staging_buffer_memory);
+  vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
 
   // The memory is not copied instantly, but it should be before the next call to vkQueueSubmit
   // This could cause performance decreases and it could be done with a host coherent memory heap
@@ -1383,15 +1256,16 @@ void BasicPSApp::AppData::createVertexBuffers() {
 
 
   // Create the actual vertex buffer
-  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_, vertex_buffer_memory_);
+  vertex_buffer_->create(physical_device_, logical_device_, buffer_size,
+    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
-  copyBuffer(staging_buffer, vertex_buffer_, buffer_size);
+  vertex_buffer_->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
 
   // Delete and free the staging buffer
-  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
-  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
+  staging_buffer->clean(logical_device_);
+  delete staging_buffer;
 
 }
 
@@ -1401,30 +1275,30 @@ void BasicPSApp::AppData::createIndexBuffers() {
 
   // Create a staging buffer and allocate its memory
   VkDeviceSize buffer_size = sizeof(indices_[0]) * indices_.size();
-  VkBuffer staging_buffer;
-  VkDeviceMemory staging_buffer_memory;
-
-  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    staging_buffer, staging_buffer_memory);
+  
+  Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Index);
+  staging_buffer->create(physical_device_, logical_device_,
+    buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   // Map the memory from the CPU to GPU
   void* data;
-  vkMapMemory(logical_device_, staging_buffer_memory, 0, buffer_size, 0, &data);
+  vkMapMemory(logical_device_, staging_buffer->buffer_memory_, 0, buffer_size, 0, &data);
   memcpy(data, indices_.data(), (size_t)buffer_size);
-  vkUnmapMemory(logical_device_, staging_buffer_memory);
+  vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
 
-  // Create the actual vertex buffer
-  createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer_, index_buffer_memory_);
-
+  // Create the actual index buffer
+  index_buffer_->create(physical_device_, logical_device_, buffer_size, 
+    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
-  copyBuffer(staging_buffer, index_buffer_, buffer_size);
-
+  index_buffer_->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
+  
   // Delete and free the staging buffer
-  vkDestroyBuffer(logical_device_, staging_buffer, nullptr);
-  vkFreeMemory(logical_device_, staging_buffer_memory, nullptr);
-
+  staging_buffer->clean(logical_device_);
+  delete staging_buffer;
+  
 }
 
 // ------------------------------------------------------------------------- //
@@ -1434,14 +1308,14 @@ void BasicPSApp::AppData::createUniformBuffers() {
   if (window_width_ == 0 || window_height_ == 0) return;
 
   uniform_buffers_.resize(swap_chain_images_.size());
-  uniform_buffers_memory_.resize(swap_chain_images_.size());
 
   VkDeviceSize buffer_size = sizeof(UniformBufferObject);
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    createBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-      uniform_buffers_[i], uniform_buffers_memory_[i]);
+    uniform_buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
+    uniform_buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
   }
 
 }
@@ -1489,14 +1363,14 @@ void BasicPSApp::AppData::createDescriptorSets() {
   // Populate the descriptors
   for (int i = 0; i < swap_chain_images_.size(); i++) {
     VkDescriptorBufferInfo buffer_info{};
-    buffer_info.buffer = uniform_buffers_[i];
+    buffer_info.buffer = uniform_buffers_[i]->buffer_;
     buffer_info.offset = 0;
     buffer_info.range = sizeof(UniformBufferObject);
 
     VkDescriptorImageInfo image_info{};
     image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = texture_image_view_;
-    image_info.sampler = texture_sampler_;
+    image_info.imageView = texture_image_->image_view_;
+    image_info.sampler = texture_image_->texture_sampler_;
 
     std::array<VkWriteDescriptorSet, 2> write_descriptors{};
     write_descriptors[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1574,11 +1448,11 @@ void BasicPSApp::AppData::createCommandBuffers() {
 
     vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
 
-    VkBuffer vertex_buffers[] = { vertex_buffer_ };
+    VkBuffer vertex_buffers[] = { vertex_buffer_->buffer_ };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
 
-    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer_, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
@@ -1623,123 +1497,6 @@ void BasicPSApp::AppData::createSyncObjects() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createImage(uint32_t width, uint32_t height, VkSampleCountFlagBits samples_count, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory) {
-
-  VkImageCreateInfo image_info{};
-  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.imageType = VK_IMAGE_TYPE_2D;
-  image_info.extent.width = width;
-  image_info.extent.height = height;
-  image_info.extent.depth = 1;
-  image_info.mipLevels = 1;
-  image_info.arrayLayers = 1;
-  image_info.format = format;
-  image_info.tiling = tiling;
-  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  image_info.usage = usage;
-  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_info.samples = samples_count;
-  image_info.flags = 0;
-
-  if (vkCreateImage(logical_device_, &image_info, nullptr, &image) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create texture image.");
-  }
-
-  // Request memory requirements
-  VkMemoryRequirements requirements;
-  vkGetImageMemoryRequirements(logical_device_, image, &requirements);
-
-  VkMemoryAllocateInfo alloc_info{};
-  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.allocationSize = requirements.size;
-  alloc_info.memoryTypeIndex = findMemoryType(requirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(logical_device_, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate image memory.");
-  }
-
-  vkBindImageMemory(logical_device_, image, image_memory, 0);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory) {
-
-  // Create the  buffer
-  VkBufferCreateInfo buffer_info{};
-  buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buffer_info.flags = 0;
-  buffer_info.size = size;
-  buffer_info.usage = usage;
-  buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  if (vkCreateBuffer(logical_device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create buffer.");
-  }
-
-  // Find memory requirements and allocate memory
-  VkMemoryRequirements mem_requirements;
-  vkGetBufferMemoryRequirements(logical_device_, buffer, &mem_requirements);
-
-  VkMemoryAllocateInfo allocate_info{};
-  allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocate_info.allocationSize = mem_requirements.size;
-  allocate_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(logical_device_, &allocate_info, nullptr, &memory) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate device memory for buffer.");
-  }
-
-  // Bind buffer and memory together
-  vkBindBufferMemory(logical_device_, buffer, memory, 0);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::copyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size) {
-
-  VkCommandBuffer command_buffer = beginSingleTimeCommands();
-
-  VkBufferCopy copy_region{};
-  copy_region.srcOffset = 0;
-  copy_region.dstOffset = 0;
-  copy_region.size = size;
-  vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
-
-  endSingleTimeCommands(command_buffer);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-
-  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
-
-  VkBufferImageCopy region{};
-  region.bufferOffset = 0;
-  region.bufferRowLength = 0;
-  region.bufferImageHeight = 0;
-
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-
-  region.imageOffset = { 0, 0, 0 };
-  region.imageExtent = { width, height, 1 };
-
-  vkCmdCopyBufferToImage(cmd_buffer, buffer, image,
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-  endSingleTimeCommands(cmd_buffer);
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void BasicPSApp::AppData::updateFrame() {
 
   // Calculate time since rendering started
@@ -1747,7 +1504,7 @@ void BasicPSApp::AppData::updateFrame() {
 
   auto current_time = std::chrono::high_resolution_clock::now();
 
-  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();  
   
 
 }
@@ -1776,10 +1533,10 @@ void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // Map the memory from the CPU to GPU
   void* data;
-  vkMapMemory(logical_device_, uniform_buffers_memory_[current_image], 0,
+  vkMapMemory(logical_device_, uniform_buffers_[current_image]->buffer_memory_, 0,
     sizeof(ubo), 0, &data);
   memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(logical_device_, uniform_buffers_memory_[current_image]);
+  vkUnmapMemory(logical_device_, uniform_buffers_[current_image]->buffer_memory_);
 
 }
 
@@ -1877,7 +1634,6 @@ void BasicPSApp::AppData::recreateSwapChain() {
   cleanupSwapChain();
 
   createSwapChain();
-  createImageViews();
   createRenderPass();
   createGraphicsPipeline();
   createColorResources();
@@ -1894,13 +1650,11 @@ void BasicPSApp::AppData::recreateSwapChain() {
 
 void BasicPSApp::AppData::cleanupSwapChain() {
 
-  vkDestroyImage(logical_device_, color_image_, nullptr);
-  vkDestroyImageView(logical_device_, color_image_view_, nullptr);
-  vkFreeMemory(logical_device_, color_image_memory_, nullptr);
+  color_image_->clean(logical_device_);
+  delete color_image_;
 
-  vkDestroyImage(logical_device_, depth_image_, nullptr);
-  vkDestroyImageView(logical_device_, depth_image_view_, nullptr);
-  vkFreeMemory(logical_device_, depth_image_memory_, nullptr);
+  depth_image_->clean(logical_device_);
+  delete depth_image_;
 
   for (int i = 0; i < swap_chain_framebuffers_.size(); i++) {
     vkDestroyFramebuffer(logical_device_, swap_chain_framebuffers_[i], nullptr);
@@ -1916,14 +1670,14 @@ void BasicPSApp::AppData::cleanupSwapChain() {
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    vkDestroyBuffer(logical_device_, uniform_buffers_[i], nullptr);
-    vkFreeMemory(logical_device_, uniform_buffers_memory_[i], nullptr);
+    uniform_buffers_[i]->clean(logical_device_);
+    delete uniform_buffers_[i];
   }
 
   vkDestroyDescriptorPool(logical_device_, descriptor_pool_, nullptr);
 
-  for (int i = 0; i < swap_chain_image_views_.size(); i++) {
-    vkDestroyImageView(logical_device_, swap_chain_image_views_[i], nullptr);
+  for (int i = 0; i < swap_chain_images_.size(); i++) {
+    vkDestroyImageView(logical_device_, swap_chain_images_[i]->image_view_, nullptr);
   }
 
   vkDestroySwapchainKHR(logical_device_, swap_chain_, nullptr);
@@ -2190,55 +1944,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL BasicPSApp::AppData::debugCallback(VkDebugUtilsMe
 
 // ------------------------------------------------------------------------- //
 
-VkCommandBuffer BasicPSApp::AppData::beginSingleTimeCommands() {
-
-  // Temporary command buffer to perform the operations
-  VkCommandBufferAllocateInfo temp_cmd_buffer_info{};
-  temp_cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  temp_cmd_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  temp_cmd_buffer_info.commandPool = command_pool_;
-  temp_cmd_buffer_info.commandBufferCount = 1;
-
-  VkCommandBuffer temp_command_buffer;
-  vkAllocateCommandBuffers(logical_device_, &temp_cmd_buffer_info, &temp_command_buffer);
-
-  // Start recording the cmd buffer
-  VkCommandBufferBeginInfo begin_info{};
-  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  vkBeginCommandBuffer(temp_command_buffer, &begin_info);
-
-  return temp_command_buffer;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::endSingleTimeCommands(VkCommandBuffer cmd_buffer) {
-
-  // Finish recording command buffer
-  vkEndCommandBuffer(cmd_buffer);
-
-  // Submit the buffer to execution
-  VkSubmitInfo submit_info{};
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmd_buffer;
-
-  // Graphics queue support transfer commands, not necessary to have a separated queue
-  vkQueueSubmit(graphics_queue_, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphics_queue_);
-
-  // Free the temp command buffer
-  vkFreeCommandBuffers(logical_device_, command_pool_, 1, &cmd_buffer);
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void BasicPSApp::AppData::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
 
-  VkCommandBuffer cmd_buffer = beginSingleTimeCommands();
+  VkCommandBuffer cmd_buffer = beginSingleTimeCommands(logical_device_, command_pool_);
 
   VkImageMemoryBarrier barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2294,7 +2002,7 @@ void BasicPSApp::AppData::transitionImageLayout(VkImage image, VkFormat format, 
     0, 0, nullptr,
     0, nullptr, 1, &barrier);
 
-  endSingleTimeCommands(cmd_buffer);
+  endSingleTimeCommands(logical_device_, command_pool_, cmd_buffer, graphics_queue_);
 
 }
 
