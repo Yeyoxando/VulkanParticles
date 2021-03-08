@@ -12,6 +12,8 @@
 #include "vulkan/vulkan.h"
 #include "internal/internal_commands.h"
 
+#include <stdexcept>
+
 // ------------------------------------------------------------------------- //
 
 static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags properties);

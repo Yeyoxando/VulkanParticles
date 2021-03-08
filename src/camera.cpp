@@ -13,19 +13,14 @@
 
 Camera::Camera() {
 
-  camera_distance_ = 1.0f;
-  dist_x = 0.0f;
-  dist_y = 2.0f;
+  position_ = glm::vec3(0.0f, 0.0f, -1.0f);
+  rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+  view_pos_ = glm::vec4();
 
-  position_ = glm::vec3(camera_distance_ * cos(dist_x), 
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
-  target_ = glm::vec3(0.0f, 0.0f, 0.0f);
-  up_ = glm::vec3(0.0f, 0.0f, 1.0f);
+  last_mouse_pos_ = glm::vec2(-1.0f, -1.0f);
+  is_moving_ = false;
 
-  view_ = glm::lookAt(position_, target_, up_);
-
-  last_mouse_pos_ = glm::vec2(400.0f, 300.0f);
-  is_rotating_ = false;
+  updateViewMatrix();
 
 }
 
@@ -39,27 +34,21 @@ Camera::~Camera() {
 
 // ------------------------------------------------------------------------- // 
 
-void Camera::moveFront(float offset) {
-
-  camera_distance_ -= offset;
-  updateViewMatrix();
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void Camera::rotateYOrbital() {
-
-}
-
-// ------------------------------------------------------------------------- // 
-
 void Camera::updateViewMatrix() {
 
-  position_ = glm::vec3(camera_distance_ * cos(dist_x),
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
+  glm::mat4 rot_mat = glm::mat4(1.0f);
+  glm::mat4 trans_mat;
+
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
   
-  view_ = glm::lookAt(position_, target_, up_);
+  trans_mat = glm::translate(glm::mat4(1.0f), position_);
+
+  view_ = trans_mat * rot_mat;
+
+  view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
 
 }
 
@@ -67,35 +56,34 @@ void Camera::updateViewMatrix() {
 
 void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 
-  // position
-  if (is_rotating_) {
-    dist_x += (last_mouse_pos_.r - new_mouse_pos.r) * 0.001f;
-
-    float diff = (last_mouse_pos_.g - new_mouse_pos.g) * 0.002f;
-    // Limit movement in top and bottom
-    if (sin(dist_y + diff) < 0.99f && sin(dist_y + diff) > -0.99f) {
-      dist_y += diff;
-    }
-
+  if (!is_moving_) {
+    last_mouse_pos_ = new_mouse_pos;
+    is_moving_ = true;
+    return;
   }
-  else {
-    is_rotating_ = true;
-  }
+
+	float dist_x_ = last_mouse_pos_.x - new_mouse_pos.x;
+	float dist_y_ = last_mouse_pos_.y - new_mouse_pos.y;
+
+  rotation_ += glm::vec3(-dist_y_, 0.0f, -dist_x_);
+  
+
+	glm::mat4 rot_mat = glm::mat4(1.0f);
+	glm::mat4 trans_mat;
+
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+
+	trans_mat = glm::translate(glm::mat4(1.0f), position_);
+
+	view_ = trans_mat * rot_mat;
+
+	view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
+
 
   last_mouse_pos_ = new_mouse_pos;
-  
-  position_ = glm::vec3(camera_distance_ * cos(dist_x), 
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
-
-  view_ = glm::lookAt(position_, target_, up_);
-
-}
-
-// ------------------------------------------------------------------------- // 
-
-void Camera::setRotating(bool is_rotating) {
-
-  is_rotating_ = is_rotating;
 
 }
 

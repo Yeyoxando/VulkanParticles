@@ -12,7 +12,6 @@
 #include "common_def.h"
 #include "vulkan_utils.h"
 #include "internal/internal_gpu_resources.h"
-#include "internal/internal_commands.h"
 
 #include <GLFW/glfw3.h>
 
