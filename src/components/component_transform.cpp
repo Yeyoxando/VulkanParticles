@@ -15,7 +15,21 @@ ComponentTransform::ComponentTransform() : Component(Component::kComponentKind_T
 
 // ------------------------------------------------------------------------- //
 
+glm::mat4 ComponentTransform::getModelMatrix(){
+
+	return glm::mat4();
+
+}
+
+// ------------------------------------------------------------------------- //
+
 ComponentTransform::~ComponentTransform() {
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentTransform::computeModelMatrix(){
 
 }
 

@@ -21,10 +21,13 @@ public:
   Camera();
   ~Camera();
 
+  void setupProjection(float fov_degrees, float aspect_ratio, float near, float far);
+
   void updateViewMatrix();
   void updateViewMatrix(glm::vec2 new_mouse_pos);
 
   glm::mat4 getViewMatrix();
+  glm::mat4 getProjectionMatrix();
 
   void finishMoving() { is_moving_ = false; }
 
@@ -35,7 +38,7 @@ private:
   glm::vec4 view_pos_;
   
   glm::mat4 view_;
-  //glm::mat4 projection_matrix_;
+  glm::mat4 projection_;
 
   glm::vec2 last_mouse_pos_;
   bool is_moving_;

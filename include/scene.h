@@ -9,15 +9,15 @@
 
 // ------------------------------------------------------------------------- // 
 
-// Includes
+#include <vector>
+
+#include "entity.h"
 
 // ------------------------------------------------------------------------- //
 
 /*
-  - It'll include a list of gameobjects
+  - It'll include a list of entities
   - Also global settings
-
-  - Upload uniform buffer at rendering
 */
 
 class Scene{
@@ -25,7 +25,22 @@ public:
   Scene();
   ~Scene();
 
+  void setName(const char* scene_name);
+
+  void addEntity(Entity* entity);
+
+
+  void init();
+  void update();
+  // draw(), will be needed, or it will get the entities and do the commands from them
+  // Or should it be a command like in suffer engine which draws the thing with its components and things
+
+  std::vector<Entity*> getEntities();
+
 private:
+  const char* name_;
+
+  std::vector<Entity*> entities_;
 
 };
 

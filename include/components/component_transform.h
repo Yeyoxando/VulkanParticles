@@ -10,6 +10,7 @@
 // ------------------------------------------------------------------------- // 
 
 #include "component.h"
+#include "glm/glm.hpp"
 
 // ------------------------------------------------------------------------- //
 
@@ -17,8 +18,16 @@ class ComponentTransform : public Component {
 public:
   ComponentTransform();
 
+  glm::mat4 getModelMatrix();
+
 protected:
   ~ComponentTransform();
+
+  void computeModelMatrix();
+
+  glm::vec3 position_;
+  glm::vec3 rotation_;
+  glm::vec3 scale_;
 
 };
 

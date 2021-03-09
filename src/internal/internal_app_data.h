@@ -159,7 +159,6 @@ struct BasicPSApp::AppData {
   VkRenderPass render_pass_;
   VkDescriptorSetLayout descriptor_set_layout_;
   VkPipelineLayout pipeline_layout_;
-  VkPipeline graphics_pipeline_;
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
   std::vector<VkSemaphore> available_image_semaphores_;
@@ -172,12 +171,16 @@ struct BasicPSApp::AppData {
 
   VkDescriptorPool descriptor_pool_;
   std::vector<VkDescriptorSet> descriptor_sets_;
+
+
+  VkPipeline graphics_pipeline_;
+
   std::vector<Vertex> vertices_;
   std::vector<uint32_t> indices_;
 
   // -- Resource variables --
-  Buffer* vertex_buffer_;
-  Buffer* index_buffer_;
+  std::vector<Buffer*> vertex_buffers_;
+  std::vector<Buffer*> index_buffers_;
   std::vector<Buffer*> uniform_buffers_;
   Image* texture_image_;
   Image* depth_image_;
@@ -335,8 +338,11 @@ BasicPSApp::AppData::AppData() {
   command_pool_ = VK_NULL_HANDLE;
   descriptor_pool_ = VK_NULL_HANDLE;
 
-  vertex_buffer_ = new Buffer(Buffer::kBufferType_Vertex);
-  index_buffer_ = new Buffer(Buffer::kBufferType_Index);
+  vertex_buffers_ = std::vector<Buffer*>(0);
+  index_buffers_ = std::vector<Buffer*>(0);
+  vertex_buffers_.push_back(new Buffer(Buffer::kBufferType_Vertex));
+  index_buffers_.push_back(new Buffer(Buffer::kBufferType_Index));
+
   texture_image_ = nullptr;
   depth_image_ = nullptr;
   color_image_ = nullptr;
@@ -444,11 +450,15 @@ void BasicPSApp::AppData::closeVulkan() {
 
   vkDestroyDescriptorSetLayout(logical_device_, descriptor_set_layout_, nullptr);
 
-  index_buffer_->clean(logical_device_);
-  delete index_buffer_;
+  for (int i = 0; i < index_buffers_.size(); i++) {
+    index_buffers_[i]->clean(logical_device_);
+    delete index_buffers_[i];
+  }
 
-  vertex_buffer_->clean(logical_device_);
-  delete vertex_buffer_;
+  for (int i = 0; i < vertex_buffers_.size(); i++) {
+    vertex_buffers_[i]->clean(logical_device_);
+    delete vertex_buffers_[i];
+  }
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(logical_device_, available_image_semaphores_[i], nullptr);
@@ -1255,12 +1265,12 @@ void BasicPSApp::AppData::createVertexBuffers() {
 
 
   // Create the actual vertex buffer
-  vertex_buffer_->create(physical_device_, logical_device_, buffer_size,
+  vertex_buffers_[0]->create(physical_device_, logical_device_, buffer_size,
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
-  vertex_buffer_->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
+  vertex_buffers_[0]->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
 
   // Delete and free the staging buffer
   staging_buffer->clean(logical_device_);
@@ -1287,12 +1297,12 @@ void BasicPSApp::AppData::createIndexBuffers() {
   vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
 
   // Create the actual index buffer
-  index_buffer_->create(physical_device_, logical_device_, buffer_size, 
+  index_buffers_[0]->create(physical_device_, logical_device_, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
-  index_buffer_->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
+  index_buffers_[0]->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
   
   // Delete and free the staging buffer
   staging_buffer->clean(logical_device_);
@@ -1445,18 +1455,21 @@ void BasicPSApp::AppData::createCommandBuffers() {
     // Record the commands on the command buffer
     vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
-
-    VkBuffer vertex_buffers[] = { vertex_buffer_->buffer_ };
+    VkBuffer vertex_buffers[] = { vertex_buffers_[0]->buffer_ };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[0]->buffer_, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer_, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
 
+
+    // Per object (uniforms and draw)
     vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
       pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
 
     vkCmdDrawIndexed(command_buffers_[i], static_cast<uint32_t>(indices_.size()), 1, 0, 0, 0);
+
+
 
     vkCmdEndRenderPass(command_buffers_[i]);
 
@@ -1519,17 +1532,14 @@ void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
   */
-  // Update the uniform buffer to make the object spin
+  
   UniformBufferObject ubo{};
   ubo.model = glm::mat4(1.0f);
 
   ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
 
-  ubo.projection = glm::perspective(glm::radians(90.0f),
-    swap_chain_extent_.width / (float)swap_chain_extent_.height, 0.1f, 10.0f);
-  // Invert clip Y due to GLM works with OpenGL and its inverted
-  ubo.projection[1][1] *= -1;
-
+  ubo.projection = BasicPSApp::instance().getCamera()->getProjectionMatrix();
+ 
   // Map the memory from the CPU to GPU
   void* data;
   vkMapMemory(logical_device_, uniform_buffers_[current_image]->buffer_memory_, 0,
@@ -1691,6 +1701,8 @@ void BasicPSApp::AppData::framebufferResizeCallback(GLFWwindow* window, int widt
   app->resized_framebuffer_ = true;
   app->window_width_ = width;
   app->window_height_ = height;
+
+  BasicPSApp::instance().getCamera()->setupProjection(90.0f, (float)app->window_width_ / (float)app->window_height_, 0.1f, 10.0f);
 
 }
 

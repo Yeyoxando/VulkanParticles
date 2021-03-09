@@ -15,8 +15,10 @@ BasicPSApp::BasicPSApp() {
 
   app_data_ = new AppData();
 
-  input_ = new InputManager();
-  camera_ = new Camera();
+  input_ = nullptr;
+  camera_ = nullptr;
+
+  active_scene_ = nullptr;
 
 }
 
@@ -55,10 +57,21 @@ Camera* BasicPSApp::getCamera() {
 
 void BasicPSApp::init() {
 
+	input_ = new InputManager();
+	camera_ = new Camera();
+
   app_data_->initWindow();
   app_data_->initVulkan();
 
   input_->init(app_data_->window_);
+
+	camera_->setupProjection(90.0f, (float)app_data_->window_width_ / (float)app_data_->window_height_, 0.1f, 10.0f);
+
+  if (active_scene_ == nullptr) {
+    throw std::runtime_error("\n A scene has not been set to run.");
+  }
+
+	active_scene_->init();
 
 }
 
@@ -82,6 +95,14 @@ BasicPSApp& BasicPSApp::instance() {
 
   static BasicPSApp* instance = new BasicPSApp();
   return *instance;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::loadScene(Scene* scene){
+
+  active_scene_ = scene;
 
 }
 
@@ -117,6 +138,7 @@ void BasicPSApp::input() {
 
 void BasicPSApp::update() {
 
+  active_scene_->update();
   app_data_->updateFrame();
 
 }

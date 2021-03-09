@@ -34,6 +34,17 @@ Camera::~Camera() {
 
 // ------------------------------------------------------------------------- // 
 
+void Camera::setupProjection(float fov_degrees, float aspect_ratio, float near, float far){
+
+	projection_ = glm::perspective(glm::radians(fov_degrees), aspect_ratio, near, far);
+	
+	// Invert clip Y due to GLM works with OpenGL and its inverted
+  projection_[1][1] *= -1;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
 void Camera::updateViewMatrix() {
 
   glm::mat4 rot_mat = glm::mat4(1.0f);
@@ -92,6 +103,14 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 glm::mat4x4 Camera::getViewMatrix() {
 
   return view_;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+glm::mat4 Camera::getProjectionMatrix() {
+
+	return projection_;
 
 }
 

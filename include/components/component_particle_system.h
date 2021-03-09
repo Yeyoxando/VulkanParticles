@@ -9,7 +9,10 @@
 
 // ------------------------------------------------------------------------- // 
 
+#include <vector>
+
 #include "component.h"
+#include "particles_test/particle.h"
 
 // ------------------------------------------------------------------------- //
 
@@ -17,8 +20,24 @@ class ComponentParticleSystem : public Component {
 public:
   ComponentParticleSystem();
 
+	void init(int max_particles);
+
+	// Setters for basic aspects
+
 protected:
   ~ComponentParticleSystem();
+
+
+	void emit();
+	void update(float time);
+	void sort();
+
+
+	std::vector<Particle*> particles_;
+  int max_particles_;
+	int alive_particles_;
+	bool burst_;
+
 
 };
 

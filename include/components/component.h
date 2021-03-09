@@ -17,7 +17,6 @@ class Component {
 public:
 
   enum ComponentKind {
-    kComponentKind_Invalid = -1,
     kComponentKind_Transform = 0,
     kComponentKind_Mesh = 1,
     kComponentKind_Material = 2,
