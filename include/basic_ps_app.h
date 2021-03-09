@@ -17,24 +17,32 @@
 
 class BasicPSApp {
 public:
+	// Main base app instance, use it to run the editor
+	static BasicPSApp& instance();
 
+  // Correspond to internal vertex and index buffers for these geometries
 	enum DefaultMesh {
 		kDefaultMesh_Quad = 0,
 		kDefaultMesh_Cube = 1,
 		// ...
-	};
+	}; 
 
+  // Correspond to internal material which have a pipeline and a descriptor set associated
   enum MaterialParent {
     kMaterialParent_Opaque = 0,
     kMaterialParent_Translucent = 1,
-  }; // Correspond to internal material which have a pipeline and a descriptor set associated
+  }; 
 
-  // Main base app instance
-  static BasicPSApp& instance();
 
+
+  // set a scene to run
   void loadScene(Scene* scene);
+  // call this method to start the editor after setting a scene
   void run();
 
+
+
+  // returns the current camera
   Camera* getCamera();
 
 private:
@@ -48,13 +56,19 @@ private:
   void update();
   void render();
 
-  // Other logic things
 
+
+  // Input manager for keyboard and mouse inputs
   InputManager* input_;
+  // Camera to travel around scene or particle edition
   Camera* camera_;
 
+  // The scene which is loaded to run on the editor
   Scene* active_scene_;
 
+
+
+  // Internal data and functions to manage everything hiding it from the user
   struct AppData;
   AppData* app_data_;
 
@@ -64,12 +78,6 @@ private:
 
 
  /* Notes Other classes to create
-
-Scene
-
-Object?
- - Different to particles, to represent a model or another geometry with a simple material
- - ...
 
 Editor
  - ImGUI

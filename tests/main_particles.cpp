@@ -22,7 +22,7 @@
 int main(){
 
   // 3D object creation and components setting
-  Entity* scenery = new Entity();
+  /*Entity* scenery = new Entity();
   {
     scenery->initAsArchetype(Entity::kArchetype_3DObject);
 
@@ -56,14 +56,14 @@ int main(){
     ps->init(500);
   }
   
-
+  */
   // Scene creation, settings and entities adding
   Scene* scene = new Scene();
   {
     scene->setName("Particles test");
 
-    scene->addEntity(scenery);
-    scene->addEntity(particle_system);
+    //scene->addEntity(scenery);
+    //scene->addEntity(particle_system);
 
     // Set up scene to the app!!
     BasicPSApp::instance().loadScene(scene);
@@ -83,8 +83,8 @@ int main(){
   // Components get deleted automatically, only created entities and scene must be deleted
 
   // User cleanup
-  delete scenery;
-  delete particle_system;
+  //delete scenery;
+  //delete particle_system;
   delete scene;
 
 

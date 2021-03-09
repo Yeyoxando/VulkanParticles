@@ -115,3 +115,15 @@ glm::mat4 Camera::getProjectionMatrix() {
 }
 
 // ------------------------------------------------------------------------- // 
+
+void Camera::zoom(float wheel_offset){
+
+  glm::vec3 front_ = glm::vec3(0.0f, 0.0f, 0.0f) - position_;
+
+  position_ += front_ * wheel_offset;
+
+  updateViewMatrix();
+
+}
+
+// ------------------------------------------------------------------------- // 

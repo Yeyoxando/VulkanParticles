@@ -79,7 +79,7 @@ public:
   
   }
 
-  // // Copy a buffer from the cpu to the device local memory through a staging buffer
+  // Copy a buffer from the cpu to the device local memory through a staging buffer
   void copy(VkDevice logical_device, VkCommandPool cmd_pool, VkQueue submit_queue,
     Buffer& src_buffer, VkDeviceSize size) {
     VkCommandBuffer command_buffer = beginSingleTimeCommands(logical_device, cmd_pool);

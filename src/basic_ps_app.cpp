@@ -123,7 +123,7 @@ void BasicPSApp::input() {
     glfwSetInputMode(app_data_->window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
   }
   if (input_->getMouseScroll() > 0.05f || input_->getMouseScroll() < -0.05f) {
-    //camera_->moveFront(input_->getState()->wheel_offset * 0.05f);
+    camera_->zoom(input_->getState()->wheel_offset * 0.05f);
     input_->getState()->wheel_offset = 0.0f;
   }
 

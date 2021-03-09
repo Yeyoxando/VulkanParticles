@@ -12,6 +12,13 @@
 #include "vulkan/vulkan.h"
 
 // ------------------------------------------------------------------------- //
+/*
+
+    Other commands like draw a geometry or a particle can be done also here
+    to have a collection of them
+
+*/
+// ------------------------------------------------------------------------- //
 
 // Begin a list of single time commands and return it
 static VkCommandBuffer beginSingleTimeCommands(VkDevice logical_device, VkCommandPool cmd_pool) {

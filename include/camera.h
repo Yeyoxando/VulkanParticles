@@ -23,15 +23,16 @@ public:
 
   void setupProjection(float fov_degrees, float aspect_ratio, float near, float far);
 
-  void updateViewMatrix();
   void updateViewMatrix(glm::vec2 new_mouse_pos);
 
   glm::mat4 getViewMatrix();
   glm::mat4 getProjectionMatrix();
 
+  void zoom(float wheeel_offset);
   void finishMoving() { is_moving_ = false; }
 
 private:
+  void updateViewMatrix();
 
   glm::vec3 position_;
   glm::vec3 rotation_;
