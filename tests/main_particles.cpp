@@ -30,7 +30,7 @@ int main(){
     ComponentMesh* mesh = static_cast<ComponentMesh*>
       (scenery->getComponent(Component::kComponentKind_Mesh));
     // Load a model
-    mesh->loadMeshFromFile("./mesh filename");
+    mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
     //mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
 
 

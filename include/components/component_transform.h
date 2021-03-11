@@ -18,6 +18,10 @@ class ComponentTransform : public Component {
 public:
   ComponentTransform();
 
+  void translate(glm::vec3 position);
+  void rotate(glm::vec3 rotation_degrees);
+  void scale(glm::vec3 scale);
+
   glm::mat4 getModelMatrix();
 
 protected:
@@ -28,6 +32,8 @@ protected:
   glm::vec3 position_;
   glm::vec3 rotation_;
   glm::vec3 scale_;
+
+  glm::mat4 model_;
 
 };
 

@@ -21,27 +21,38 @@ ComponentMesh::ComponentMesh() : Component(Component::kComponentKind_Mesh) {
 
 void ComponentMesh::loadMeshFromFile(const char* model_path){
 
-	// it will check in a map of loaded models (name and id on singleton), 
-	// if is not loaded it will call the internal function to do it and store it in the map
-	// with the id which indicates the position in the internal vector of buffers.
-	// and then the component will store the id for the place of the model in this vector
+	// Add model to load it later when empty
 	auto it = BasicPSApp::instance().app_data_->loaded_models_.cbegin();
 	if (it == BasicPSApp::instance().app_data_->loaded_models_.cend()) {
 		// Not any object insert it
-		// Load it on internal buffers
+		BasicPSApp::instance().app_data_->loaded_models_.insert(
+			std::pair<int, const char*>(BasicPSApp::instance().app_data_->default_geometries, model_path));
 		// Store new id
-		mesh_buffer_id_ = 1;
-	}
-	else {
-		// Compare the ones in the vector
-		// If is not insert it 
-		// load it
-		// Store new id
+		mesh_buffer_id_ = BasicPSApp::instance().app_data_->default_geometries;
+		return;
 	}
 
-	// the vector of buffers will be shared, models loaded will be put at the end of the default geometries
+	// Check if model was previously loaded to not load it again
+	it = BasicPSApp::instance().app_data_->loaded_models_.cbegin();
+	while (it != BasicPSApp::instance().app_data_->loaded_models_.cend()){
+		if (!strcmp(model_path, it->second)) {
+			printf("\nModel has been loaded earlier. Assigning id");
+			mesh_buffer_id_ = it->first;
+			return;
+		}
+		++it;
+	}
 
-	
+	// Save it if its not added yet
+	BasicPSApp::instance().app_data_->loaded_models_.insert(
+		std::pair<int, const char*>(BasicPSApp::instance().app_data_->default_geometries + 
+			BasicPSApp::instance().app_data_->loaded_models_.size(), model_path));
+	// Store new id
+	mesh_buffer_id_ = BasicPSApp::instance().app_data_->default_geometries +
+		BasicPSApp::instance().app_data_->loaded_models_.size();
+
+
+	// the vector of buffers its be shared, models loaded will be put at the end of the default geometries
 
 }
 

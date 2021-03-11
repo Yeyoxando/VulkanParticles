@@ -16,6 +16,7 @@
 
 // Provisional
 #include "components/component_mesh.h"
+#include "components/component_transform.h"
 
 // ----------------------- Functions definition ---------------------------- //
 
@@ -104,7 +105,7 @@ void BasicPSApp::AppData::initVulkan() {
 #ifdef LOAD_BILLBOARD
 
 #else
-	loadModel("../../../resources/models/viking_room.obj");
+	loadModels();
 #endif
   createUniformBuffers();
   createDescriptorPool();
@@ -877,52 +878,60 @@ void BasicPSApp::AppData::createTextureImage(const char* texture_path) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::loadModel(const char* model_path) {
+void BasicPSApp::AppData::loadModels() {
 
-  // Load model from file
-  tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t> shapes;
-  std::vector<tinyobj::material_t> materials;
-  std::string warn, err;
+	// Load model from file
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
 
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
+  auto it = loaded_models_.cbegin();
+	while (it != loaded_models_.cend()) {
 
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_path)) {
-    throw std::runtime_error(warn + err);
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
+
+    const char* model_path = it->second;
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_path)) {
+			throw std::runtime_error(warn + err);
+		}
+
+		// Create the model with indices
+		std::unordered_map<Vertex, uint32_t> unique_vertices{};
+
+		for (const auto& shape : shapes) {
+			for (const auto& index : shape.mesh.indices) {
+				Vertex vertex{};
+
+				vertex.position = {
+					attrib.vertices[3 * index.vertex_index + 0],
+					attrib.vertices[3 * index.vertex_index + 1],
+					attrib.vertices[3 * index.vertex_index + 2]
+				};
+
+				vertex.tex_coord = {
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+				};
+
+				vertex.color = { 1.0f, 1.0f, 1.0f };
+
+				if (unique_vertices.count(vertex) == 0) {
+					unique_vertices[vertex] = static_cast<uint32_t>(vertices.size());
+					vertices.push_back(vertex);
+				}
+
+				indices.push_back(unique_vertices[vertex]);
+			}
+		}
+
+		createVertexBuffer(vertices);
+		createIndexBuffer(indices);
+
+    ++it;
   }
 
-  // Create the model with indices
-  std::unordered_map<Vertex, uint32_t> unique_vertices{};
-
-  for (const auto& shape : shapes) {
-    for (const auto& index : shape.mesh.indices) {
-      Vertex vertex{};
-
-      vertex.position = {
-        attrib.vertices[3 * index.vertex_index + 0],
-        attrib.vertices[3 * index.vertex_index + 1],
-        attrib.vertices[3 * index.vertex_index + 2]
-      };
-
-      vertex.tex_coord = {
-        attrib.texcoords[2 * index.texcoord_index + 0],
-        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-      };
-
-      vertex.color = { 1.0f, 1.0f, 1.0f };
-
-      if (unique_vertices.count(vertex) == 0) {
-        unique_vertices[vertex] = static_cast<uint32_t>(vertices.size());
-        vertices.push_back(vertex);
-      }
-
-      indices.push_back(unique_vertices[vertex]);
-    }
-  }
-
-  createVertexBuffer(vertices);
-  createIndexBuffer(indices);
 
 }
 
@@ -1219,15 +1228,22 @@ void BasicPSApp::AppData::updateFrame() {
 void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // Calculate time since rendering started
-  /*static auto start_time = std::chrono::high_resolution_clock::now();
+  static auto start_time = std::chrono::high_resolution_clock::now();
 
   auto current_time = std::chrono::high_resolution_clock::now();
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
-  */
   
+  // Get model matrix (this will be on the system somehow
+  auto transform = static_cast<ComponentTransform*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
+    getComponent(Component::ComponentKind::kComponentKind_Transform));
+  // test to see transform comp working
+  //transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));
+  
+  //Fill the UBO
   UniformBufferObject ubo{};
-  ubo.model = glm::mat4(1.0f);
+
+  ubo.model = transform->getModelMatrix();
 
   ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
 

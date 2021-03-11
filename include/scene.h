@@ -28,7 +28,7 @@ public:
   void setName(const char* scene_name);
 
   void addEntity(Entity* entity);
-
+  // void removeEntity (Not for the moment due to dynamic buffers, until know how they work)
 
   void init();
   void update();

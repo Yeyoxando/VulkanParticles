@@ -227,7 +227,7 @@ struct BasicPSApp::AppData {
   void createGraphicsPipeline();
   // Create a shader module with the given bytecode
   VkShaderModule createShaderModule(const std::vector<char>& bytecode);
-  // Creates the framebuffers used for rendering
+  // Creates the frame buffers used for rendering
   void createFramebuffers();
   // Creates a command pool for manage the memory of the command buffers 
   void createCommandPool();
@@ -237,8 +237,8 @@ struct BasicPSApp::AppData {
   void createDepthResources();
   // Creates an image from a texture
   void createTextureImage(const char* texture_path);
-  // Loads a OBJ model
-  void loadModel(const char* model_path);
+  // Loads all the requested OBJ models
+  void loadModels();
   // Creates the vertex buffers for the app and map their memory to the GPU
   void createVertexBuffer(std::vector<Vertex>& vertices);
   // Creates the index buffers for the app and map their memory to the GPU
