@@ -6,11 +6,11 @@
 
 // ------------------------------------------------------------------------- //
 
-#include "systems/system.h"
+#include "systems/system_draw_objects.h"
 
 // ------------------------------------------------------------------------- //
 
-System::System(){
+SystemDrawObjects::SystemDrawObjects(){
 
 
 
@@ -18,31 +18,20 @@ System::System(){
 
 // ------------------------------------------------------------------------- //
 
-bool System::hasRequiredComponents(Entity* entity){
+void SystemDrawObjects::drawObjectsCommand(VkCommandBuffer cmd_buffer){
 
-	return true;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void System::setRequiredComponent(Component::ComponentKind comp_kind){
-
-
+	// This is an example to see that draw commands can be done like this, i think :)
+	/*VkBufferCopy copy_region{};
+	copy_region.srcOffset = 0;
+	copy_region.dstOffset = 0;
+	copy_region.size = 0;
+	vkCmdCopyBuffer(command_buffer, src_buffer.buffer_, buffer_, 1, &copy_region);*/
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void System::setRequiredArchetype(Entity::Archetype archetype){
-
-
-
-}
-
-// ------------------------------------------------------------------------- //
-
-System::~System() {
+void SystemDrawObjects::updateDynamicBuffer(){
 
 
 
@@ -50,3 +39,21 @@ System::~System() {
 
 // ------------------------------------------------------------------------- //
 
+std::vector<glm::mat4> SystemDrawObjects::getObjectModels(){
+
+	//will store all the objects models matrices in a vector
+	std::vector<glm::mat4> models = std::vector<glm::mat4>(0);
+
+	return models;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+SystemDrawObjects::~SystemDrawObjects(){
+
+
+
+}
+
+// ------------------------------------------------------------------------- //

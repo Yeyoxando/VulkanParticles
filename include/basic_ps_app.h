@@ -15,6 +15,19 @@
 
 // ------------------------------------------------------------------------- //
 
+struct AppSettings {
+  // This will be send as parameter to the app to initialize certain values
+  int max_entities;
+  int max_particles;
+  int max_objects;
+
+  // Global settings
+
+  bool use_msaa;
+};
+
+// ------------------------------------------------------------------------- //
+
 class BasicPSApp {
   friend class ComponentMesh;
 public:

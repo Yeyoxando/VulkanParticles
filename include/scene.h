@@ -15,10 +15,17 @@
 
 // ------------------------------------------------------------------------- //
 
-/*
-  - It'll include a list of entities
-  - Also global settings
-*/
+struct SceneSettings {
+	// This will be send as parameter to the scene to initialize certain values
+
+  // name
+	// settings like fog
+  // Global lighting
+  // ...
+
+};
+
+// ------------------------------------------------------------------------- //
 
 class Scene{
 public:

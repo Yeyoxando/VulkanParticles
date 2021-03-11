@@ -183,10 +183,10 @@ struct BasicPSApp::AppData {
   // internal materials
   // internal pipelines
   // internal descriptor sets
-  // internal textures
+  Image* texture_image_;
+	std::map<int, const char*> loaded_textures_;
 
   // Images for rendering
-  Image* texture_image_;
   Image* depth_image_;
   Image* color_image_;
 

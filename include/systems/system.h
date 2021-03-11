@@ -10,6 +10,7 @@
 // ------------------------------------------------------------------------- //
 
 #include "components/component.h"
+#include "entity.h"
 
 #include <vector>
 
@@ -17,11 +18,24 @@
 
 class System {
 public:
+  System();
 
 protected:
+  // Check if the entity has the components required by the system
+  bool hasRequiredComponents(Entity* entity);
+  
+  // Can be called multiple times to set where the system should act
+  void setRequiredComponent(Component::ComponentKind comp_kind);
+
+  // Called to set the components directly using an archetype
+  void setRequiredArchetype(Entity::Archetype archetype);
+
+  ~System();
+
   std::vector<Component::ComponentKind> required_components_;
 
 };
+
 /* 
   - Systems will need to be executed by each entity which has certain components
   
