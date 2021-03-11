@@ -22,6 +22,8 @@ public:
 
   void loadDefaultMesh(BasicPSApp::DefaultMesh default_mesh);
 
+  int getMeshID() { return mesh_buffer_id_; }
+
 protected:
   ~ComponentMesh();
 

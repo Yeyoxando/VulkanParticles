@@ -16,6 +16,7 @@
 // ------------------------------------------------------------------------- //
 
 class BasicPSApp {
+  friend class ComponentMesh;
 public:
 	// Main base app instance, use it to run the editor
 	static BasicPSApp& instance();
@@ -25,7 +26,7 @@ public:
 		kDefaultMesh_Quad = 0,
 		kDefaultMesh_Cube = 1,
 		// ...
-	}; 
+	};
 
   // Correspond to internal material which have a pipeline and a descriptor set associated
   enum MaterialParent {

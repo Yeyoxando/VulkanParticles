@@ -31,6 +31,7 @@ int main(){
       (scenery->getComponent(Component::kComponentKind_Mesh));
     // Load a model
     mesh->loadMeshFromFile("./mesh filename");
+    //mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
 
 
     // Get material component

@@ -15,7 +15,7 @@
 
 /* 
   - This will need a material and a mesh component to prepare the drawing of the entities
-
+  - get all model matrixes in the same piece of data to use dynamic buffers
 */
 
 // ------------------------------------------------------------------------- //

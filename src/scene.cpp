@@ -24,7 +24,7 @@ Scene::~Scene() {
 
 void Scene::setName(const char* scene_name){
 
-
+	name_ = scene_name;
 
 }
 
@@ -32,7 +32,7 @@ void Scene::setName(const char* scene_name){
 
 void Scene::addEntity(Entity* entity){
 
-
+	entities_.push_back(entity);
 
 }
 

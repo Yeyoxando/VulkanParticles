@@ -24,6 +24,8 @@ public:
 
 	// Setters for basic aspects
 
+	// It will use default internal mesh and material for now (quad and Billboard shader)
+
 protected:
   ~ComponentParticleSystem();
 

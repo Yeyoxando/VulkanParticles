@@ -60,18 +60,17 @@ void BasicPSApp::init() {
 	input_ = new InputManager();
 	camera_ = new Camera();
 
+	if (active_scene_ == nullptr) {
+		throw std::runtime_error("\n A scene has not been set to run.");
+	}
+	active_scene_->init();
+
   app_data_->initWindow();
   app_data_->initVulkan();
 
   input_->init(app_data_->window_);
-
 	camera_->setupProjection(90.0f, (float)app_data_->window_width_ / (float)app_data_->window_height_, 0.1f, 10.0f);
 
-  if (active_scene_ == nullptr) {
-    throw std::runtime_error("\n A scene has not been set to run.");
-  }
-
-	active_scene_->init();
 
 }
 

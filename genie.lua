@@ -44,6 +44,7 @@ project "ParticleEditor"
 
 	includedirs{
 	  "./include/",
+	  "./src/internal/",
 	  "C:/Program Files/VulkanSDK/1.2.154.1/Include/",
 	  "C:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
 	  "C:/VSLibraries/glm/",
@@ -57,6 +58,7 @@ project "ParticleEditor"
 		"./include/**.h",
 		"./src/**.cpp",
 		"./src/internal/**.h",
+		"./src/internal/**.cpp",
 		"./tests/**.cpp", 
 		"./resources/**.vert", 
 		"./resources/**.frag", 
@@ -68,6 +70,7 @@ project "ParticleEditor"
 		--"./deps/glm/*.h",
 		--"./deps/glm/*.hpp",
 
+		"C:/VSLibraries/SingleHeaderFiles/stb_image/**.h",
 		"C:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/**.h"
 
 	}
@@ -80,7 +83,6 @@ project "ParticleEditor"
 		"GLM_FORCE_RADIANS",
 		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
 		"GLM_ENABLE_EXPERIMENTAL",
-		"STB_IMAGE_IMPLEMENTATION",
 		"TINYOBJLOADER_IMPLEMENTATION",
 	}	 
 	

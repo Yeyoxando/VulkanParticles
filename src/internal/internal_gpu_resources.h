@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------- //
 
 #include "vulkan/vulkan.h"
-#include "internal/internal_commands.h"
+#include "../src/internal/internal_commands.h"
 
 #include <stdexcept>
 
@@ -47,7 +47,7 @@ public:
 
   // Creates a buffer and allocate its memory
   void create(VkPhysicalDevice phys_device, VkDevice logical_device, VkDeviceSize size, VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties) {
+    VkMemoryPropertyFlags properties, uint32_t data_count = 0) {
 
     // Create the  buffer
     VkBufferCreateInfo buffer_info{};
@@ -76,7 +76,9 @@ public:
 
     // Bind buffer and memory together
     vkBindBufferMemory(logical_device, buffer_, buffer_memory_, 0);
-  
+    
+    data_count_ = data_count;
+
   }
 
   // Copy a buffer from the cpu to the device local memory through a staging buffer
@@ -104,6 +106,8 @@ public:
 
   VkBuffer buffer_;
   VkDeviceMemory buffer_memory_;
+
+  uint32_t data_count_;
 
 };
 
