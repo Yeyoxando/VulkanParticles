@@ -17,6 +17,7 @@ public:
   glm::vec3 position_;
   glm::vec3 velocity_;
   float life_time_;
+  float distance_;
   bool alive_;
 
 };

@@ -12,13 +12,13 @@
 
 SystemDrawParticles::SystemDrawParticles(){
 
-
+	setRequiredArchetype(Entity::kArchetype_ParticleSystem);
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawParticles::drawObjectsCommand(VkCommandBuffer cmd_buffer){
+void SystemDrawParticles::drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*>& entities){
 
 	// This is an example to see that draw commands can be done like this, i think :)
 	/*VkBufferCopy copy_region{};
@@ -31,7 +31,7 @@ void SystemDrawParticles::drawObjectsCommand(VkCommandBuffer cmd_buffer){
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawParticles::updateDynamicBuffer(){
+void SystemDrawParticles::updateDynamicBuffer(std::vector<Entity*>& entities){
 
 
 
@@ -39,7 +39,7 @@ void SystemDrawParticles::updateDynamicBuffer(){
 
 // ------------------------------------------------------------------------- //
 
-std::vector<glm::mat4> SystemDrawParticles::getObjectModels(){
+std::vector<glm::mat4> SystemDrawParticles::getObjectModels(std::vector<Entity*>& entities){
 
 	//for all the particle systems
 

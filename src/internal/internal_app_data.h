@@ -12,6 +12,7 @@
 #include "common_def.h"
 #include "vulkan_utils.h"
 #include "../src/internal/internal_gpu_resources.h"
+#include "systems/system_draw_objects.h"
 
 #include <GLFW/glfw3.h>
 
@@ -195,8 +196,15 @@ struct BasicPSApp::AppData {
   // -- MSAA --
   VkSampleCountFlagBits msaa_samples_;
 
+
+  // -- Internal systems --
+	SystemDrawObjects* system_draw_objects_;
+
+
+
   // -- Constructor --
   AppData();
+  ~AppData();
 
   // -- Init and close --
   // Initializes GLFW and creates a window

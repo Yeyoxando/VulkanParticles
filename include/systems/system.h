@@ -19,6 +19,7 @@
 class System {
 public:
   System();
+  ~System();
 
 protected:
   // Check if the entity has the components required by the system
@@ -30,7 +31,6 @@ protected:
   // Called to set the components directly using an archetype
   void setRequiredArchetype(Entity::Archetype archetype);
 
-  ~System();
 
   std::vector<Component::ComponentKind> required_components_;
 

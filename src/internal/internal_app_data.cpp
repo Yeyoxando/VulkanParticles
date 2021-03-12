@@ -55,6 +55,16 @@ BasicPSApp::AppData::AppData() {
   resized_framebuffer_ = false;
   close_window_ = false;
 
+  system_draw_objects_ = new SystemDrawObjects();
+
+}
+
+// ------------------------------------------------------------------------- //
+
+BasicPSApp::AppData::~AppData(){
+
+  delete system_draw_objects_;
+
 }
 
 // ------------------------------------------------------------------------- //

@@ -20,6 +20,8 @@ static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_f
 
 class GPUResource {
 public:
+  GPUResource() { id_ = -1; }
+  ~GPUResource() {}
 
   uint32_t id_;
 protected:
@@ -282,6 +284,20 @@ public:
 
   uint32_t width_;
   uint32_t height_;
+
+};
+
+// ------------------------------------------------------------------------- //
+
+class Material : public GPUResource {
+public:
+  Material();
+  ~Material();
+
+protected:
+  VkPipeline graphics_pipeline_;
+  VkPipelineLayout pipeline_layout_;
+  VkDescriptorSet descriptor_set_; // Or it is the layout?
 
 };
 

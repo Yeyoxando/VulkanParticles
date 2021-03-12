@@ -19,6 +19,25 @@
 #include "components/component_material.h"
 #include "components/component_particle_system.h"
 
+/*
+TODO (ordered):
+	- implement material component and texture loading like models
+  - Replace draw system   
+  - implement neat materials system, use a color variable only for now to make an example
+  - draw two objects with dynamic uniforms         
+  - draw lots of objects with dynamic uniforms     
+  - implement the same for particles
+  - use blend mode which not requires sorting (additive?)
+  - implement radix sort    
+  - add a callback for the scene update to customize it from the outside as a scripting method
+  - clean everything and made a little example    
+  - finished step 2
+
+  - start step 3 -> min to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
+
+*/
+
+
 int main(){
 
   // 3D object creation and components setting

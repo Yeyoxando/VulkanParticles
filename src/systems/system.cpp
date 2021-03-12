@@ -20,6 +20,10 @@ System::System(){
 
 bool System::hasRequiredComponents(Entity* entity){
 
+	for (auto comp_kind : required_components_) {
+		if (!entity->hasComponent(comp_kind)) return false;
+	}
+
 	return true;
 
 }
@@ -28,7 +32,7 @@ bool System::hasRequiredComponents(Entity* entity){
 
 void System::setRequiredComponent(Component::ComponentKind comp_kind){
 
-
+	required_components_.push_back(comp_kind);
 
 }
 
@@ -36,7 +40,21 @@ void System::setRequiredComponent(Component::ComponentKind comp_kind){
 
 void System::setRequiredArchetype(Entity::Archetype archetype){
 
-
+	switch (archetype) {
+	case Entity::Archetype::kArchetype_3DObject: {
+		required_components_.push_back(Component::ComponentKind::kComponentKind_Mesh);
+		required_components_.push_back(Component::ComponentKind::kComponentKind_Material);
+		break;
+	}
+	case Entity::Archetype::kArchetype_ParticleSystem: {
+		required_components_.push_back(Component::ComponentKind::kComponentKind_ParticleSystem);
+		break;
+	}
+	default: {
+		// assert
+		break;
+	}
+	}
 
 }
 

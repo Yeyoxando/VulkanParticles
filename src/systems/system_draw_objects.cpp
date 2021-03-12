@@ -12,34 +12,47 @@
 
 SystemDrawObjects::SystemDrawObjects(){
 
-
+	setRequiredArchetype(Entity::kArchetype_3DObject);
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::drawObjectsCommand(VkCommandBuffer cmd_buffer){
+void SystemDrawObjects::drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*> &entities){
 
 	// This is an example to see that draw commands can be done like this, i think :)
-	/*VkBufferCopy copy_region{};
-	copy_region.srcOffset = 0;
-	copy_region.dstOffset = 0;
-	copy_region.size = 0;
-	vkCmdCopyBuffer(command_buffer, src_buffer.buffer_, buffer_, 1, &copy_region);*/
+	
+	/*auto first_entity = BasicPSApp::instance().active_scene_->getEntities()[0];
+	auto mesh = static_cast<ComponentMesh*>(first_entity->getComponent(Component::kComponentKind_Mesh));
+
+	// The draw system must return this list of commands for each object
+	VkBuffer vertex_buffers[] = { vertex_buffers_[mesh->getMeshID()]->buffer_ };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
+	vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[mesh->getMeshID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
+
+	// Per object (uniforms and draw)
+	//for (int i = 0; i < entities.size(); i++) {
+	vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+		pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
+
+	vkCmdDrawIndexed(command_buffers_[i], index_buffers_[mesh->getMeshID()]->data_count_, 1, 0, 0, 0);
+	*/
+}
+
+// ------------------------------------------------------------------------- //
+
+void SystemDrawObjects::updateDynamicBuffer(std::vector<Entity*> &entities){
+
+
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::updateDynamicBuffer(){
-
-
-
-}
-
-// ------------------------------------------------------------------------- //
-
-std::vector<glm::mat4> SystemDrawObjects::getObjectModels(){
+std::vector<glm::mat4> SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 
 	//will store all the objects models matrices in a vector
 	std::vector<glm::mat4> models = std::vector<glm::mat4>(0);
