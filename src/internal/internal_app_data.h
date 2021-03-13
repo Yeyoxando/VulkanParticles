@@ -29,8 +29,6 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-//#define LOAD_BILLBOARD 1
-
 // ------------------------------------------------------------------------- //
 
 struct QueueFamilyIndices {
@@ -135,12 +133,13 @@ struct UniformBufferObject {
 // All data used in the application, the majority are Vulkan elements
 struct BasicPSApp::AppData {
 
-  // -- Window variables --
+  // ----- WINDOW -----
   GLFWwindow* window_;
   int window_width_;
   int window_height_;
 
-  // -- Vulkan variables --
+
+  // ----- VULKAN -----
   VkInstance instance_;
   VkDebugUtilsMessengerEXT debug_messenger_;
   VkPhysicalDevice physical_device_; // GPU
@@ -151,56 +150,41 @@ struct BasicPSApp::AppData {
   VkSwapchainKHR swap_chain_;
   VkFormat swap_chain_image_format_;
   VkExtent2D swap_chain_extent_;
-  std::vector<Image*> swap_chain_images_;
+	std::vector<Image*> swap_chain_images_;
+	Image* depth_image_;
+	Image* color_image_;
   std::vector<VkFramebuffer> swap_chain_framebuffers_;
   VkRenderPass render_pass_;
-  VkDescriptorSetLayout descriptor_set_layout_;
-  VkPipelineLayout pipeline_layout_;
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
   std::vector<VkSemaphore> available_image_semaphores_;
   std::vector<VkSemaphore> finished_render_semaphores_;
   std::vector<VkFence> in_flight_fences_;
   std::vector<VkFence> images_in_flight_;
+	VkSampleCountFlagBits msaa_samples_;
   int current_frame_;
   bool resized_framebuffer_;
   bool close_window_;
 
-  VkDescriptorPool descriptor_pool_;
-  std::vector<VkDescriptorSet> descriptor_sets_;
 
-
-  VkPipeline graphics_pipeline_;
-
-
-
-  // -- Resource variables (Internals) --
+  // ----- RESOURCES -----
   const int default_geometries = 1;
   std::vector<Buffer*> vertex_buffers_;
   std::vector<Buffer*> index_buffers_;
 	std::map<int, const char*> loaded_models_;
 
-  std::vector<Buffer*> uniform_buffers_;
-  // internal materials
-  // internal pipelines
-  // internal descriptor sets
-  Image* texture_image_;
+  std::vector<Material*> materials_;
+  //std::vector<Buffer*> uniform_buffers_;
+  std::vector<Image*> texture_images_;
 	std::map<int, const char*> loaded_textures_;
 
-  // Images for rendering
-  Image* depth_image_;
-  Image* color_image_;
 
-
-
-  // -- MSAA --
-  VkSampleCountFlagBits msaa_samples_;
-
-
-  // -- Internal systems --
+  // ----- SYSTEMS -----
 	SystemDrawObjects* system_draw_objects_;
 
 
+
+// ----------- METHODS -----------
 
   // -- Constructor --
   AppData();
@@ -230,9 +214,11 @@ struct BasicPSApp::AppData {
   // Creates the render pass for the graphics pipeline
   void createRenderPass();
   // Creates the descriptor layout to upload uniforms to the shader
-  void createDescriptorSetLayout();
+  void createDescriptorSetLayouts();
+  // Creates the pipeline layout for the different graphics pipelines
+  void createPipelineLayouts();
   // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
-  void createGraphicsPipeline();
+  void createGraphicsPipelines();
   // Create a shader module with the given bytecode
   VkShaderModule createShaderModule(const std::vector<char>& bytecode);
   // Creates the frame buffers used for rendering
@@ -243,18 +229,16 @@ struct BasicPSApp::AppData {
   void createColorResources();
   // Creates the depth resources for depth testing
   void createDepthResources();
-  // Creates an image from a texture
-  void createTextureImage(const char* texture_path);
+  // Creates all the texture images marked for load
+  void createTextureImages();
   // Loads all the requested OBJ models
   void loadModels();
   // Creates the vertex buffers for the app and map their memory to the GPU
   void createVertexBuffer(std::vector<Vertex>& vertices);
   // Creates the index buffers for the app and map their memory to the GPU
   void createIndexBuffer(std::vector<uint32_t>& indices);
-  // Creates the uniform buffers for the app
-  void createUniformBuffers();
   // Creates a descriptor pool to allocate the descriptor sets for the uniforms
-  void createDescriptorPool();
+  void createDescriptorPools();
   // Creates the descriptor sets for the uniform buffers
   void createDescriptorSets();
   // Creates the command buffers for each swap chain framebuffer
@@ -317,14 +301,22 @@ struct BasicPSApp::AppData {
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
   // Find a depth format
   VkFormat findDepthFormat();
+  // Allocates the given descriptor sets (for swap chain images) with the settings of the parent 
+  void allocateDescriptorSets(std::vector<VkDescriptorSet> &descriptor_set, int parent_id);
+	// Creates the uniform buffers for a material
+	void createUniformBuffers(std::vector<Buffer*>& buffers_);
+  // Clean up the uniform buffers from a material
+  void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
 
-// -- MSAA -- 
+  // -- MSAA -- 
   // Get the maximum number of samples supported by physical device
   VkSampleCountFlagBits getMaxUsableSampleCount();
 
   // -- Internal structure --
   void setupVertexBuffers();
   void setupIndexBuffers();
+
+  void setupMaterials();
 
 };
 

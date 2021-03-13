@@ -40,6 +40,8 @@ void System::setRequiredComponent(Component::ComponentKind comp_kind){
 
 void System::setRequiredArchetype(Entity::Archetype archetype){
 
+	// transform components are not required because are added by default
+
 	switch (archetype) {
 	case Entity::Archetype::kArchetype_3DObject: {
 		required_components_.push_back(Component::ComponentKind::kComponentKind_Mesh);

@@ -55,6 +55,14 @@ Camera* BasicPSApp::getCamera() {
 
 // ------------------------------------------------------------------------- //
 
+Scene* BasicPSApp::getScene(){
+
+  return active_scene_;
+
+}
+
+// ------------------------------------------------------------------------- //
+
 void BasicPSApp::init() {
 
 	input_ = new InputManager();
@@ -77,9 +85,12 @@ void BasicPSApp::init() {
 // ------------------------------------------------------------------------- //
 
 void BasicPSApp::shutDown() {
-
+  
   app_data_->renderLoopEnd();
+
+  delete active_scene_;
   app_data_->closeVulkan();
+
 
   delete camera_;
   delete input_;

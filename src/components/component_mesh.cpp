@@ -51,9 +51,6 @@ void ComponentMesh::loadMeshFromFile(const char* model_path){
 	mesh_buffer_id_ = BasicPSApp::instance().app_data_->default_geometries +
 		BasicPSApp::instance().app_data_->loaded_models_.size();
 
-
-	// the vector of buffers its be shared, models loaded will be put at the end of the default geometries
-
 }
 
 // ------------------------------------------------------------------------- //

@@ -21,10 +21,10 @@
 
 /*
 TODO (ordered):
-	- implement material component and texture loading like models
   - Replace draw system   
-  - implement neat materials system, use a color variable only for now to make an example
+  - use a color variable only for now to make an example of the different uniforms
   - draw two objects with dynamic uniforms         
+  - separate vp and model matrices
   - draw lots of objects with dynamic uniforms     
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
@@ -36,7 +36,6 @@ TODO (ordered):
   - start step 3 -> min to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
 
 */
-
 
 int main(){
 
@@ -59,8 +58,10 @@ int main(){
     // Indicate material parent to internally set pipeline, descriptor set...
     mat->setMaterialParent(BasicPSApp::kMaterialParent_Opaque);
     // Create initial instance data
-    ComponentMaterial::Mat1 opaque_instance_data;
-    mat->setInstanceData(&opaque_instance_data);
+    ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
+    opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+    //opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+    mat->setInstanceData(opaque_instance_data);
   }
 
 
@@ -100,12 +101,7 @@ int main(){
   }
 
 
-  // Components get deleted automatically, only created entities and scene must be deleted
-
-  // User cleanup
-  delete scenery;
-  delete particle_system;
-  delete scene;
+  // Components get deleted automatically,
 
 
   // This is to check that memory gets cleaned

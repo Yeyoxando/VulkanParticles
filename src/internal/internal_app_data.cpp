@@ -16,6 +16,7 @@
 
 // Provisional
 #include "components/component_mesh.h"
+#include "components/component_material.h"
 #include "components/component_transform.h"
 
 // ----------------------- Functions definition ---------------------------- //
@@ -36,16 +37,13 @@ BasicPSApp::AppData::AppData() {
   swap_chain_ = VK_NULL_HANDLE;
   swap_chain_extent_ = {};
   render_pass_ = VK_NULL_HANDLE;
-  descriptor_set_layout_ = VK_NULL_HANDLE;
-  pipeline_layout_ = VK_NULL_HANDLE;
-  graphics_pipeline_ = VK_NULL_HANDLE;
-  command_pool_ = VK_NULL_HANDLE;
-  descriptor_pool_ = VK_NULL_HANDLE;
 
   vertex_buffers_ = std::vector<Buffer*>(0);
   index_buffers_ = std::vector<Buffer*>(0);
 
-  texture_image_ = nullptr;
+  materials_ = std::vector<Material*>(0);
+  texture_images_ = std::vector<Image*>(0);
+
   depth_image_ = nullptr;
   color_image_ = nullptr;
 
@@ -99,26 +97,19 @@ void BasicPSApp::AppData::initVulkan() {
   createLogicalDevice();
   createSwapChain();
   createRenderPass();
-  createDescriptorSetLayout();
-  createGraphicsPipeline();
+  setupMaterials();
+  createDescriptorSetLayouts();
+  createPipelineLayouts();
+  createGraphicsPipelines();
   createCommandPool();
   createColorResources();
   createDepthResources();
   createFramebuffers();
-#ifdef LOAD_BILLBOARD
-  createTextureImage("../../../resources/textures/smoke_texture_trasnparency.png");
-#else
-  createTextureImage("../../../resources/textures/viking_room.png");
-#endif
+  createTextureImages();
   setupVertexBuffers();
 	setupIndexBuffers();
-#ifdef LOAD_BILLBOARD
-
-#else
 	loadModels();
-#endif
-  createUniformBuffers();
-  createDescriptorPool();
+  createDescriptorPools();
   createDescriptorSets();
   createCommandBuffers();
   createSyncObjects();
@@ -141,10 +132,14 @@ void BasicPSApp::AppData::closeVulkan() {
   // Vulkan cleanup
   cleanupSwapChain();
 
-  texture_image_->clean(logical_device_);
-  delete texture_image_;
+  for (int i = 0; i < texture_images_.size(); i++) {
+    texture_images_[i]->clean(logical_device_);
+    delete texture_images_[i];
+  }
 
-  vkDestroyDescriptorSetLayout(logical_device_, descriptor_set_layout_, nullptr);
+  for (int i = 0; i < materials_.size(); i++) {
+    vkDestroyDescriptorSetLayout(logical_device_, materials_[i]->descriptor_set_layout_, nullptr);
+  }
 
   for (int i = 0; i < index_buffers_.size(); i++) {
     index_buffers_[i]->clean(logical_device_);
@@ -469,7 +464,7 @@ void BasicPSApp::AppData::createRenderPass() {
   color_attachment_resolve_ref.attachment = 2;
   color_attachment_resolve_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-  // Subpasses (only 1 for now)
+  // Sub passes (only 1 for now)
   VkSubpassDescription subpass{};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpass.colorAttachmentCount = 1;
@@ -508,7 +503,9 @@ void BasicPSApp::AppData::createRenderPass() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDescriptorSetLayout() {
+void BasicPSApp::AppData::createDescriptorSetLayouts() {
+
+  // MATERIAL OPAQUE
 
   // Create the binding for the vertex shader MVP matrices
   VkDescriptorSetLayoutBinding ubo_layout_binding{};
@@ -525,37 +522,72 @@ void BasicPSApp::AppData::createDescriptorSetLayout() {
   sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
   sampler_layout_binding.pImmutableSamplers = nullptr;
 
-  // Create the descriptor set
+  // Create the descriptor set layout
   std::array<VkDescriptorSetLayoutBinding, 2> bindings = { ubo_layout_binding, sampler_layout_binding };
   VkDescriptorSetLayoutCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   create_info.bindingCount = static_cast<uint32_t>(bindings.size());
   create_info.pBindings = bindings.data();
 
-  if (vkCreateDescriptorSetLayout(logical_device_, &create_info, nullptr, &descriptor_set_layout_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create descriptor set layout.");
+  if (vkCreateDescriptorSetLayout(logical_device_, &create_info, nullptr, &materials_[0]->descriptor_set_layout_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create opaque descriptor set layout.");
   }
+
+
+
+  // MATERIAL TRANSLUCENT
+  // The same as the other one
+	if (vkCreateDescriptorSetLayout(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_set_layout_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create translucent descriptor set layout.");
+	}
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createGraphicsPipeline() {
+void BasicPSApp::AppData::createPipelineLayouts(){
+
+	// OPAQUE MATERIAL PIPELINE LAYOUT
+	
+  VkPipelineLayoutCreateInfo opaque_layout_info{};
+	opaque_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	opaque_layout_info.setLayoutCount = 1;
+	opaque_layout_info.pSetLayouts = &materials_[0]->descriptor_set_layout_;
+	opaque_layout_info.pushConstantRangeCount = 0;
+	opaque_layout_info.pPushConstantRanges = nullptr;
+
+	if (vkCreatePipelineLayout(logical_device_, &opaque_layout_info, nullptr, &materials_[0]->pipeline_layout_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create opaque pipeline layout.");
+	}
+
+
+
+	// TRANSLUCENT MATERIAL PIPELINE LAYOUT
+
+	VkPipelineLayoutCreateInfo translucent_layout_info{};
+	translucent_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	translucent_layout_info.setLayoutCount = 1;
+	translucent_layout_info.pSetLayouts = &materials_[1]->descriptor_set_layout_;
+	translucent_layout_info.pushConstantRangeCount = 0;
+	translucent_layout_info.pPushConstantRanges = nullptr;
+
+	if (vkCreatePipelineLayout(logical_device_, &translucent_layout_info, nullptr, &materials_[1]->pipeline_layout_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create translucent pipeline layout.");
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::createGraphicsPipelines() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
-  // Different pipelines has to be created for different render options
-  // Not like in OpenGL where you can change glBlendFunc between objects
-  // Whole pipeline has to be created and changed to do this
+  // OPAQUE MATERIAL PIPELINE
 
   // Load shaders
-#ifdef LOAD_BILLBOARD
-  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_billboard.spv");
-  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
-#else
   auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_triangle.spv");
   auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
-#endif
 
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
@@ -619,7 +651,7 @@ void BasicPSApp::AppData::createGraphicsPipeline() {
   rasterizer_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer_state_info.depthClampEnable = VK_FALSE;
   rasterizer_state_info.rasterizerDiscardEnable = VK_FALSE;
-  rasterizer_state_info.polygonMode = VK_POLYGON_MODE_FILL; // Line to draw wireframe but require a GPU feature
+  rasterizer_state_info.polygonMode = VK_POLYGON_MODE_FILL; // Line to draw wire frame but require a GPU feature
   rasterizer_state_info.lineWidth = 1.0f;
   rasterizer_state_info.cullMode = VK_CULL_MODE_BACK_BIT;
   rasterizer_state_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Turned counter-clockwise due to glm y clip flip on the projection matrix
@@ -653,22 +685,16 @@ void BasicPSApp::AppData::createGraphicsPipeline() {
 
   // Create color blend settings
   VkPipelineColorBlendAttachmentState color_blend_attachment{};
-  color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-    VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-#ifdef LOAD_BILLBOARD
-  color_blend_attachment.blendEnable = VK_TRUE;
-#else
   color_blend_attachment.blendEnable = VK_FALSE;
-#endif
   color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
   color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-  // Alpha blending
-  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
   color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+  // Alpha blending
   color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
   color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+  color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+    VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
   VkPipelineColorBlendStateCreateInfo blend_state_info{};
   blend_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -676,10 +702,10 @@ void BasicPSApp::AppData::createGraphicsPipeline() {
   blend_state_info.logicOp = VK_LOGIC_OP_COPY;
   blend_state_info.attachmentCount = 1;
   blend_state_info.pAttachments = &color_blend_attachment;
-  blend_state_info.blendConstants[0] = 0.0f;
+  /*blend_state_info.blendConstants[0] = 0.0f;
   blend_state_info.blendConstants[1] = 0.0f;
   blend_state_info.blendConstants[2] = 0.0f;
-  blend_state_info.blendConstants[3] = 0.0f;
+  blend_state_info.blendConstants[3] = 0.0f;*/
 
   // Create dynamic settings of the pipeline
   VkDynamicState dynamic_states[] = {
@@ -692,43 +718,84 @@ void BasicPSApp::AppData::createGraphicsPipeline() {
   dynamic_state_info.dynamicStateCount = 2;
   dynamic_state_info.pDynamicStates = dynamic_states;
 
-  // Create pipeline state layout (Uniforms)
-  VkPipelineLayoutCreateInfo layout_info{};
-  layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  layout_info.setLayoutCount = 1;
-  layout_info.pSetLayouts = &descriptor_set_layout_;
-  layout_info.pushConstantRangeCount = 0;
-  layout_info.pPushConstantRanges = nullptr;
-
-  if (vkCreatePipelineLayout(logical_device_, &layout_info, nullptr, &pipeline_layout_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create pipeline layout.");
-  }
-
   // Create the actual graphics pipeline
-  VkGraphicsPipelineCreateInfo graphics_pipeline_info{};
-  graphics_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  graphics_pipeline_info.stageCount = 2;
-  graphics_pipeline_info.pStages = shader_stages;
-  graphics_pipeline_info.pVertexInputState = &vertex_input_info;
-  graphics_pipeline_info.pInputAssemblyState = &input_assembly_info;
-  graphics_pipeline_info.pViewportState = &viewport_state_info;
-  graphics_pipeline_info.pRasterizationState = &rasterizer_state_info;
-  graphics_pipeline_info.pMultisampleState = &multisample_state_info;
-  graphics_pipeline_info.pDepthStencilState = &depth_stencil_info;
-  graphics_pipeline_info.pColorBlendState = &blend_state_info;
-  graphics_pipeline_info.pDynamicState = nullptr;
-  graphics_pipeline_info.layout = pipeline_layout_;
-  graphics_pipeline_info.renderPass = render_pass_;
-  graphics_pipeline_info.subpass = 0;
-  graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // derive from other graphics pipeline with flags VK_PIPELINE_CREATE_DERIVATIVE_BIT
-  graphics_pipeline_info.basePipelineIndex = -1;
+  VkGraphicsPipelineCreateInfo opaque_pipeline_info{};
+  opaque_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  opaque_pipeline_info.stageCount = 2;
+  opaque_pipeline_info.pStages = shader_stages;
+  opaque_pipeline_info.pVertexInputState = &vertex_input_info;
+  opaque_pipeline_info.pInputAssemblyState = &input_assembly_info;
+  opaque_pipeline_info.pViewportState = &viewport_state_info;
+  opaque_pipeline_info.pRasterizationState = &rasterizer_state_info;
+  opaque_pipeline_info.pMultisampleState = &multisample_state_info;
+  opaque_pipeline_info.pDepthStencilState = &depth_stencil_info;
+  opaque_pipeline_info.pColorBlendState = &blend_state_info;
+  opaque_pipeline_info.pDynamicState = nullptr;
+  opaque_pipeline_info.layout = materials_[0]->pipeline_layout_;
+  opaque_pipeline_info.renderPass = render_pass_;
+  opaque_pipeline_info.subpass = 0;
+  opaque_pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // derive from other graphics pipeline with flags VK_PIPELINE_CREATE_DERIVATIVE_BIT
+  opaque_pipeline_info.basePipelineIndex = -1;
 
-  if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
-    nullptr, &graphics_pipeline_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the graphics pipeline.");
+  if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &opaque_pipeline_info,
+    nullptr, &materials_[0]->graphics_pipeline_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create the opaque graphics pipeline.");
   }
+
+
+  // TRANSLUCENT MATERIAL PIPELINE
+  // Modification of the 1st one
+
+  // VShader
+  vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_billboard.spv");
+  VkShaderModule billboard_vert_shader_module = createShaderModule(vert_shader_code);
+
+	VkPipelineShaderStageCreateInfo billboard_shader_stage_info = vert_shader_stage_info;
+	billboard_shader_stage_info.module = billboard_vert_shader_module;
+
+  VkPipelineShaderStageCreateInfo billboard_shader_stages[] = { billboard_shader_stage_info, frag_shader_stage_info };
+
+  // Blend
+	VkPipelineColorBlendAttachmentState translucent_color_blend_attachment = color_blend_attachment;
+  translucent_color_blend_attachment.blendEnable = VK_TRUE;
+	translucent_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	translucent_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	translucent_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+	translucent_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	translucent_color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	translucent_color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+  translucent_color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+  
+	VkPipelineColorBlendStateCreateInfo translucent_blend_state_info = blend_state_info;
+  translucent_blend_state_info.pAttachments = &translucent_color_blend_attachment;
+
+  // Depth
+	VkPipelineDepthStencilStateCreateInfo translucent_depth_stencil_info = depth_stencil_info;
+	translucent_depth_stencil_info.depthTestEnable = VK_FALSE;
+
+	// MSAA
+	//VkPipelineMultisampleStateCreateInfo translucent_multisample_state_info = multisample_state_info;
+  //translucent_multisample_state_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+
+  // Translucent pipeline
+	VkGraphicsPipelineCreateInfo translucent_pipeline_info = opaque_pipeline_info;
+  translucent_pipeline_info.stageCount = 2;
+  translucent_pipeline_info.pStages = billboard_shader_stages;
+	translucent_pipeline_info.layout = materials_[1]->pipeline_layout_;
+  translucent_pipeline_info.pColorBlendState = &translucent_blend_state_info;
+  translucent_pipeline_info.pDepthStencilState = &translucent_depth_stencil_info;
+  //translucent_pipeline_info.pMultisampleState = &translucent_multisample_state_info;
+
+	if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &translucent_pipeline_info,
+		nullptr, &materials_[1]->graphics_pipeline_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create the translucent graphics pipeline.");
+	}
+
 
   vkDestroyShaderModule(logical_device_, vert_shader_module, nullptr);
+  vkDestroyShaderModule(logical_device_, billboard_vert_shader_module, nullptr);
   vkDestroyShaderModule(logical_device_, frag_shader_module, nullptr);
 
 }
@@ -834,55 +901,64 @@ void BasicPSApp::AppData::createDepthResources() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createTextureImage(const char* texture_path) {
+void BasicPSApp::AppData::createTextureImages() {
 
   int tex_width;
   int tex_height;
   int tex_channels;
+  stbi_uc* pixels;
+  VkDeviceSize image_size;
 
-  texture_image_ = new Image(Image::kImageType_Texture);
+	auto it = loaded_textures_.cbegin();
+  while (it != loaded_textures_.cend()) {
+    Image* texture_image = new Image(Image::kImageType_Texture);
 
-  // Load any texture with 4 channels with STBI_rgb_alpha
-  stbi_uc* pixels = stbi_load(texture_path,
-    &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+    // Load any texture with 4 channels with STBI_rgb_alpha
+    pixels = stbi_load(it->second,
+      &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
 
-  VkDeviceSize image_size = tex_width * tex_height * 4;
+    image_size = tex_width * tex_height * 4;
 
-  if (!pixels) {
-    throw std::runtime_error("Failed to load texture.");
-  }
+    if (!pixels) {
+      throw std::runtime_error("Failed to load texture.");
+    }
 
-  // Create a staging buffer to transfer it to the device memory
-  Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Image);
-  staging_buffer->create(physical_device_, logical_device_, image_size,
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    // Create a staging buffer to transfer it to the device memory
+    Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Image);
+    staging_buffer->create(physical_device_, logical_device_, image_size,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-  // Copy values to the buffer
-  void* data;
-  vkMapMemory(logical_device_, staging_buffer->buffer_memory_, 0, image_size, 0, &data);
-  memcpy(data, pixels, static_cast<size_t>(image_size));
-  vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
+    // Copy values to the buffer
+    void* data;
+    vkMapMemory(logical_device_, staging_buffer->buffer_memory_, 0, image_size, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(image_size));
+    vkUnmapMemory(logical_device_, staging_buffer->buffer_memory_);
 
-  stbi_image_free(pixels);
+    stbi_image_free(pixels);
 
-  // Create the texture image
-  texture_image_->create(physical_device_, logical_device_, tex_width, tex_height, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
-    VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    // Create the texture image
+    texture_image->create(physical_device_, logical_device_, tex_width, tex_height, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+      VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   
-  transitionImageLayout(texture_image_->image_, VK_FORMAT_R8G8B8A8_SRGB,
-    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  texture_image_->copyFromBuffer(logical_device_, command_pool_, graphics_queue_, *staging_buffer,
-    static_cast<uint32_t>(tex_width), static_cast<uint32_t>(tex_height));
-  transitionImageLayout(texture_image_->image_, VK_FORMAT_R8G8B8A8_SRGB,
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transitionImageLayout(texture_image->image_, VK_FORMAT_R8G8B8A8_SRGB,
+      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    texture_image->copyFromBuffer(logical_device_, command_pool_, graphics_queue_, *staging_buffer,
+      static_cast<uint32_t>(tex_width), static_cast<uint32_t>(tex_height));
+    transitionImageLayout(texture_image->image_, VK_FORMAT_R8G8B8A8_SRGB,
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  staging_buffer->clean(logical_device_);
-  delete staging_buffer;
+    staging_buffer->clean(logical_device_);
+    delete staging_buffer;
 
-  texture_image_->createImageView(logical_device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-  texture_image_->createSampler(physical_device_, logical_device_);
+    texture_image->createImageView(logical_device_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+    texture_image->createSampler(physical_device_, logical_device_);
+
+    texture_images_.push_back(texture_image);
+
+    ++it;
+	}
 
 }
 
@@ -1021,17 +1097,17 @@ void BasicPSApp::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createUniformBuffers() {
+void BasicPSApp::AppData::createUniformBuffers(std::vector<Buffer*>& buffers_) {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
-  uniform_buffers_.resize(swap_chain_images_.size());
+  buffers_.resize(swap_chain_images_.size());
 
   VkDeviceSize buffer_size = sizeof(UniformBufferObject);
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
-    uniform_buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
-    uniform_buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+    buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
+    buffers_[i]->create(physical_device_, logical_device_, buffer_size,
       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
   }
@@ -1040,9 +1116,11 @@ void BasicPSApp::AppData::createUniformBuffers() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDescriptorPool() {
+void BasicPSApp::AppData::createDescriptorPools() {
 
-  // Create descriptor pool
+  // OPAQUE MATERIAL DESCRIPTOR POOL
+
+  // Create descriptor pool info
   std::array<VkDescriptorPoolSize, 2> pool_sizes{};
   pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
@@ -1055,9 +1133,16 @@ void BasicPSApp::AppData::createDescriptorPool() {
   create_info.pPoolSizes = pool_sizes.data();
   create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 
-  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &descriptor_pool_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create descriptor pool.");
+  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[0]->descriptor_pool_) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create opaque descriptor pool.");
   }
+
+
+
+  // TRANSLUCENT MATERIAL DESCRIPTOR POOL
+	if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create translucent descriptor pool.");
+	}
 
 }
 
@@ -1065,55 +1150,12 @@ void BasicPSApp::AppData::createDescriptorPool() {
 
 void BasicPSApp::AppData::createDescriptorSets() {
 
-  // Allocate the descriptor sets
-  std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), descriptor_set_layout_);
-  VkDescriptorSetAllocateInfo allocate_info{};
-  allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocate_info.descriptorPool = descriptor_pool_;
-  allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
-  allocate_info.pSetLayouts = descriptor_set_layouts.data();
+  // OPAQUE MATERIAL DESCRIPTOR SETS
 
-  descriptor_sets_.resize(swap_chain_images_.size());
-  if (vkAllocateDescriptorSets(logical_device_, &allocate_info, descriptor_sets_.data()) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create descriptor sets.");
-  }
 
-  // Populate the descriptors
-  for (int i = 0; i < swap_chain_images_.size(); i++) {
-    VkDescriptorBufferInfo buffer_info{};
-    buffer_info.buffer = uniform_buffers_[i]->buffer_;
-    buffer_info.offset = 0;
-    buffer_info.range = sizeof(UniformBufferObject);
+  // TRANSLUCENT MATERIAL DESCRIPTOR SETS
 
-    VkDescriptorImageInfo image_info{};
-    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = texture_image_->image_view_;
-    image_info.sampler = texture_image_->texture_sampler_;
-
-    std::array<VkWriteDescriptorSet, 2> write_descriptors{};
-    write_descriptors[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_descriptors[0].dstSet = descriptor_sets_[i];
-    write_descriptors[0].dstBinding = 0;
-    write_descriptors[0].dstArrayElement = 0;
-    write_descriptors[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    write_descriptors[0].descriptorCount = 1;
-    write_descriptors[0].pBufferInfo = &buffer_info;
-    write_descriptors[0].pImageInfo = nullptr; // Image data
-    write_descriptors[0].pTexelBufferView = nullptr; // Buffer views
-
-    write_descriptors[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_descriptors[1].dstSet = descriptor_sets_[i];
-    write_descriptors[1].dstBinding = 1;
-    write_descriptors[1].dstArrayElement = 0;
-    write_descriptors[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write_descriptors[1].descriptorCount = 1;
-    write_descriptors[1].pBufferInfo = nullptr; // Buffer data
-    write_descriptors[1].pImageInfo = &image_info;
-    write_descriptors[1].pTexelBufferView = nullptr; // Buffer views
-
-    vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()),
-      write_descriptors.data(), 0, nullptr);
-  }
+	
 
 }
 
@@ -1166,21 +1208,27 @@ void BasicPSApp::AppData::createCommandBuffers() {
 
     auto first_entity = BasicPSApp::instance().active_scene_->getEntities()[0];
     auto mesh = static_cast<ComponentMesh*>(first_entity->getComponent(Component::kComponentKind_Mesh));
+    auto material = static_cast<ComponentMaterial*>(first_entity->getComponent(Component::kComponentKind_Material));
 
     // The draw system must return this list of commands for each object
-    VkBuffer vertex_buffers[] = { vertex_buffers_[mesh->getMeshID()]->buffer_ };
+    VkBuffer vertex_buffers[] = { vertex_buffers_[mesh->getID()]->buffer_ };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[mesh->getMeshID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[mesh->getID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
+    vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, materials_[material->getID()]->graphics_pipeline_);
 
     // Per object (uniforms and draw)
     //for (int i = 0; i < entities.size(); i++) {
-      vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
+		if (material->getInstanceData()->getDescriptorSets().size() == 0) {
+			BasicPSApp::instance().app_data_->createUniformBuffers(material->getInstanceData()->uniform_buffers_);
+			material->getInstanceData()->populateDescriptorSets();
+		}
+		vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+			materials_[material->getID()]->pipeline_layout_, 0, 1,
+			&material->getInstanceData()->getDescriptorSets()[i], 0, nullptr);
 
-      vkCmdDrawIndexed(command_buffers_[i], index_buffers_[mesh->getMeshID()]->data_count_, 1, 0, 0, 0);
+		vkCmdDrawIndexed(command_buffers_[i], index_buffers_[mesh->getID()]->data_count_, 1, 0, 0, 0);
     //}
 
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -1260,11 +1308,15 @@ void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
   ubo.projection = BasicPSApp::instance().getCamera()->getProjectionMatrix();
  
   // Map the memory from the CPU to GPU
+	auto material = static_cast<ComponentMaterial*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
+		getComponent(Component::ComponentKind::kComponentKind_Material));
+
   void* data;
-  vkMapMemory(logical_device_, uniform_buffers_[current_image]->buffer_memory_, 0,
+  auto material_data = material->getInstanceData();
+  vkMapMemory(logical_device_, material_data->getUniformBuffers()[current_image]->buffer_memory_, 0,
     sizeof(ubo), 0, &data);
   memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(logical_device_, uniform_buffers_[current_image]->buffer_memory_);
+  vkUnmapMemory(logical_device_, material_data->getUniformBuffers()[current_image]->buffer_memory_);
 
 }
 
@@ -1362,13 +1414,14 @@ void BasicPSApp::AppData::recreateSwapChain() {
   cleanupSwapChain();
 
   createSwapChain();
-  createRenderPass();
-  createGraphicsPipeline();
+	createRenderPass();
+	createPipelineLayouts();
+  createGraphicsPipelines();
   createColorResources();
   createDepthResources();
   createFramebuffers();
-  createUniformBuffers();
-  createDescriptorPool();
+  system_draw_objects_->resetUniformBuffers(BasicPSApp::instance().active_scene_->getEntities());
+  createDescriptorPools();
   createDescriptorSets();
   createCommandBuffers();
 
@@ -1391,18 +1444,16 @@ void BasicPSApp::AppData::cleanupSwapChain() {
   vkFreeCommandBuffers(logical_device_, command_pool_,
     static_cast<uint32_t>(command_buffers_.size()), command_buffers_.data());
 
-  vkDestroyPipeline(logical_device_, graphics_pipeline_, nullptr);
-
-  vkDestroyPipelineLayout(logical_device_, pipeline_layout_, nullptr);
+  
+  for (int i = 0; i < materials_.size(); i++) {
+    vkDestroyPipeline(logical_device_, materials_[i]->graphics_pipeline_, nullptr);
+    vkDestroyPipelineLayout(logical_device_, materials_[i]->pipeline_layout_, nullptr);
+    vkDestroyDescriptorPool(logical_device_, materials_[i]->descriptor_pool_, nullptr);
+  }
 
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
 
-  for (int i = 0; i < swap_chain_images_.size(); i++) {
-    uniform_buffers_[i]->clean(logical_device_);
-    delete uniform_buffers_[i];
-  }
-
-  vkDestroyDescriptorPool(logical_device_, descriptor_pool_, nullptr);
+  system_draw_objects_->deleteUniformBuffers(BasicPSApp::instance().active_scene_->getEntities());
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
     vkDestroyImageView(logical_device_, swap_chain_images_[i]->image_view_, nullptr);
@@ -1421,7 +1472,9 @@ void BasicPSApp::AppData::framebufferResizeCallback(GLFWwindow* window, int widt
   app->window_width_ = width;
   app->window_height_ = height;
 
-  BasicPSApp::instance().getCamera()->setupProjection(90.0f, (float)app->window_width_ / (float)app->window_height_, 0.1f, 10.0f);
+  if (width != 0) {
+    BasicPSApp::instance().getCamera()->setupProjection(90.0f, (float)app->window_width_ / (float)app->window_height_, 0.1f, 10.0f);
+  }
 
 }
 
@@ -1846,6 +1899,37 @@ VkFormat BasicPSApp::AppData::findDepthFormat() {
 
 // ------------------------------------------------------------------------- //
 
+void BasicPSApp::AppData::allocateDescriptorSets(std::vector<VkDescriptorSet>& descriptor_set, int parent_id){
+
+	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), materials_[parent_id]->descriptor_set_layout_);
+	VkDescriptorSetAllocateInfo allocate_info{};
+	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocate_info.descriptorPool = materials_[parent_id]->descriptor_pool_;
+	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
+	allocate_info.pSetLayouts = descriptor_set_layouts.data();
+
+  descriptor_set.resize(swap_chain_images_.size());
+	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, descriptor_set.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create descriptor sets.");
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
+
+	for (int i = 0; i < swap_chain_images_.size(); i++) {
+    buffers_[i]->clean(logical_device_);
+		delete buffers_[i];
+	}
+
+  buffers_.clear();
+
+}
+
+// ------------------------------------------------------------------------- //
+
 VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
 
   VkPhysicalDeviceProperties phys_device_properties;
@@ -1905,6 +1989,23 @@ void BasicPSApp::AppData::setupIndexBuffers(){
 	//indices = {
 		//{{-0.5f, ... };
 	//createIndexBuffer(indices);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::setupMaterials(){
+
+  Material* opaque_material = new Material();
+  opaque_material->material_id_ = 0;
+
+  materials_.push_back(opaque_material);
+  
+  
+  Material* translucent_material = new Material();
+  translucent_material->material_id_ = 1;
+
+  materials_.push_back(translucent_material);
 
 }
 

@@ -22,14 +22,11 @@ public:
 
   void loadDefaultMesh(BasicPSApp::DefaultMesh default_mesh);
 
-  int getMeshID() { return mesh_buffer_id_; }
+  int getID() { return mesh_buffer_id_; }
 
 protected:
-  ~ComponentMesh();
+	~ComponentMesh();
 
-  /*
-  - Will have a index and vertex buffer associated with the same id to the internal vector of models ( stored as vertex and index buffers)
-  */
   int mesh_buffer_id_;
 
 };

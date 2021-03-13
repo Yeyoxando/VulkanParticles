@@ -30,6 +30,8 @@ struct AppSettings {
 
 class BasicPSApp {
   friend class ComponentMesh;
+  friend class ComponentMaterial;
+  friend class SystemDrawObjects;
 public:
 	// Main base app instance, use it to run the editor
 	static BasicPSApp& instance();
@@ -57,7 +59,9 @@ public:
 
 
   // returns the current camera
-  Camera* getCamera();
+	Camera* getCamera();
+	// returns the current scene
+	Scene* getScene();
 
 private:
   BasicPSApp();

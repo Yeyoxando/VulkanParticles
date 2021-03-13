@@ -24,11 +24,11 @@ public:
   };
 
   explicit Component(ComponentKind comp_kind) : component_kind_(comp_kind) {};
+  virtual ~Component();
 
   ComponentKind component_kind_;
 
 protected:
-  ~Component();
 
   int entity_reference_id_;
 

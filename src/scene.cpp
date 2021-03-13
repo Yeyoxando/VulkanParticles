@@ -18,6 +18,10 @@ Scene::Scene() {
 
 Scene::~Scene() {
 
+	for (int i = 0; i < entities_.size(); i++) {
+		delete entities_[i];
+	}
+
 }
 
 // ------------------------------------------------------------------------- //

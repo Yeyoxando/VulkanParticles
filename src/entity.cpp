@@ -32,9 +32,9 @@ Entity::~Entity() {
   // for the moment when an entity is destroyed it will destroy its associated components
   auto it = components_.cbegin();
   while (it != components_.cend()) {
+    delete it->second;
     components_.erase(it);
     it = components_.cbegin();
-    ++it;
   }
 
 }
