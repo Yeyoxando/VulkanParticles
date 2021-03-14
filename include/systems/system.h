@@ -19,7 +19,7 @@
 class System {
 public:
   System();
-  ~System();
+  virtual ~System();
 
 protected:
   // Check if the entity has the components required by the system

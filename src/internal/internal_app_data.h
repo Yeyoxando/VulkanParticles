@@ -106,11 +106,20 @@ namespace std {
 
 // ------------------------------------------------------------------------- //
 
+struct CameraUBO {
+	glm::mat4 view;
+	glm::mat4 projection;
+};
+
+struct ObjectsUBO {
+  glm::mat4 models[500];
+};
+
 // Example for Uniforms for the shaders
 struct UniformBufferObject {
-  glm::mat4x4 model;
-  glm::mat4x4 view;
-  glm::mat4x4 projection;
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 projection;
 
   /*
    * Scalars have to be aligned by N (= 4 bytes given 32 bit floats).
@@ -301,18 +310,20 @@ struct BasicPSApp::AppData {
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
   // Find a depth format
   VkFormat findDepthFormat();
+  // Get the maximum number of samples supported by physical device
+  VkSampleCountFlagBits getMaxUsableSampleCount();
+ 
+  
+  // -- Internal structure --
   // Allocates the given descriptor sets (for swap chain images) with the settings of the parent 
   void allocateDescriptorSets(std::vector<VkDescriptorSet> &descriptor_set, int parent_id);
 	// Creates the uniform buffers for a material
 	void createUniformBuffers(std::vector<Buffer*>& buffers_);
+	// Clean up the uniform buffers from a material
+	void updateUniformBuffer(UniformBufferObject ubo, Buffer* buffer);
   // Clean up the uniform buffers from a material
   void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
 
-  // -- MSAA -- 
-  // Get the maximum number of samples supported by physical device
-  VkSampleCountFlagBits getMaxUsableSampleCount();
-
-  // -- Internal structure --
   void setupVertexBuffers();
   void setupIndexBuffers();
 

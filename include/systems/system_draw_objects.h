@@ -31,7 +31,7 @@ public:
 	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
 
 	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
-	void updateDynamicBuffer(std::vector<Entity*>& entities);
+	void updateDynamicBuffer(int current_image, std::vector<Entity*>& entities);
 
 
 
@@ -39,7 +39,7 @@ public:
 	void deleteUniformBuffers(std::vector<Entity*>& entities);
 
 protected:
-  // Return the model matrix for all the entities
+  // Return the model matrix for all the objects
   std::vector<glm::mat4> getObjectModels(std::vector<Entity*> &entities); // It'll be used for dynamic buffers
 
 };

@@ -11,6 +11,7 @@
 #include "../src/internal/internal_app_data.h"
 #include "components/component_mesh.h"
 #include "components/component_material.h"
+#include "components/component_transform.h"
 
 // ------------------------------------------------------------------------- //
 
@@ -24,7 +25,7 @@ SystemDrawObjects::SystemDrawObjects(){
 
 void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities) {
 
-	// This is an example to see that draw commands can be done like this, i think :)
+	// Record all the draw commands needed for a 3D object
 	for (auto entity : entities) {
 		if (hasRequiredComponents(entity)) {
 
@@ -65,9 +66,30 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::updateDynamicBuffer(std::vector<Entity*> &entities){
+void SystemDrawObjects::updateDynamicBuffer(int current_image, std::vector<Entity*> &entities){
 
+	// Prepare the uniform buffer for the scene's 3D objects
+	for (auto entity : entities) {
+		if (hasRequiredComponents(entity)) {
 
+			auto transform = static_cast<ComponentTransform*>
+				(entity->getComponent(Component::ComponentKind::kComponentKind_Transform));
+			auto material = static_cast<ComponentMaterial*>
+				(entity->getComponent(Component::ComponentKind::kComponentKind_Material));
+
+			// Fill the ubo with the updated data
+			UniformBufferObject ubo{};
+			ubo.model = transform->getModelMatrix();
+			ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
+			ubo.projection = BasicPSApp::instance().getCamera()->getProjectionMatrix();
+
+			// Map the memory from the CPU to GPU
+			auto material_data = material->getInstanceData();
+			BasicPSApp::instance().app_data_->updateUniformBuffer(ubo, 
+				material_data->getUniformBuffers()[current_image]);
+
+		}
+	}
 
 }
 

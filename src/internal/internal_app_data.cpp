@@ -1096,25 +1096,6 @@ void BasicPSApp::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createUniformBuffers(std::vector<Buffer*>& buffers_) {
-
-  if (window_width_ == 0 || window_height_ == 0) return;
-
-  buffers_.resize(swap_chain_images_.size());
-
-  VkDeviceSize buffer_size = sizeof(UniformBufferObject);
-
-  for (int i = 0; i < swap_chain_images_.size(); i++) {
-    buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
-    buffers_[i]->create(physical_device_, logical_device_, buffer_size,
-      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-  }
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void BasicPSApp::AppData::createDescriptorPools() {
 
   // OPAQUE MATERIAL DESCRIPTOR POOL
@@ -1265,6 +1246,7 @@ void BasicPSApp::AppData::updateFrame() {
 
 void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
+  // THIS SHOULD BE ON THE SCENE
   // Calculate time since rendering started
   static auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -1273,30 +1255,15 @@ void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
   
   // Get model matrix (this will be on the system somehow
-  auto transform = static_cast<ComponentTransform*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
-    getComponent(Component::ComponentKind::kComponentKind_Transform));
+  //auto transform = static_cast<ComponentTransform*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
+  //  getComponent(Component::ComponentKind::kComponentKind_Transform));
   // test to see transform comp working
   //transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));
   
-  //Fill the UBO
-  UniformBufferObject ubo{};
 
-  ubo.model = transform->getModelMatrix();
-
-  ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
-
-  ubo.projection = BasicPSApp::instance().getCamera()->getProjectionMatrix();
- 
-  // Map the memory from the CPU to GPU
-	auto material = static_cast<ComponentMaterial*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
-		getComponent(Component::ComponentKind::kComponentKind_Material));
-
-  void* data;
-  auto material_data = material->getInstanceData();
-  vkMapMemory(logical_device_, material_data->getUniformBuffers()[current_image]->buffer_memory_, 0,
-    sizeof(ubo), 0, &data);
-  memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(logical_device_, material_data->getUniformBuffers()[current_image]->buffer_memory_);
+  // Update the dynamic buffer using the draw system
+  system_draw_objects_->updateDynamicBuffer(current_image,
+    BasicPSApp::instance().active_scene_->getEntities());
 
 }
 
@@ -1878,6 +1845,29 @@ VkFormat BasicPSApp::AppData::findDepthFormat() {
 
 // ------------------------------------------------------------------------- //
 
+VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
+
+	VkPhysicalDeviceProperties phys_device_properties;
+	vkGetPhysicalDeviceProperties(physical_device_, &phys_device_properties);
+
+	VkSampleCountFlags counts = phys_device_properties.limits.framebufferColorSampleCounts &
+		phys_device_properties.limits.framebufferDepthSampleCounts;
+
+	if (!ENABLE_MSAA) return VK_SAMPLE_COUNT_1_BIT;
+
+	if (counts & VK_SAMPLE_COUNT_64_BIT) return VK_SAMPLE_COUNT_64_BIT;
+	if (counts & VK_SAMPLE_COUNT_32_BIT) return VK_SAMPLE_COUNT_32_BIT;
+	if (counts & VK_SAMPLE_COUNT_16_BIT) return VK_SAMPLE_COUNT_16_BIT;
+	if (counts & VK_SAMPLE_COUNT_8_BIT)  return VK_SAMPLE_COUNT_8_BIT;
+	if (counts & VK_SAMPLE_COUNT_4_BIT)  return VK_SAMPLE_COUNT_4_BIT;
+	if (counts & VK_SAMPLE_COUNT_2_BIT)  return VK_SAMPLE_COUNT_2_BIT;
+
+	return VK_SAMPLE_COUNT_1_BIT;
+
+}
+
+// ------------------------------------------------------------------------- //
+
 void BasicPSApp::AppData::allocateDescriptorSets(std::vector<VkDescriptorSet>& descriptor_set, int parent_id){
 
 	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), materials_[parent_id]->descriptor_set_layout_);
@@ -1896,6 +1886,37 @@ void BasicPSApp::AppData::allocateDescriptorSets(std::vector<VkDescriptorSet>& d
 
 // ------------------------------------------------------------------------- //
 
+void BasicPSApp::AppData::createUniformBuffers(std::vector<Buffer*>& buffers_) {
+
+	if (window_width_ == 0 || window_height_ == 0) return;
+
+	buffers_.resize(swap_chain_images_.size());
+
+	VkDeviceSize buffer_size = sizeof(UniformBufferObject);
+
+	for (int i = 0; i < swap_chain_images_.size(); i++) {
+		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
+		buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::updateUniformBuffer(UniformBufferObject ubo, Buffer* buffer){
+
+	void* data;
+	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
+		sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(logical_device_, buffer->buffer_memory_);
+
+}
+
+// ------------------------------------------------------------------------- //
+
 void BasicPSApp::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
 
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
@@ -1904,29 +1925,6 @@ void BasicPSApp::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
 	}
 
   buffers_.clear();
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
-
-  VkPhysicalDeviceProperties phys_device_properties;
-  vkGetPhysicalDeviceProperties(physical_device_, &phys_device_properties);
-
-  VkSampleCountFlags counts = phys_device_properties.limits.framebufferColorSampleCounts &
-    phys_device_properties.limits.framebufferDepthSampleCounts;
-
-  if (!ENABLE_MSAA) return VK_SAMPLE_COUNT_1_BIT;
-
-  if (counts & VK_SAMPLE_COUNT_64_BIT) return VK_SAMPLE_COUNT_64_BIT;
-  if (counts & VK_SAMPLE_COUNT_32_BIT) return VK_SAMPLE_COUNT_32_BIT;
-  if (counts & VK_SAMPLE_COUNT_16_BIT) return VK_SAMPLE_COUNT_16_BIT;
-  if (counts & VK_SAMPLE_COUNT_8_BIT)  return VK_SAMPLE_COUNT_8_BIT;
-  if (counts & VK_SAMPLE_COUNT_4_BIT)  return VK_SAMPLE_COUNT_4_BIT;
-  if (counts & VK_SAMPLE_COUNT_2_BIT)  return VK_SAMPLE_COUNT_2_BIT;
-
-  return VK_SAMPLE_COUNT_1_BIT;
 
 }
 

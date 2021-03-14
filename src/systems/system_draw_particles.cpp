@@ -20,12 +20,9 @@ SystemDrawParticles::SystemDrawParticles(){
 
 void SystemDrawParticles::drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*>& entities){
 
-	// This is an example to see that draw commands can be done like this, i think :)
-	/*VkBufferCopy copy_region{};
-	copy_region.srcOffset = 0;
-	copy_region.dstOffset = 0;
-	copy_region.size = 0;
-	vkCmdCopyBuffer(command_buffer, src_buffer.buffer_, buffer_, 1, &copy_region);*/
+	// Record all the draw commands needed for a 3D object
+
+	// The same on system draw objects
 
 }
 

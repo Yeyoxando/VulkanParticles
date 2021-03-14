@@ -21,7 +21,6 @@
 
 /*
 TODO (ordered):
-	- Replace draw system
 	- separate vp and model matrices
   - use a color variable only for now to make an example of the different uniforms
   - draw two objects with dynamic uniforms        
@@ -48,6 +47,7 @@ int main(){
     // Get mesh component
     ComponentMesh* mesh = static_cast<ComponentMesh*>
       (scenery->getComponent(Component::kComponentKind_Mesh));
+
     // Load a model
     mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
     //mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
@@ -58,7 +58,8 @@ int main(){
       (scenery->getComponent(Component::kComponentKind_Material));
     // Indicate material parent to internally set pipeline, descriptor set...
     mat->setMaterialParent(BasicPSApp::kMaterialParent_Opaque);
-    // Create initial instance data
+
+    // Create instance data
     ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
     opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
     //opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
