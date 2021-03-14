@@ -1018,7 +1018,6 @@ void BasicPSApp::AppData::loadModels() {
     ++it;
   }
 
-
 }
 
 // ------------------------------------------------------------------------- //
@@ -1203,39 +1202,20 @@ void BasicPSApp::AppData::createCommandBuffers() {
     render_pass_begin.clearValueCount = static_cast<uint32_t>(clear_values.size());
     render_pass_begin.pClearValues = clear_values.data();
 
-    // Record the commands on the command buffer
+    // Begin recording the commands on the command buffer
     vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    auto first_entity = BasicPSApp::instance().active_scene_->getEntities()[0];
-    auto mesh = static_cast<ComponentMesh*>(first_entity->getComponent(Component::kComponentKind_Mesh));
-    auto material = static_cast<ComponentMaterial*>(first_entity->getComponent(Component::kComponentKind_Material));
+    // Call draw system to prepare the commands for all the entities
+    system_draw_objects_->drawObjectsCommand(i, command_buffers_[i], 
+      BasicPSApp::instance().active_scene_->getEntities());
 
-    // The draw system must return this list of commands for each object
-    VkBuffer vertex_buffers[] = { vertex_buffers_[mesh->getID()]->buffer_ };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[mesh->getID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, materials_[material->getID()]->graphics_pipeline_);
-
-    // Per object (uniforms and draw)
-    //for (int i = 0; i < entities.size(); i++) {
-		if (material->getInstanceData()->getDescriptorSets().size() == 0) {
-			BasicPSApp::instance().app_data_->createUniformBuffers(material->getInstanceData()->uniform_buffers_);
-			material->getInstanceData()->populateDescriptorSets();
-		}
-		vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-			materials_[material->getID()]->pipeline_layout_, 0, 1,
-			&material->getInstanceData()->getDescriptorSets()[i], 0, nullptr);
-
-		vkCmdDrawIndexed(command_buffers_[i], index_buffers_[mesh->getID()]->data_count_, 1, 0, 0, 0);
-    //}
-
+    // Finish recording commands
     vkCmdEndRenderPass(command_buffers_[i]);
 
     if (vkEndCommandBuffer(command_buffers_[i]) != VK_SUCCESS) {
       throw std::runtime_error("Failed to end command buffer recording.");
     }
+
   }
 
 }
@@ -1420,7 +1400,6 @@ void BasicPSApp::AppData::recreateSwapChain() {
   createColorResources();
   createDepthResources();
   createFramebuffers();
-  system_draw_objects_->resetUniformBuffers(BasicPSApp::instance().active_scene_->getEntities());
   createDescriptorPools();
   createDescriptorSets();
   createCommandBuffers();

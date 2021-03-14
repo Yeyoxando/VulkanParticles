@@ -28,7 +28,7 @@ public:
   ~SystemDrawObjects();
 
   // It will create one command and it will add it to the current command buffer containing all the objects
-	void drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*>& entities);
+	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
 
 	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
 	void updateDynamicBuffer(std::vector<Entity*>& entities);
@@ -37,9 +37,6 @@ public:
 
 	// It will delete current uniform buffers of all material components, for swap chain cleanup
 	void deleteUniformBuffers(std::vector<Entity*>& entities);
-
-	// It will create again uniform buffers of all material components, for swap chain recreation
-	void resetUniformBuffers(std::vector<Entity*>& entities);
 
 protected:
   // Return the model matrix for all the entities

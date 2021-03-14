@@ -21,10 +21,10 @@
 
 /*
 TODO (ordered):
-  - Replace draw system   
+	- Replace draw system
+	- separate vp and model matrices
   - use a color variable only for now to make an example of the different uniforms
-  - draw two objects with dynamic uniforms         
-  - separate vp and model matrices
+  - draw two objects with dynamic uniforms        
   - draw lots of objects with dynamic uniforms     
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
@@ -38,6 +38,7 @@ TODO (ordered):
 */
 
 int main(){
+  //while (1) {} 2MB start
 
   // 3D object creation and components setting
   Entity* scenery = new Entity();
@@ -101,11 +102,8 @@ int main(){
   }
 
 
-  // Components get deleted automatically,
-
-
   // This is to check that memory gets cleaned
-  //while (1) {}
+  //while (1) {} //7MB at the end -> 5MB??
 
 
 

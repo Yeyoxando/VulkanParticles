@@ -9,6 +9,7 @@
 #include "systems/system_draw_objects.h"
 #include "basic_ps_app.h"
 #include "../src/internal/internal_app_data.h"
+#include "components/component_mesh.h"
 #include "components/component_material.h"
 
 // ------------------------------------------------------------------------- //
@@ -21,28 +22,44 @@ SystemDrawObjects::SystemDrawObjects(){
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*> &entities){
+void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities) {
 
 	// This is an example to see that draw commands can be done like this, i think :)
-	
-	/*auto first_entity = BasicPSApp::instance().active_scene_->getEntities()[0];
-	auto mesh = static_cast<ComponentMesh*>(first_entity->getComponent(Component::kComponentKind_Mesh));
+	for (auto entity : entities) {
+		if (hasRequiredComponents(entity)) {
 
-	// The draw system must return this list of commands for each object
-	VkBuffer vertex_buffers[] = { vertex_buffers_[mesh->getMeshID()]->buffer_ };
-	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, vertex_buffers, offsets);
-	vkCmdBindIndexBuffer(command_buffers_[i], index_buffers_[mesh->getMeshID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
+			auto mesh = static_cast<ComponentMesh*>(entity->getComponent(Component::kComponentKind_Mesh));
+			auto material = static_cast<ComponentMaterial*>(entity->getComponent(Component::kComponentKind_Material));
 
-	vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline_);
+			// Vertex and index buffers
+			VkBuffer vertex_buffers[] = {
+				BasicPSApp::instance().app_data_->vertex_buffers_[mesh->getID()]->buffer_ };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(cmd_buffer, 0, 1, vertex_buffers, offsets);
+			vkCmdBindIndexBuffer(cmd_buffer,
+				BasicPSApp::instance().app_data_->index_buffers_[mesh->getID()]->buffer_, 0, VK_INDEX_TYPE_UINT32);
 
-	// Per object (uniforms and draw)
-	//for (int i = 0; i < entities.size(); i++) {
-	vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline_layout_, 0, 1, &descriptor_sets_[i], 0, nullptr);
+			// Bind pipeline
+			vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+				BasicPSApp::instance().app_data_->materials_[material->getID()]->graphics_pipeline_);
 
-	vkCmdDrawIndexed(command_buffers_[i], index_buffers_[mesh->getMeshID()]->data_count_, 1, 0, 0, 0);
-	*/
+			// Initialize uniform buffers and descriptor sets if they're not
+			if (material->getInstanceData()->getDescriptorSets().size() == 0) {
+				BasicPSApp::instance().app_data_->createUniformBuffers(material->getInstanceData()->uniform_buffers_);
+				material->getInstanceData()->populateDescriptorSets();
+			}
+
+			// Bind descriptor set (Uniform and texture data, update is not here)
+			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+				BasicPSApp::instance().app_data_->materials_[material->getID()]->pipeline_layout_, 0, 1,
+				&material->getInstanceData()->getDescriptorSets()[cmd_buffer_image], 0, nullptr);
+
+			// Draw
+			vkCmdDrawIndexed(cmd_buffer,
+				BasicPSApp::instance().app_data_->index_buffers_[mesh->getID()]->data_count_, 1, 0, 0, 0);
+
+		}
+	}
 
 }
 
@@ -65,19 +82,6 @@ void SystemDrawObjects::deleteUniformBuffers(std::vector<Entity*>& entities){
 			material->getInstanceData()->getDescriptorSets().clear();
 		}
 	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void SystemDrawObjects::resetUniformBuffers(std::vector<Entity*>& entities){
-
-	/*for (auto entity : entities) {
-		if (hasRequiredComponents(entity)) {
-			auto material = static_cast<ComponentMaterial*>(entity->getComponent(Component::kComponentKind_Material));
-			BasicPSApp::instance().app_data_->createUniformBuffers(material->getInstanceData()->uniform_buffers_);
-		}
-	}*/
 
 }
 
