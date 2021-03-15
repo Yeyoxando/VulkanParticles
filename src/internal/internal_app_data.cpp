@@ -61,6 +61,10 @@ BasicPSApp::AppData::AppData() {
 
 BasicPSApp::AppData::~AppData(){
 
+  for (int i = 0; i < materials_.size(); i++) {
+    delete materials_[i];
+  }
+
   delete system_draw_objects_;
 
 }
@@ -110,7 +114,6 @@ void BasicPSApp::AppData::initVulkan() {
 	setupIndexBuffers();
 	loadModels();
   createDescriptorPools();
-  createDescriptorSets();
   createCommandBuffers();
   createSyncObjects();
 
@@ -137,6 +140,8 @@ void BasicPSApp::AppData::closeVulkan() {
     delete texture_images_[i];
   }
 
+
+  vkDestroyDescriptorSetLayout(logical_device_, scene_descriptor_set_layout_, nullptr);
   for (int i = 0; i < materials_.size(); i++) {
     vkDestroyDescriptorSetLayout(logical_device_, materials_[i]->descriptor_set_layout_, nullptr);
   }
@@ -505,15 +510,33 @@ void BasicPSApp::AppData::createRenderPass() {
 
 void BasicPSApp::AppData::createDescriptorSetLayouts() {
 
-  // MATERIAL OPAQUE
+  // COMMON (Scene descriptor set layout)
+	VkDescriptorSetLayoutBinding vp_ubo_layout_binding{};
+	vp_ubo_layout_binding.binding = 0;
+	vp_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vp_ubo_layout_binding.descriptorCount = 1;
+	vp_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	vp_ubo_layout_binding.pImmutableSamplers = nullptr;
 
+	VkDescriptorSetLayoutCreateInfo dsl_scene_create_info{};
+	dsl_scene_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	dsl_scene_create_info.bindingCount = 1;
+	dsl_scene_create_info.pBindings = &vp_ubo_layout_binding;
+
+	if (vkCreateDescriptorSetLayout(logical_device_, &dsl_scene_create_info, nullptr, &scene_descriptor_set_layout_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create opaque descriptor set layout.");
+	}
+
+
+
+  // MATERIAL OPAQUE
   // Create the binding for the vertex shader MVP matrices
-  VkDescriptorSetLayoutBinding ubo_layout_binding{};
-  ubo_layout_binding.binding = 0;
-  ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  ubo_layout_binding.descriptorCount = 1;
-  ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-  ubo_layout_binding.pImmutableSamplers = nullptr;
+  VkDescriptorSetLayoutBinding model_ubo_layout_binding{};
+  model_ubo_layout_binding.binding = 0;
+  model_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  model_ubo_layout_binding.descriptorCount = 1;
+  model_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  model_ubo_layout_binding.pImmutableSamplers = nullptr;
 
   VkDescriptorSetLayoutBinding sampler_layout_binding{};
   sampler_layout_binding.binding = 1;
@@ -523,7 +546,8 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
   sampler_layout_binding.pImmutableSamplers = nullptr;
 
   // Create the descriptor set layout
-  std::array<VkDescriptorSetLayoutBinding, 2> bindings = { ubo_layout_binding, sampler_layout_binding };
+  std::array<VkDescriptorSetLayoutBinding, 2> bindings = { model_ubo_layout_binding, sampler_layout_binding };
+
   VkDescriptorSetLayoutCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   create_info.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -548,11 +572,13 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
 void BasicPSApp::AppData::createPipelineLayouts(){
 
 	// OPAQUE MATERIAL PIPELINE LAYOUT
-	
+  std::array<VkDescriptorSetLayout, 2> opaque_descriptor_set_layouts{ 
+    scene_descriptor_set_layout_, materials_[0]->descriptor_set_layout_ };
+
   VkPipelineLayoutCreateInfo opaque_layout_info{};
 	opaque_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	opaque_layout_info.setLayoutCount = 1;
-	opaque_layout_info.pSetLayouts = &materials_[0]->descriptor_set_layout_;
+	opaque_layout_info.setLayoutCount = static_cast<uint32_t>(opaque_descriptor_set_layouts.size());
+	opaque_layout_info.pSetLayouts = opaque_descriptor_set_layouts.data();
 	opaque_layout_info.pushConstantRangeCount = 0;
 	opaque_layout_info.pPushConstantRanges = nullptr;
 
@@ -563,11 +589,13 @@ void BasicPSApp::AppData::createPipelineLayouts(){
 
 
 	// TRANSLUCENT MATERIAL PIPELINE LAYOUT
+	std::array<VkDescriptorSetLayout, 2> translucent_descriptor_set_layouts{
+		scene_descriptor_set_layout_, materials_[1]->descriptor_set_layout_ };
 
 	VkPipelineLayoutCreateInfo translucent_layout_info{};
 	translucent_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	translucent_layout_info.setLayoutCount = 1;
-	translucent_layout_info.pSetLayouts = &materials_[1]->descriptor_set_layout_;
+  translucent_layout_info.setLayoutCount = static_cast<uint32_t>(translucent_descriptor_set_layouts.size());
+	translucent_layout_info.pSetLayouts = translucent_descriptor_set_layouts.data();
 	translucent_layout_info.pushConstantRangeCount = 0;
 	translucent_layout_info.pPushConstantRanges = nullptr;
 
@@ -1098,14 +1126,29 @@ void BasicPSApp::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
 
 void BasicPSApp::AppData::createDescriptorPools() {
 
+  // COMMON DESCRIPTOR POOL (Scene)
+  VkDescriptorPoolSize pool_size{};
+	pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	pool_size.descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+
+	VkDescriptorPoolCreateInfo scene_dp_create_info{};
+	scene_dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	scene_dp_create_info.poolSizeCount = 1;
+	scene_dp_create_info.pPoolSizes = &pool_size;
+	scene_dp_create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
+	
+  if (vkCreateDescriptorPool(logical_device_, &scene_dp_create_info, nullptr, &scene_descriptor_pool_) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create scene descriptor pool.");
+	}
+
   // OPAQUE MATERIAL DESCRIPTOR POOL
 
   // Create descriptor pool info
   std::array<VkDescriptorPoolSize, 2> pool_sizes{};
   pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-  pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  pool_sizes[1].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+	pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pool_sizes[1].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
 
   VkDescriptorPoolCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1120,22 +1163,10 @@ void BasicPSApp::AppData::createDescriptorPools() {
 
 
   // TRANSLUCENT MATERIAL DESCRIPTOR POOL
+  // The same for now
 	if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create translucent descriptor pool.");
 	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createDescriptorSets() {
-
-  // OPAQUE MATERIAL DESCRIPTOR SETS
-
-
-  // TRANSLUCENT MATERIAL DESCRIPTOR SETS
-
-	
 
 }
 
@@ -1368,7 +1399,6 @@ void BasicPSApp::AppData::recreateSwapChain() {
   createDepthResources();
   createFramebuffers();
   createDescriptorPools();
-  createDescriptorSets();
   createCommandBuffers();
 
 }
@@ -1396,9 +1426,14 @@ void BasicPSApp::AppData::cleanupSwapChain() {
     vkDestroyPipelineLayout(logical_device_, materials_[i]->pipeline_layout_, nullptr);
     vkDestroyDescriptorPool(logical_device_, materials_[i]->descriptor_pool_, nullptr);
   }
+  vkDestroyDescriptorPool(logical_device_, scene_descriptor_pool_, nullptr);
+
 
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
 
+  
+	cleanUniformBuffers(scene_uniform_buffers_);
+	scene_descriptor_sets_.clear();
   system_draw_objects_->deleteUniformBuffers(BasicPSApp::instance().active_scene_->getEntities());
 
   for (int i = 0; i < swap_chain_images_.size(); i++) {
@@ -1886,13 +1921,13 @@ void BasicPSApp::AppData::allocateDescriptorSets(std::vector<VkDescriptorSet>& d
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createUniformBuffers(std::vector<Buffer*>& buffers_) {
+void BasicPSApp::AppData::createUniformBuffers(int size, std::vector<Buffer*>& buffers_) {
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
 	buffers_.resize(swap_chain_images_.size());
 
-	VkDeviceSize buffer_size = sizeof(UniformBufferObject);
+	VkDeviceSize buffer_size = size;
 
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
 		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
@@ -1905,7 +1940,19 @@ void BasicPSApp::AppData::createUniformBuffers(std::vector<Buffer*>& buffers_) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateUniformBuffer(UniformBufferObject ubo, Buffer* buffer){
+void BasicPSApp::AppData::updateUniformBuffer(ModelsUBO ubo, Buffer* buffer){
+
+	void* data;
+	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
+		sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(logical_device_, buffer->buffer_memory_);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
 
 	void* data;
 	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
@@ -1983,6 +2030,46 @@ void BasicPSApp::AppData::setupMaterials(){
   translucent_material->material_id_ = 1;
 
   materials_.push_back(translucent_material);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void BasicPSApp::AppData::populateSceneDescriptorSets(){
+
+	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), scene_descriptor_set_layout_);
+	VkDescriptorSetAllocateInfo allocate_info{};
+	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocate_info.descriptorPool = scene_descriptor_pool_;
+	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
+	allocate_info.pSetLayouts = descriptor_set_layouts.data();
+
+	scene_descriptor_sets_.resize(swap_chain_images_.size());
+	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, scene_descriptor_sets_.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create scene descriptor sets.");
+	}
+
+
+	for (int i = 0; i < scene_descriptor_sets_.size(); i++) {
+		VkDescriptorBufferInfo buffer_info{};
+		buffer_info.buffer = scene_uniform_buffers_[i]->buffer_;
+		buffer_info.offset = 0;
+		buffer_info.range = sizeof(SceneUBO);
+
+		VkWriteDescriptorSet write_descriptor{};
+		write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptor.dstSet = scene_descriptor_sets_[i];
+		write_descriptor.dstBinding = 0;
+		write_descriptor.dstArrayElement = 0;
+		write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write_descriptor.descriptorCount = 1;
+		write_descriptor.pBufferInfo = &buffer_info;
+		write_descriptor.pImageInfo = nullptr; // Image data
+		write_descriptor.pTexelBufferView = nullptr; // Buffer views
+
+		vkUpdateDescriptorSets(BasicPSApp::instance().app_data_->logical_device_, 1,
+			&write_descriptor, 0, nullptr);
+	}
 
 }
 

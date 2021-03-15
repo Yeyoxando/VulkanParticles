@@ -187,7 +187,7 @@ void ComponentMaterial::OpaqueData::populateDescriptorSets(){
 		VkDescriptorBufferInfo buffer_info{};
 		buffer_info.buffer = uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
-		buffer_info.range = sizeof(UniformBufferObject);
+		buffer_info.range = sizeof(ModelsUBO);
 
 		VkDescriptorImageInfo image_info{};
 		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -255,7 +255,7 @@ void ComponentMaterial::TranslucentData::populateDescriptorSets(){
 		VkDescriptorBufferInfo buffer_info{};
 		buffer_info.buffer = uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
-		buffer_info.range = sizeof(UniformBufferObject);
+		buffer_info.range = sizeof(ModelsUBO);
 
 		VkDescriptorImageInfo image_info{};
 		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

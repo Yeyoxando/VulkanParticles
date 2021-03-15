@@ -106,36 +106,24 @@ namespace std {
 
 // ------------------------------------------------------------------------- //
 
-struct CameraUBO {
+struct SceneUBO {
 	glm::mat4 view;
 	glm::mat4 projection;
 };
 
-struct ObjectsUBO {
-  glm::mat4 models[500];
+struct ModelsUBO {
+  glm::mat4 model/*s[500]*/;
 };
 
-// Example for Uniforms for the shaders
-struct UniformBufferObject {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 projection;
-
-  /*
-   * Scalars have to be aligned by N (= 4 bytes given 32 bit floats).
-   * A vec2 must be aligned by 2N (= 8 bytes)
-   * A vec3 or vec4 must be aligned by 4N (= 16 bytes)
-   * A nested structure must be aligned by the base alignment of its members rounded up to a multiple of 16.
-   * A mat4 matrix must have the same alignment as a vec4.
-   * alignas(bytes) could be used to fix this but better nope
-   */
-
-   /*
-    * For binding multiple descriptors, for example per object or shared descriptors
-    * look at the final section of the Vulkan tutorial chapter 'descriptor pool and sets'
-    */
-
-};
+/*
+* // Textures should be bind on these sets
+struct OpaqueUBO{
+  //whatever but aligned
+}
+struct TranslucentUBO{
+	//whatever but aligned
+}
+*/
 
 // ------------------------------------------------------------------------- //
 
@@ -183,9 +171,14 @@ struct BasicPSApp::AppData {
 	std::map<int, const char*> loaded_models_;
 
   std::vector<Material*> materials_;
-  //std::vector<Buffer*> uniform_buffers_;
   std::vector<Image*> texture_images_;
 	std::map<int, const char*> loaded_textures_;
+
+
+	VkDescriptorSetLayout scene_descriptor_set_layout_; 
+	VkDescriptorPool scene_descriptor_pool_; 
+	std::vector<VkDescriptorSet> scene_descriptor_sets_; // one per swap chain image.
+	std::vector<Buffer*> scene_uniform_buffers_;
 
 
   // ----- SYSTEMS -----
@@ -248,8 +241,6 @@ struct BasicPSApp::AppData {
   void createIndexBuffer(std::vector<uint32_t>& indices);
   // Creates a descriptor pool to allocate the descriptor sets for the uniforms
   void createDescriptorPools();
-  // Creates the descriptor sets for the uniform buffers
-  void createDescriptorSets();
   // Creates the command buffers for each swap chain framebuffer
   void createCommandBuffers();
   // Creates the semaphores needed for rendering
@@ -318,11 +309,16 @@ struct BasicPSApp::AppData {
   // Allocates the given descriptor sets (for swap chain images) with the settings of the parent 
   void allocateDescriptorSets(std::vector<VkDescriptorSet> &descriptor_set, int parent_id);
 	// Creates the uniform buffers for a material
-	void createUniformBuffers(std::vector<Buffer*>& buffers_);
+	void createUniformBuffers(int size, std::vector<Buffer*>& buffers_);
 	// Clean up the uniform buffers from a material
-	void updateUniformBuffer(UniformBufferObject ubo, Buffer* buffer);
+	void updateUniformBuffer(SceneUBO ubo, Buffer* buffer);
+	// Clean up the uniform buffers from a material
+	void updateUniformBuffer(ModelsUBO ubo, Buffer* buffer);
   // Clean up the uniform buffers from a material
   void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
+
+  // Populates the descriptor set for the scene
+  void populateSceneDescriptorSets();
 
   void setupVertexBuffers();
   void setupIndexBuffers();

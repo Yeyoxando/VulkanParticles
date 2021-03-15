@@ -8,11 +8,14 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform UniformBufferObject{
-	mat4 model;
+layout(set = 0, binding = 0) uniform SceneUBO{
 	mat4 view;
 	mat4 proj;
-} ubo;
+} scene_ubo;
+
+layout(set = 1, binding = 0) uniform ModelsUBO{
+	mat4 model;
+} models_ubo;
 
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_color;
@@ -26,6 +29,6 @@ void main(){
 	frag_color = in_color;
 	frag_tex_coord = in_tex_coord;
 
-	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_position, 1.0f);
+	gl_Position = scene_ubo.proj * scene_ubo.view * models_ubo.model * vec4(in_position, 1.0f);
 
 }

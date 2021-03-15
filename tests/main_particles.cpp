@@ -21,7 +21,6 @@
 
 /*
 TODO (ordered):
-	- separate vp and model matrices
   - use a color variable only for now to make an example of the different uniforms
   - draw two objects with dynamic uniforms        
   - draw lots of objects with dynamic uniforms     
@@ -29,7 +28,8 @@ TODO (ordered):
   - use blend mode which not requires sorting (additive?)
   - implement radix sort    
   - add a callback for the scene update to customize it from the outside as a scripting method
-  - clean everything and made a little example    
+  - clean everything and made a little example (add node system?)
+  - Move Vulkan things to internal app (material, etc)
   - finished step 2
 
   - start step 3 -> min to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
@@ -37,7 +37,8 @@ TODO (ordered):
 */
 
 int main(){
-  //while (1) {} 2MB start
+  
+  //while (1) {}// 2MB start
 
   // 3D object creation and components setting
   Entity* scenery = new Entity();
@@ -104,7 +105,7 @@ int main(){
 
 
   // This is to check that memory gets cleaned
-  //while (1) {} //7MB at the end -> 5MB??
+  //while (1) {} //5MB at the end -> 3MB??
 
 
 
