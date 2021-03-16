@@ -17,13 +17,15 @@
 
 #include "components/component_mesh.h"
 #include "components/component_material.h"
+#include "components/component_transform.h"
 #include "components/component_particle_system.h"
 
 /*
 TODO (ordered):
-  - use a color variable only for now to make an example of the different uniforms
-  - draw two objects with dynamic uniforms        
-  - draw lots of objects with dynamic uniforms     
+  - draw lots of objects with dynamic uniforms
+      - Move all the opaque things into another dynamic buffer instead of having lots of descriptor sets
+      - update the dynamic buffer being careful with the offset and alignment
+      - memory mapping and unmapping should only be done 1 time
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
   - implement radix sort    
@@ -38,7 +40,14 @@ TODO (ordered):
 
 int main(){
   
-  //while (1) {}// 2MB start
+  //while (1) {} // 2MB start
+
+
+
+	// Scene creation and settings, entities are added after them settings
+	Scene* scene = new Scene();
+	scene->setName("Particles test");
+
 
   // 3D object creation and components setting
   Entity* scenery = new Entity();
@@ -65,11 +74,48 @@ int main(){
     opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
     //opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
     mat->setInstanceData(opaque_instance_data);
+
+		scene->addEntity(scenery);
   }
 
 
+	/*Entity* scenery2 = new Entity();
+	{
+		scenery2->initAsArchetype(Entity::kArchetype_3DObject);
+
+		// Get transform component
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(scenery2->getComponent(Component::kComponentKind_Transform));
+    transform->translate(glm::vec3(0.0f, 5.0f, 0.0f));
+
+
+		// Get mesh component
+		ComponentMesh* mesh = static_cast<ComponentMesh*>
+			(scenery2->getComponent(Component::kComponentKind_Mesh));
+
+		// Load a model
+		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		//mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
+
+
+		// Get material component
+		ComponentMaterial* mat = static_cast<ComponentMaterial*>
+			(scenery2->getComponent(Component::kComponentKind_Material));
+		// Indicate material parent to internally set pipeline, descriptor set...
+		mat->setMaterialParent(BasicPSApp::kMaterialParent_Opaque);
+
+		// Create instance data
+		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
+		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		mat->setInstanceData(opaque_instance_data);
+
+		scene->addEntity(scenery2);
+	}*/
+
+
   // Particle system creation and setting
-  Entity* particle_system = new Entity();
+  /*Entity* particle_system = new Entity();
   {
     particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
     
@@ -78,20 +124,14 @@ int main(){
       (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
     ps->init(500);
-  }
-  
-  
-  // Scene creation, settings and entities adding
-  Scene* scene = new Scene();
-  {
-    scene->setName("Particles test");
 
-    scene->addEntity(scenery);
     scene->addEntity(particle_system);
+  }*/
+  
+  
 
-    // Set up scene to the app!!
-    BasicPSApp::instance().loadScene(scene);
-  }
+  // Set up scene to the app!!
+  BasicPSApp::instance().loadScene(scene);
 
 
   // Run particle editor

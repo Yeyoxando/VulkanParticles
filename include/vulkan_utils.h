@@ -72,8 +72,36 @@ static std::vector<char> readFile(const char* file_name) {
 }
 
 // ------------------------------------------------------------------------- // 
-// Expand an unordered map feature to accept Vertex structure
 
+// ------------------------------------------------------------------------- // 
+
+// Allocs aligned memory to use the dynamic ubo with the correct offset and alignment
+// Windows specific
+static void* alignedAlloc(size_t size, size_t alignment){
+
+	void* data = nullptr;
+	data = _aligned_malloc(size, alignment);
+	return data;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+// Releases the aligned memory created by alignedAlloc
+// Windows specific
+static void alignedFree(void* data){
+
+	_aligned_free(data);
+
+}
+
+// ------------------------------------------------------------------------- // 
+/*
+* ToDo:
+- Add all different kinds of functions to get default Vulkan structures filled
+- Rename and reorganize all the internal things
+- Reallocate and Refactor everything on its place
+*/
 
 // ------------------------------------------------------------------------- // 
 

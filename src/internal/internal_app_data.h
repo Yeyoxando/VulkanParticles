@@ -112,16 +112,23 @@ struct SceneUBO {
 };
 
 struct ModelsUBO {
-  glm::mat4 model/*s[500]*/;
+  glm::mat4* models = nullptr;
 };
 
+struct OpaqueUBO {
+  glm::vec4 color;
+  // Textures should be bind on these sets
+};
 /*
-* // Textures should be bind on these sets
-struct OpaqueUBO{
-  //whatever but aligned
-}
 struct TranslucentUBO{
-	//whatever but aligned
+	glm::vec4 color;
+	// Textures should be bind on these sets
+}
+
+// Special UBO for the lights, as they are the same for all objects
+struct LightsUBO{
+	// Will contain a limited number of lights data
+  // For the moment start with one directional in the scene
 }
 */
 
@@ -174,11 +181,24 @@ struct BasicPSApp::AppData {
   std::vector<Image*> texture_images_;
 	std::map<int, const char*> loaded_textures_;
 
-
+  // -- SPECIFIC UBOS SETTINGS --
+  // Scene UBO
 	VkDescriptorSetLayout scene_descriptor_set_layout_; 
 	VkDescriptorPool scene_descriptor_pool_; 
 	std::vector<VkDescriptorSet> scene_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> scene_uniform_buffers_;
+	std::vector<Buffer*> scene_uniform_buffers_; // one per swap chain image.
+	// SceneUBO scene_ubo_;
+
+  // Models UBO
+	VkDescriptorSetLayout models_descriptor_set_layout_;
+	VkDescriptorPool models_descriptor_pool_;
+	std::vector<VkDescriptorSet> models_descriptor_sets_; // one per swap chain image.
+	std::vector<Buffer*> models_uniform_buffers_; // one per swap chain image.
+  ModelsUBO models_ubo_;
+
+  // Objects UBO is now in the mat component but they could stores here and assign an id in the material
+
+	// LightsUBO
 
 
   // ----- SYSTEMS -----
@@ -221,7 +241,7 @@ struct BasicPSApp::AppData {
   void createPipelineLayouts();
   // Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
   void createGraphicsPipelines();
-  // Create a shader module with the given bytecode
+  // Create a shader module with the given bytecode // TODO: Move this to Vulkan utils
   VkShaderModule createShaderModule(const std::vector<char>& bytecode);
   // Creates the frame buffers used for rendering
   void createFramebuffers();
@@ -310,15 +330,23 @@ struct BasicPSApp::AppData {
   void allocateDescriptorSets(std::vector<VkDescriptorSet> &descriptor_set, int parent_id);
 	// Creates the uniform buffers for a material
 	void createUniformBuffers(int size, std::vector<Buffer*>& buffers_);
-	// Clean up the uniform buffers from a material
+	// Creates the uniform dynamic buffers for a material
+	void createDynamicUniformBuffers(std::vector<Buffer*>& buffers_);
+	// Updates the scene uniform buffer
 	void updateUniformBuffer(SceneUBO ubo, Buffer* buffer);
-	// Clean up the uniform buffers from a material
-	void updateUniformBuffer(ModelsUBO ubo, Buffer* buffer);
+	// Updates the object models buffer
+	void updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer);
+	// Updates a uniform opaque buffer
+	void updateUniformBuffer(OpaqueUBO ubo, Buffer* buffer);
+	// Updates a uniform opaque buffer
+	//void updateUniformBuffer(TranslucentUBO ubo, Buffer* buffer);
   // Clean up the uniform buffers from a material
   void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
 
   // Populates the descriptor set for the scene
   void populateSceneDescriptorSets();
+  // Populates the descriptor set for the objects models
+  void populateModelsDescriptorSets();
 
   void setupVertexBuffers();
   void setupIndexBuffers();

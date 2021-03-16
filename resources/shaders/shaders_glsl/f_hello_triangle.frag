@@ -11,11 +11,15 @@
 layout(location = 0) in vec3 frag_color;
 layout(location = 1) in vec2 frag_tex_coord;
 
-layout(set = 1, binding = 1) uniform sampler2D tex_sampler;
+/*layout(set = 2, binding = 0) uniform OpaqueUBO{
+	vec4 color;
+} opaque_ubo;*/
+
+layout(set = 2, binding = 1) uniform sampler2D tex_sampler;
 
 // Fragments of the framebuffer at index 0
 layout(location = 0) out vec4 out_color;
 
 void main(){
-  out_color = texture(tex_sampler, frag_tex_coord);
+  out_color = texture(tex_sampler, frag_tex_coord) /* opaque_ubo.color*/;
 }
