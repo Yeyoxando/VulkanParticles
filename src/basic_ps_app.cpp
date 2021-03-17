@@ -11,7 +11,7 @@
 
 // ------------------------------------------------------------------------- //
 
-BasicPSApp::BasicPSApp() {
+ParticleEditor::ParticleEditor() {
 
   app_data_ = new AppData();
 
@@ -24,13 +24,13 @@ BasicPSApp::BasicPSApp() {
 
 // ------------------------------------------------------------------------- //
 
-BasicPSApp::~BasicPSApp() {
+ParticleEditor::~ParticleEditor() {
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::run() {
+void ParticleEditor::run() {
 
   init();
 
@@ -47,7 +47,7 @@ void BasicPSApp::run() {
 
 // ------------------------------------------------------------------------- //
 
-Camera* BasicPSApp::getCamera() {
+Camera* ParticleEditor::getCamera() {
 
   return camera_;
 
@@ -55,7 +55,7 @@ Camera* BasicPSApp::getCamera() {
 
 // ------------------------------------------------------------------------- //
 
-Scene* BasicPSApp::getScene(){
+Scene* ParticleEditor::getScene(){
 
   return active_scene_;
 
@@ -63,7 +63,7 @@ Scene* BasicPSApp::getScene(){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::init() {
+void ParticleEditor::init() {
 
 	input_ = new InputManager();
 	camera_ = new Camera();
@@ -84,7 +84,7 @@ void BasicPSApp::init() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::shutDown() {
+void ParticleEditor::shutDown() {
   
   app_data_->renderLoopEnd();
 
@@ -101,16 +101,16 @@ void BasicPSApp::shutDown() {
 
 // ------------------------------------------------------------------------- //
 
-BasicPSApp& BasicPSApp::instance() {
+ParticleEditor& ParticleEditor::instance() {
 
-  static BasicPSApp* instance = new BasicPSApp();
+  static ParticleEditor* instance = new ParticleEditor();
   return *instance;
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::loadScene(Scene* scene){
+void ParticleEditor::loadScene(Scene* scene){
 
   active_scene_ = scene;
 
@@ -118,7 +118,7 @@ void BasicPSApp::loadScene(Scene* scene){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::input() {
+void ParticleEditor::input() {
 
   glfwPollEvents();
 
@@ -146,7 +146,7 @@ void BasicPSApp::input() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::update() {
+void ParticleEditor::update() {
 
   active_scene_->update();
   app_data_->updateFrame();
@@ -155,7 +155,7 @@ void BasicPSApp::update() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::render() {
+void ParticleEditor::render() {
 
   app_data_->drawFrame();
 

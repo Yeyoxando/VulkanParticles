@@ -23,24 +23,17 @@ public:
 	// Not usable, base for the material instance data
 	// This is the material instance (data correspond to its parent descriptor set layout)
   struct MaterialData {
-    friend class BasicPSApp::AppData;
+    friend class ParticleEditor::AppData;
     friend class SystemDrawObjects;
   public: 
 
     int getParentID() { return parent_id_; }
-		std::vector<Buffer*>& getUniformBuffers() { return uniform_buffers_; }
-		std::vector<VkDescriptorSet>& getDescriptorSets() { return descriptor_sets_; }
-
-    virtual void populateDescriptorSets() {}
+    virtual glm::vec4 getTextureIDs() { return glm::vec4(); }
   
-  protected: 
 		int parent_id_;
     MaterialData() { parent_id_ = -1; }
     virtual ~MaterialData();
-    std::vector<VkDescriptorSet> descriptor_sets_; // one per swap chain image.
-    std::vector<Buffer*> uniform_buffers_;
-	  //std::vector<Buffer*> light_data_; custom_data_... whatever but same as the other data kinds
-		std::vector<int> texture_ids_; // textures array, identified later on the specific shader
+	  std::vector<int> texture_ids_; // textures array, identified later on the specific shader
 
   };
 
@@ -49,12 +42,13 @@ public:
   public:
     OpaqueData();
 
-    // loadUniforms
     void loadAlbedoTexture(const char* texture_path);
     // void loadSpecular
     // void loadNormalMap
 
-    virtual void populateDescriptorSets() override;
+    virtual glm::vec4 getTextureIDs() override;
+
+    glm::vec4 color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	};
 
@@ -66,13 +60,13 @@ public:
 		void loadAlbedoTexture(const char* texture_path);
     // This material will only have one texture for instance
 
-    virtual void populateDescriptorSets() override;
+    virtual glm::vec4 getTextureIDs() override;
 
 	};
 
 
 
-  void setMaterialParent(BasicPSApp::MaterialParent parent);
+  void setMaterialParent(ParticleEditor::MaterialParent parent);
 
   void setInstanceData(MaterialData* instance_data);
 

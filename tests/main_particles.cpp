@@ -67,7 +67,7 @@ int main(){
     ComponentMaterial* mat = static_cast<ComponentMaterial*>
       (scenery->getComponent(Component::kComponentKind_Material));
     // Indicate material parent to internally set pipeline, descriptor set...
-    mat->setMaterialParent(BasicPSApp::kMaterialParent_Opaque);
+    mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
 
     // Create instance data
     ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
@@ -79,14 +79,15 @@ int main(){
   }
 
 
-	/*Entity* scenery2 = new Entity();
+	Entity* scenery2 = new Entity();
 	{
 		scenery2->initAsArchetype(Entity::kArchetype_3DObject);
 
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(scenery2->getComponent(Component::kComponentKind_Transform));
-    transform->translate(glm::vec3(0.0f, 5.0f, 0.0f));
+    // z, x, y
+    transform->translate(glm::vec3(0.0f, 0.0f, 1.6f));
 
 
 		// Get mesh component
@@ -102,16 +103,52 @@ int main(){
 		ComponentMaterial* mat = static_cast<ComponentMaterial*>
 			(scenery2->getComponent(Component::kComponentKind_Material));
 		// Indicate material parent to internally set pipeline, descriptor set...
-		mat->setMaterialParent(BasicPSApp::kMaterialParent_Opaque);
+		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
 
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
-		mat->setInstanceData(opaque_instance_data);
+    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+    mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(scenery2);
-	}*/
+	}
+
+
+	Entity* scenery3 = new Entity();
+	{
+		scenery3->initAsArchetype(Entity::kArchetype_3DObject);
+
+		// Get transform component
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(scenery3->getComponent(Component::kComponentKind_Transform));
+		// z, x, y
+		transform->translate(glm::vec3(0.0f, 0.0f, -1.6f));
+
+
+		// Get mesh component
+		ComponentMesh* mesh = static_cast<ComponentMesh*>
+			(scenery3->getComponent(Component::kComponentKind_Mesh));
+
+		// Load a model
+		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		//mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
+
+
+		// Get material component
+		ComponentMaterial* mat = static_cast<ComponentMaterial*>
+			(scenery3->getComponent(Component::kComponentKind_Material));
+		// Indicate material parent to internally set pipeline, descriptor set...
+		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
+
+		// Create instance data
+		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
+		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		mat->setInstanceData(opaque_instance_data);
+
+		scene->addEntity(scenery3);
+	}
 
 
   // Particle system creation and setting
@@ -131,12 +168,12 @@ int main(){
   
 
   // Set up scene to the app!!
-  BasicPSApp::instance().loadScene(scene);
+  ParticleEditor::instance().loadScene(scene);
 
 
   // Run particle editor
   try {
-    BasicPSApp::instance().run();
+    ParticleEditor::instance().run();
   }
   catch(const std::exception& e) {
     printf(e.what());

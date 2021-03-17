@@ -14,6 +14,8 @@
 
 #include <tiny_obj_loader.h>
 
+#define VK_USE_PLATFORM_WIN32_KHR
+
 // Provisional
 #include "components/component_mesh.h"
 #include "components/component_material.h"
@@ -21,7 +23,7 @@
 
 // ----------------------- Functions definition ---------------------------- //
 
-BasicPSApp::AppData::AppData() {
+ParticleEditor::AppData::AppData() {
 
   window_ = nullptr;
   window_width_ = 0;
@@ -59,7 +61,7 @@ BasicPSApp::AppData::AppData() {
 
 // ------------------------------------------------------------------------- //
 
-BasicPSApp::AppData::~AppData(){
+ParticleEditor::AppData::~AppData(){
 
   for (int i = 0; i < materials_.size(); i++) {
     delete materials_[i];
@@ -71,7 +73,7 @@ BasicPSApp::AppData::~AppData(){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::initWindow(int width /*= 800*/, int height /*= 600*/) {
+void ParticleEditor::AppData::initWindow(int width /*= 800*/, int height /*= 600*/) {
 
   glfwInit();
 
@@ -92,7 +94,7 @@ void BasicPSApp::AppData::initWindow(int width /*= 800*/, int height /*= 600*/) 
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::initVulkan() {
+void ParticleEditor::AppData::initVulkan() {
 
   createInstance();
   setupDebugMessenger();
@@ -113,7 +115,8 @@ void BasicPSApp::AppData::initVulkan() {
   setupVertexBuffers();
 	setupIndexBuffers();
 	loadModels();
-  createDescriptorPools();
+	createDescriptorPools();
+	initializeDescriptorSets();
   createCommandBuffers();
   createSyncObjects();
 
@@ -121,7 +124,7 @@ void BasicPSApp::AppData::initVulkan() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::renderLoopEnd() {
+void ParticleEditor::AppData::renderLoopEnd() {
 
   // Wait until the device is on idle so we can clean up resources without being in use
   vkDeviceWaitIdle(logical_device_);
@@ -130,7 +133,7 @@ void BasicPSApp::AppData::renderLoopEnd() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::closeVulkan() {
+void ParticleEditor::AppData::closeVulkan() {
 
   // Vulkan cleanup
   cleanupSwapChain();
@@ -143,9 +146,8 @@ void BasicPSApp::AppData::closeVulkan() {
 
   vkDestroyDescriptorSetLayout(logical_device_, scene_descriptor_set_layout_, nullptr);
   vkDestroyDescriptorSetLayout(logical_device_, models_descriptor_set_layout_, nullptr);
-  for (int i = 0; i < materials_.size(); i++) {
-    vkDestroyDescriptorSetLayout(logical_device_, materials_[i]->descriptor_set_layout_, nullptr);
-  }
+  vkDestroyDescriptorSetLayout(logical_device_, opaque_descriptor_set_layout_, nullptr);
+
 
   for (int i = 0; i < index_buffers_.size(); i++) {
     index_buffers_[i]->clean(logical_device_);
@@ -183,7 +185,7 @@ void BasicPSApp::AppData::closeVulkan() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createInstance() {
+void ParticleEditor::AppData::createInstance() {
 
   // Check for validation layers
   if (kEnableValidationLayers && !checkValidationLayerSupport()) {
@@ -242,7 +244,7 @@ void BasicPSApp::AppData::createInstance() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createSurface() {
+void ParticleEditor::AppData::createSurface() {
 
   if (glfwCreateWindowSurface(instance_, window_, nullptr, &surface_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface.");
@@ -252,7 +254,7 @@ void BasicPSApp::AppData::createSurface() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::pickPhysicalDevice() {
+void ParticleEditor::AppData::pickPhysicalDevice() {
 
   // Request available physical devices (graphics cards)
   uint32_t device_count = 0;
@@ -281,7 +283,7 @@ void BasicPSApp::AppData::pickPhysicalDevice() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createLogicalDevice() {
+void ParticleEditor::AppData::createLogicalDevice() {
 
   // Create needed queues
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
@@ -338,7 +340,7 @@ void BasicPSApp::AppData::createLogicalDevice() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createSwapChain() {
+void ParticleEditor::AppData::createSwapChain() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -419,7 +421,7 @@ void BasicPSApp::AppData::createSwapChain() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createRenderPass() {
+void ParticleEditor::AppData::createRenderPass() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -509,13 +511,13 @@ void BasicPSApp::AppData::createRenderPass() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDescriptorSetLayouts() {
+void ParticleEditor::AppData::createDescriptorSetLayouts() {
 
   // COMMON 
   // (Scene descriptor set layout)
 	VkDescriptorSetLayoutBinding vp_ubo_layout_binding{};
-	vp_ubo_layout_binding.binding = 0;
 	vp_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vp_ubo_layout_binding.binding = 0;
 	vp_ubo_layout_binding.descriptorCount = 1;
 	vp_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	vp_ubo_layout_binding.pImmutableSamplers = nullptr;
@@ -531,8 +533,8 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
 
   // (Models descriptor set layout)
 	VkDescriptorSetLayoutBinding models_ubo_layout_binding{};
-	models_ubo_layout_binding.binding = 0;
 	models_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	models_ubo_layout_binding.binding = 0;
 	models_ubo_layout_binding.descriptorCount = 1;
 	models_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	models_ubo_layout_binding.pImmutableSamplers = nullptr;
@@ -551,16 +553,16 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
   // MATERIAL OPAQUE
   // Create the binding for the vertex shader MVP matrices
   VkDescriptorSetLayoutBinding opaque_ubo_layout_binding{};
+  opaque_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
   opaque_ubo_layout_binding.binding = 0;
-  opaque_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   opaque_ubo_layout_binding.descriptorCount = 1;
   opaque_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
   opaque_ubo_layout_binding.pImmutableSamplers = nullptr;
 
   VkDescriptorSetLayoutBinding sampler_layout_binding{};
-  sampler_layout_binding.binding = 1;
   sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  sampler_layout_binding.descriptorCount = 1;
+  sampler_layout_binding.binding = 1;
+  sampler_layout_binding.descriptorCount = loaded_textures_.size();
   sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
   sampler_layout_binding.pImmutableSamplers = nullptr;
 
@@ -572,17 +574,17 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
   opaque_create_info.bindingCount = static_cast<uint32_t>(opaque_bindings.size());
   opaque_create_info.pBindings = opaque_bindings.data();
 
-  if (vkCreateDescriptorSetLayout(logical_device_, &opaque_create_info, nullptr, &materials_[0]->descriptor_set_layout_) != VK_SUCCESS) {
+  if (vkCreateDescriptorSetLayout(logical_device_, &opaque_create_info, nullptr, &opaque_descriptor_set_layout_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create opaque descriptor set layout.");
   }
 
 
 
   // MATERIAL TRANSLUCENT
-	// Create the binding for the vertex shader MVP matrices
+	/*// Create the binding for the vertex shader MVP matrices
 	VkDescriptorSetLayoutBinding translucent_ubo_layout_binding{};
-	translucent_ubo_layout_binding.binding = 0;
 	translucent_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	translucent_ubo_layout_binding.binding = 0;
 	translucent_ubo_layout_binding.descriptorCount = 1;
 	translucent_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	translucent_ubo_layout_binding.pImmutableSamplers = nullptr;
@@ -597,18 +599,18 @@ void BasicPSApp::AppData::createDescriptorSetLayouts() {
 
 	if (vkCreateDescriptorSetLayout(logical_device_, &translucent_create_info, nullptr, &materials_[1]->descriptor_set_layout_) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create translucent descriptor set layout.");
-	}
+	}*/
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createPipelineLayouts(){
+void ParticleEditor::AppData::createPipelineLayouts(){
 
 	// OPAQUE MATERIAL PIPELINE LAYOUT
   std::array<VkDescriptorSetLayout, 3> opaque_descriptor_set_layouts{ 
     scene_descriptor_set_layout_, models_descriptor_set_layout_, 
-    materials_[0]->descriptor_set_layout_ 
+    opaque_descriptor_set_layout_
   };
 
   VkPipelineLayoutCreateInfo opaque_layout_info{};
@@ -627,7 +629,7 @@ void BasicPSApp::AppData::createPipelineLayouts(){
 	// TRANSLUCENT MATERIAL PIPELINE LAYOUT
 	std::array<VkDescriptorSetLayout, 3> translucent_descriptor_set_layouts{
 		scene_descriptor_set_layout_, models_descriptor_set_layout_,
-		materials_[1]->descriptor_set_layout_
+		opaque_descriptor_set_layout_
 	};
 
 	VkPipelineLayoutCreateInfo translucent_layout_info{};
@@ -645,7 +647,7 @@ void BasicPSApp::AppData::createPipelineLayouts(){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createGraphicsPipelines() {
+void ParticleEditor::AppData::createGraphicsPipelines() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -658,19 +660,32 @@ void BasicPSApp::AppData::createGraphicsPipelines() {
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
 
+  
   VkPipelineShaderStageCreateInfo vert_shader_stage_info{};
   vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
   vert_shader_stage_info.module = vert_shader_module;
   vert_shader_stage_info.pName = "main";
   vert_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
+  
+  // Fragment shader num textures constant
+  VkSpecializationMapEntry entry{};
+  entry.constantID = 0;
+  entry.offset = 0;
+  entry.size = sizeof(int32_t);
+  VkSpecializationInfo spec_info{};
+  spec_info.mapEntryCount = 1;
+  spec_info.pMapEntries = &entry;
+  spec_info.dataSize = sizeof(uint32_t);
+  uint32_t data = loaded_textures_.size();
+  spec_info.pData = &data;
 
   VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
   frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
   frag_shader_stage_info.module = frag_shader_module;
   frag_shader_stage_info.pName = "main";
-  frag_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
+  frag_shader_stage_info.pSpecializationInfo = &spec_info; // Constants can be defined here
 
   VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
 
@@ -868,7 +883,7 @@ void BasicPSApp::AppData::createGraphicsPipelines() {
 
 // ------------------------------------------------------------------------- //
 
-VkShaderModule BasicPSApp::AppData::createShaderModule(const std::vector<char>& bytecode) {
+VkShaderModule ParticleEditor::AppData::createShaderModule(const std::vector<char>& bytecode) {
 
   VkShaderModuleCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -887,7 +902,7 @@ VkShaderModule BasicPSApp::AppData::createShaderModule(const std::vector<char>& 
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createFramebuffers() {
+void ParticleEditor::AppData::createFramebuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -918,7 +933,7 @@ void BasicPSApp::AppData::createFramebuffers() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createCommandPool() {
+void ParticleEditor::AppData::createCommandPool() {
 
   QueueFamilyIndices indices = findQueueFamilies(physical_device_);
 
@@ -935,7 +950,7 @@ void BasicPSApp::AppData::createCommandPool() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createColorResources() {
+void ParticleEditor::AppData::createColorResources() {
 
   VkFormat format = swap_chain_image_format_;
 
@@ -950,7 +965,7 @@ void BasicPSApp::AppData::createColorResources() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDepthResources() {
+void ParticleEditor::AppData::createDepthResources() {
 
   VkFormat format = findDepthFormat();
 
@@ -967,7 +982,7 @@ void BasicPSApp::AppData::createDepthResources() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createTextureImages() {
+void ParticleEditor::AppData::createTextureImages() {
 
   int tex_width;
   int tex_height;
@@ -1030,7 +1045,7 @@ void BasicPSApp::AppData::createTextureImages() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::loadModels() {
+void ParticleEditor::AppData::loadModels() {
 
 	// Load model from file
 	tinyobj::attrib_t attrib;
@@ -1088,7 +1103,7 @@ void BasicPSApp::AppData::loadModels() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createVertexBuffer(std::vector<Vertex> &vertices) {
+void ParticleEditor::AppData::createVertexBuffer(std::vector<Vertex> &vertices) {
 
   // Driver developers says that buffers should be created in only one VkBuffer
   // and use them with the offset properties that are in the functions
@@ -1128,7 +1143,7 @@ void BasicPSApp::AppData::createVertexBuffer(std::vector<Vertex> &vertices) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
+void ParticleEditor::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
 
 	index_buffers_.push_back(new Buffer(Buffer::kBufferType_Index));
 
@@ -1162,7 +1177,7 @@ void BasicPSApp::AppData::createIndexBuffer(std::vector<uint32_t>& indices) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDescriptorPools() {
+void ParticleEditor::AppData::createDescriptorPools() {
 
   // COMMON DESCRIPTOR POOLS 
   // Scene
@@ -1199,11 +1214,14 @@ void BasicPSApp::AppData::createDescriptorPools() {
 
   // OPAQUE MATERIAL DESCRIPTOR POOL
   // Create descriptor pool info
-  std::array<VkDescriptorPoolSize, 2> pool_sizes{};
-  pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  int num_textures = loaded_textures_.size();
+  std::vector<VkDescriptorPoolSize> pool_sizes = std::vector<VkDescriptorPoolSize>(1 + num_textures);
+  pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_sizes[1].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+  for (int i = 1; i < num_textures + 1; ++i) {
+    pool_sizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    pool_sizes[i].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
+  }
 
   VkDescriptorPoolCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1211,7 +1229,7 @@ void BasicPSApp::AppData::createDescriptorPools() {
   create_info.pPoolSizes = pool_sizes.data();
   create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 
-  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[0]->descriptor_pool_) != VK_SUCCESS) {
+  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &opaque_descriptor_pool_) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create opaque descriptor pool.");
   }
 
@@ -1231,15 +1249,28 @@ void BasicPSApp::AppData::createDescriptorPools() {
 	create_info.pPoolSizes = pool_sizes.data();
 	create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());*/
 
-	if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
+	/*if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create translucent descriptor pool.");
-	}
+	}*/
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createCommandBuffers() {
+void ParticleEditor::AppData::initializeDescriptorSets(){
+
+	createUniformBuffers(sizeof(SceneUBO), scene_uniform_buffers_);
+	createDynamicUniformBuffers(models_uniform_buffers_);
+	createOpaqueDynamicUniformBuffers(opaque_uniform_buffers_);
+	populateSceneDescriptorSets();
+	populateModelsDescriptorSets();
+	populateOpaqueDescriptorSets();
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ParticleEditor::AppData::createCommandBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1286,7 +1317,7 @@ void BasicPSApp::AppData::createCommandBuffers() {
 
     // Call draw system to prepare the commands for all the entities
     system_draw_objects_->drawObjectsCommand(i, command_buffers_[i], 
-      BasicPSApp::instance().active_scene_->getEntities());
+      ParticleEditor::instance().active_scene_->getEntities());
 
     // Finish recording commands
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -1301,7 +1332,7 @@ void BasicPSApp::AppData::createCommandBuffers() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createSyncObjects() {
+void ParticleEditor::AppData::createSyncObjects() {
 
   available_image_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
   finished_render_semaphores_.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1328,7 +1359,7 @@ void BasicPSApp::AppData::createSyncObjects() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateFrame() {
+void ParticleEditor::AppData::updateFrame() {
 
   // Calculate time since rendering started
   static auto start_time = std::chrono::high_resolution_clock::now();
@@ -1342,7 +1373,7 @@ void BasicPSApp::AppData::updateFrame() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
+void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // THIS SHOULD BE ON THE SCENE
   // Calculate time since rendering started
@@ -1361,13 +1392,13 @@ void BasicPSApp::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // Update the dynamic buffer using the draw system
   system_draw_objects_->updateUniformBuffers(current_image,
-    BasicPSApp::instance().active_scene_->getEntities());
+    ParticleEditor::instance().active_scene_->getEntities());
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::drawFrame() {
+void ParticleEditor::AppData::drawFrame() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -1444,7 +1475,7 @@ void BasicPSApp::AppData::drawFrame() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::recreateSwapChain() {
+void ParticleEditor::AppData::recreateSwapChain() {
 
   int width = 0;
   int height = 0;
@@ -1466,13 +1497,14 @@ void BasicPSApp::AppData::recreateSwapChain() {
   createDepthResources();
   createFramebuffers();
   createDescriptorPools();
+  initializeDescriptorSets();
   createCommandBuffers();
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::cleanupSwapChain() {
+void ParticleEditor::AppData::cleanupSwapChain() {
 
   // Render images
   color_image_->clean(logical_device_);
@@ -1494,10 +1526,10 @@ void BasicPSApp::AppData::cleanupSwapChain() {
   for (int i = 0; i < materials_.size(); i++) {
     vkDestroyPipeline(logical_device_, materials_[i]->graphics_pipeline_, nullptr);
     vkDestroyPipelineLayout(logical_device_, materials_[i]->pipeline_layout_, nullptr);
-    vkDestroyDescriptorPool(logical_device_, materials_[i]->descriptor_pool_, nullptr);
   }
   vkDestroyDescriptorPool(logical_device_, scene_descriptor_pool_, nullptr);
   vkDestroyDescriptorPool(logical_device_, models_descriptor_pool_, nullptr);
+  vkDestroyDescriptorPool(logical_device_, opaque_descriptor_pool_, nullptr);
 
   // Render pass
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
@@ -1508,8 +1540,9 @@ void BasicPSApp::AppData::cleanupSwapChain() {
 
 	cleanUniformBuffers(models_uniform_buffers_);
 	models_descriptor_sets_.clear();
-
-  system_draw_objects_->deleteUniformBuffers(BasicPSApp::instance().active_scene_->getEntities());
+	
+  cleanUniformBuffers(opaque_uniform_buffers_);
+	opaque_descriptor_sets_.clear();
 
   // Swap chain image views
   for (int i = 0; i < swap_chain_images_.size(); i++) {
@@ -1523,7 +1556,7 @@ void BasicPSApp::AppData::cleanupSwapChain() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+void ParticleEditor::AppData::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 
   auto app = reinterpret_cast<AppData*>(glfwGetWindowUserPointer(window));
   app->resized_framebuffer_ = true;
@@ -1531,14 +1564,14 @@ void BasicPSApp::AppData::framebufferResizeCallback(GLFWwindow* window, int widt
   app->window_height_ = height;
 
   if (width != 0) {
-    BasicPSApp::instance().getCamera()->setupProjection(90.0f, (float)app->window_width_ / (float)app->window_height_, 0.1f, 10.0f);
+    ParticleEditor::instance().getCamera()->setupProjection(90.0f, (float)app->window_width_ / (float)app->window_height_, 0.1f, 10.0f);
   }
 
 }
 
 // ------------------------------------------------------------------------- //
 
-bool BasicPSApp::AppData::isDeviceSuitable(VkPhysicalDevice device) {
+bool ParticleEditor::AppData::isDeviceSuitable(VkPhysicalDevice device) {
 
   // Basic device properties
   VkPhysicalDeviceProperties device_properties;
@@ -1574,7 +1607,7 @@ bool BasicPSApp::AppData::isDeviceSuitable(VkPhysicalDevice device) {
 
 // ------------------------------------------------------------------------- //
 
-bool BasicPSApp::AppData::hasStencilComponent(VkFormat format) {
+bool ParticleEditor::AppData::hasStencilComponent(VkFormat format) {
 
   return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 
@@ -1582,7 +1615,7 @@ bool BasicPSApp::AppData::hasStencilComponent(VkFormat format) {
 
 // ------------------------------------------------------------------------- //
 
-SwapChainSupportDetails BasicPSApp::AppData::querySwapChainSupportDetails(VkPhysicalDevice device) {
+SwapChainSupportDetails ParticleEditor::AppData::querySwapChainSupportDetails(VkPhysicalDevice device) {
 
   SwapChainSupportDetails details;
 
@@ -1611,7 +1644,7 @@ SwapChainSupportDetails BasicPSApp::AppData::querySwapChainSupportDetails(VkPhys
 
 // ------------------------------------------------------------------------- //
 
-VkSurfaceFormatKHR BasicPSApp::AppData::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
+VkSurfaceFormatKHR ParticleEditor::AppData::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
 
   // Search if any of the available formats has the desired features
   for (int i = 0; i < available_formats.size(); i++) {
@@ -1631,7 +1664,7 @@ VkSurfaceFormatKHR BasicPSApp::AppData::chooseSwapChainSurfaceFormat(const std::
 
 // ------------------------------------------------------------------------- //
 
-VkPresentModeKHR BasicPSApp::AppData::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
+VkPresentModeKHR ParticleEditor::AppData::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
 
   // Search if any of the available present modes are mailbox (triple buffering support)
   for (int i = 0; i < available_present_modes.size(); i++) {
@@ -1647,7 +1680,7 @@ VkPresentModeKHR BasicPSApp::AppData::chooseSwapChainPresentMode(const std::vect
 
 // ------------------------------------------------------------------------- //
 
-VkExtent2D BasicPSApp::AppData::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D ParticleEditor::AppData::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
 
   if (capabilities.currentExtent.width != UINT32_MAX) {
     // Some window managers set this by default, if is not equal to this it can be modified
@@ -1676,7 +1709,7 @@ VkExtent2D BasicPSApp::AppData::chooseSwapChainExtent(const VkSurfaceCapabilitie
 
 // ------------------------------------------------------------------------- //
 
-std::vector<const char*> BasicPSApp::AppData::getRequiredExtensions() {
+std::vector<const char*> ParticleEditor::AppData::getRequiredExtensions() {
 
   // Get supported extensions
   uint32_t glfw_extension_count = 0;
@@ -1696,7 +1729,7 @@ std::vector<const char*> BasicPSApp::AppData::getRequiredExtensions() {
 
 // ------------------------------------------------------------------------- //
 
-bool BasicPSApp::AppData::checkValidationLayerSupport() {
+bool ParticleEditor::AppData::checkValidationLayerSupport() {
 
   // Count available layers
   uint32_t layers_count = 0;
@@ -1728,7 +1761,7 @@ bool BasicPSApp::AppData::checkValidationLayerSupport() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::setupDebugMessenger() {
+void ParticleEditor::AppData::setupDebugMessenger() {
 
   if (!kEnableValidationLayers) return;
 
@@ -1743,7 +1776,7 @@ void BasicPSApp::AppData::setupDebugMessenger() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
+void ParticleEditor::AppData::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
 
   create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -1761,7 +1794,7 @@ void BasicPSApp::AppData::populateDebugMessengerCreateInfo(VkDebugUtilsMessenger
 
 // ------------------------------------------------------------------------- //
 
-VKAPI_ATTR VkBool32 VKAPI_CALL BasicPSApp::AppData::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL ParticleEditor::AppData::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
 
   // Not finished, it could show the information of other lot of things
   // it could even show it trough a log in the app, which can be divided in different message sections
@@ -1785,7 +1818,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL BasicPSApp::AppData::debugCallback(VkDebugUtilsMe
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
+void ParticleEditor::AppData::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
 
   VkCommandBuffer cmd_buffer = beginSingleTimeCommands(logical_device_, command_pool_);
 
@@ -1849,7 +1882,7 @@ void BasicPSApp::AppData::transitionImageLayout(VkImage image, VkFormat format, 
 
 // ------------------------------------------------------------------------- //
 
-uint32_t BasicPSApp::AppData::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+uint32_t ParticleEditor::AppData::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
 
   // Request supported memory properties from the graphics card
   VkPhysicalDeviceMemoryProperties mem_properties;
@@ -1869,7 +1902,7 @@ uint32_t BasicPSApp::AppData::findMemoryType(uint32_t type_filter, VkMemoryPrope
 
 // ------------------------------------------------------------------------- //
 
-VkFormat BasicPSApp::AppData::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+VkFormat ParticleEditor::AppData::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
 
   for (uint32_t i = 0; i < candidates.size(); i++) {
     VkFormatProperties properties;
@@ -1889,7 +1922,7 @@ VkFormat BasicPSApp::AppData::findSupportedFormat(const std::vector<VkFormat>& c
 
 // ------------------------------------------------------------------------- //
 
-bool BasicPSApp::AppData::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool ParticleEditor::AppData::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
   // Get supported device properties
   uint32_t extension_count;
@@ -1912,7 +1945,7 @@ bool BasicPSApp::AppData::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
 // ------------------------------------------------------------------------- //
 
-QueueFamilyIndices BasicPSApp::AppData::findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices ParticleEditor::AppData::findQueueFamilies(VkPhysicalDevice device) {
 
   QueueFamilyIndices indices;
 
@@ -1948,7 +1981,7 @@ QueueFamilyIndices BasicPSApp::AppData::findQueueFamilies(VkPhysicalDevice devic
 
 // ------------------------------------------------------------------------- //
 
-VkFormat BasicPSApp::AppData::findDepthFormat() {
+VkFormat ParticleEditor::AppData::findDepthFormat() {
 
   return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
     VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -1957,7 +1990,7 @@ VkFormat BasicPSApp::AppData::findDepthFormat() {
 
 // ------------------------------------------------------------------------- //
 
-VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
+VkSampleCountFlagBits ParticleEditor::AppData::getMaxUsableSampleCount() {
 
 	VkPhysicalDeviceProperties phys_device_properties;
 	vkGetPhysicalDeviceProperties(physical_device_, &phys_device_properties);
@@ -1980,25 +2013,7 @@ VkSampleCountFlagBits BasicPSApp::AppData::getMaxUsableSampleCount() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::allocateDescriptorSets(std::vector<VkDescriptorSet>& descriptor_set, int parent_id){
-
-	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), materials_[parent_id]->descriptor_set_layout_);
-	VkDescriptorSetAllocateInfo allocate_info{};
-	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocate_info.descriptorPool = materials_[parent_id]->descriptor_pool_;
-	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
-	allocate_info.pSetLayouts = descriptor_set_layouts.data();
-
-  descriptor_set.resize(swap_chain_images_.size());
-	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, descriptor_set.data()) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create descriptor sets.");
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void BasicPSApp::AppData::createUniformBuffers(int size, std::vector<Buffer*>& buffers_) {
+void ParticleEditor::AppData::createUniformBuffers(int size, std::vector<Buffer*>& buffers_) {
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -2017,7 +2032,7 @@ void BasicPSApp::AppData::createUniformBuffers(int size, std::vector<Buffer*>& b
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& buffers_){
+void ParticleEditor::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& buffers_){
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
@@ -2036,7 +2051,7 @@ void BasicPSApp::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& buff
 	}
 
   // Number of 3D objects * dynamic alignment
-	size_t buffer_size = system_draw_objects_->getNumberOfObjects(BasicPSApp::instance().getScene()->getEntities()) *
+	size_t buffer_size = system_draw_objects_->getNumberOfObjects(ParticleEditor::instance().getScene()->getEntities()) *
     system_draw_objects_->dynamic_alignment_;
 
   // Allocate the memory for the ubo
@@ -2062,7 +2077,48 @@ void BasicPSApp::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& buff
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
+void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers_){
+
+	if (window_width_ == 0 || window_height_ == 0) return;
+
+	buffers_.resize(swap_chain_images_.size());
+
+	// Return false if a requested feature is not supported
+	VkPhysicalDeviceProperties device_properties;
+	vkGetPhysicalDeviceProperties(physical_device_, &device_properties);
+
+	// Calculate required alignment  for the ubo based on minimum device offset alignment
+	size_t min_ubo_alignment = device_properties.limits.minUniformBufferOffsetAlignment;
+	system_draw_objects_->opaque_dynamic_alignment_ = sizeof(glm::mat4);
+	if (min_ubo_alignment > 0) {
+		system_draw_objects_->opaque_dynamic_alignment_ = (system_draw_objects_->opaque_dynamic_alignment_ +
+			min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
+	}
+
+	// Number of 3D objects * dynamic alignment
+	size_t buffer_size = system_draw_objects_->getNumberOfObjects(ParticleEditor::instance().getScene()->getEntities()) *
+		system_draw_objects_->opaque_dynamic_alignment_;
+
+	// Allocate the memory for the ubo (First half of the ubo)
+	opaque_ubo_.packed_uniforms = (glm::mat4*)alignedAlloc(buffer_size,
+		system_draw_objects_->opaque_dynamic_alignment_);
+	if (opaque_ubo_.packed_uniforms == nullptr) {
+		throw std::runtime_error("\nFailed to allocate color dynamic uniform buffer.");
+	}
+
+	// Uniform buffer object with per-object matrices
+	for (int i = 0; i < swap_chain_images_.size(); i++) {
+		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
+		buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ParticleEditor::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
 
 	void* data;
 	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
@@ -2074,14 +2130,21 @@ void BasicPSApp::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer) {
+void ParticleEditor::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer) {
 
   void* data;
-  int size = objects * system_draw_objects_->dynamic_alignment_;
+  uint32_t size = objects * system_draw_objects_->dynamic_alignment_;
   vkMapMemory(logical_device_, buffer->buffer_memory_, 0, size, 0, &data);
-  memcpy(data, *(&ubo.models), size);
 
-  // Flush to make changes visible to the host
+	for (int i = 0; i < objects; ++i) {
+		// Do the dynamic offset things
+		uint32_t offset = (i * system_draw_objects_->dynamic_alignment_);
+    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)data + offset));
+		glm::mat4* model = (glm::mat4*)(((uint64_t)ubo.models + offset));
+		memcpy((void*)mem_offset, *(&model), system_draw_objects_->dynamic_alignment_);
+	}
+
+  // Flush to make changes visible to the host if visible host flag is not set
   /*VkMappedMemoryRange memoryRange = vks::initializers::mappedMemoryRange();
   memoryRange.memory = uniformBuffers.dynamic.memory;
   memoryRange.size = uniformBuffers.dynamic.size;
@@ -2093,19 +2156,28 @@ void BasicPSApp::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Buffer
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::updateUniformBuffer(OpaqueUBO ubo, Buffer* buffer){
+void ParticleEditor::AppData::updateUniformBuffer(OpaqueUBO ubo, int objects, Buffer* buffer){
 
 	void* data;
-	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
-		sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
+  uint32_t size = objects * system_draw_objects_->opaque_dynamic_alignment_;
+	vkMapMemory(logical_device_, buffer->buffer_memory_, 0, size, 0, &data);
+
+  for (int i = 0; i < objects; ++i) {
+    // Do the dynamic offset things
+    uint64_t offset = (i * system_draw_objects_->opaque_dynamic_alignment_);
+    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)data + offset));
+    glm::mat4* packed_uniform = (glm::mat4*)(((uint64_t)ubo.packed_uniforms + offset));
+	  memcpy((void*)mem_offset, *(&packed_uniform), system_draw_objects_->opaque_dynamic_alignment_);
+  }
+
+
 	vkUnmapMemory(logical_device_, buffer->buffer_memory_);
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
+void ParticleEditor::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
 
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
     buffers_[i]->clean(logical_device_);
@@ -2118,7 +2190,7 @@ void BasicPSApp::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::populateSceneDescriptorSets() {
+void ParticleEditor::AppData::populateSceneDescriptorSets() {
 
 	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), scene_descriptor_set_layout_);
 	VkDescriptorSetAllocateInfo allocate_info{};
@@ -2157,7 +2229,7 @@ void BasicPSApp::AppData::populateSceneDescriptorSets() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::populateModelsDescriptorSets() {
+void ParticleEditor::AppData::populateModelsDescriptorSets() {
 
 	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), models_descriptor_set_layout_);
 	VkDescriptorSetAllocateInfo allocate_info{};
@@ -2176,7 +2248,7 @@ void BasicPSApp::AppData::populateModelsDescriptorSets() {
 		VkDescriptorBufferInfo buffer_info{};
 		buffer_info.buffer = models_uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
-		buffer_info.range = sizeof(ModelsUBO);
+    buffer_info.range = system_draw_objects_->dynamic_alignment_;
 
 		VkWriteDescriptorSet write_descriptor{};
 		write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2196,7 +2268,68 @@ void BasicPSApp::AppData::populateModelsDescriptorSets() {
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::setupVertexBuffers(){
+void ParticleEditor::AppData::populateOpaqueDescriptorSets() {
+
+	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), opaque_descriptor_set_layout_);
+	VkDescriptorSetAllocateInfo allocate_info{};
+	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocate_info.descriptorPool = opaque_descriptor_pool_;
+	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
+	allocate_info.pSetLayouts = descriptor_set_layouts.data();
+
+	opaque_descriptor_sets_.resize(swap_chain_images_.size());
+	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, opaque_descriptor_sets_.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create opaque descriptor sets.");
+	}
+
+
+	for (int i = 0; i < opaque_descriptor_sets_.size(); i++) {
+		VkDescriptorBufferInfo buffer_info{};
+		buffer_info.buffer = opaque_uniform_buffers_[i]->buffer_;
+		buffer_info.offset = 0;
+		buffer_info.range = system_draw_objects_->opaque_dynamic_alignment_;
+
+    const int num_textures = loaded_textures_.size();
+    std::vector<VkDescriptorImageInfo> image_info = std::vector<VkDescriptorImageInfo>(num_textures);
+    for (int j = 0; j < num_textures; ++j) {
+      image_info[j] = {};
+			image_info[j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			image_info[j].imageView = ParticleEditor::instance().app_data_->
+				texture_images_[j]->image_view_;
+			image_info[j].sampler = ParticleEditor::instance().app_data_->
+				texture_images_[j]->texture_sampler_;
+    }
+
+    std::array<VkWriteDescriptorSet, 2> write_descriptors{};
+		write_descriptors[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptors[0].dstSet = opaque_descriptor_sets_[i];
+		write_descriptors[0].dstBinding = 0;
+		write_descriptors[0].dstArrayElement = 0;
+		write_descriptors[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		write_descriptors[0].descriptorCount = 1;
+		write_descriptors[0].pBufferInfo = &buffer_info;
+		write_descriptors[0].pImageInfo = nullptr; // Image data
+		write_descriptors[0].pTexelBufferView = nullptr; // Buffer views
+
+		write_descriptors[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptors[1].dstSet = opaque_descriptor_sets_[i];
+		write_descriptors[1].dstBinding = 1;
+		write_descriptors[1].dstArrayElement = 0;
+		write_descriptors[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write_descriptors[1].descriptorCount = num_textures;
+		write_descriptors[1].pBufferInfo = nullptr; // Buffer data
+		write_descriptors[1].pImageInfo = image_info.data();
+		write_descriptors[1].pTexelBufferView = nullptr; // Buffer views
+
+		vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()),
+			write_descriptors.data(), 0, nullptr);
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ParticleEditor::AppData::setupVertexBuffers(){
 
 	std::vector<Vertex> quad_vertices;
   // Quad
@@ -2220,7 +2353,7 @@ void BasicPSApp::AppData::setupVertexBuffers(){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::setupIndexBuffers(){
+void ParticleEditor::AppData::setupIndexBuffers(){
 
 	std::vector<uint32_t> quad_indices;
   // Quad
@@ -2237,7 +2370,7 @@ void BasicPSApp::AppData::setupIndexBuffers(){
 
 // ------------------------------------------------------------------------- //
 
-void BasicPSApp::AppData::setupMaterials(){
+void ParticleEditor::AppData::setupMaterials(){
 
   Material* opaque_material = new Material();
   opaque_material->material_id_ = 0;

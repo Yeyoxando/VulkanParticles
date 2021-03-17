@@ -290,19 +290,16 @@ public:
 
 class Material : public GPUResource {
 public:
-  Material() {}
+  Material() { material_id_ = -1; }
   ~Material() {}
 
 
   // maybe it would be better with ids, as these things will be created in the internal file
   // so they could be in an array or something like the buffers
 
-	VkDescriptorSetLayout descriptor_set_layout_; //Specification of what contains the descriptor set
 	VkPipeline graphics_pipeline_; // uses the descSet layout
 	VkPipelineLayout pipeline_layout_; // defines the layout of the descriptor set layouts on the pipeline
 	
-  VkDescriptorPool descriptor_pool_; // used to store memory for the descriptor sets (like command pool)
-
   int material_id_;
 
 };

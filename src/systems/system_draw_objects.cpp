@@ -24,7 +24,7 @@ SystemDrawObjects::SystemDrawObjects(){
 
 void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities) {
 
-	BasicPSApp::AppData* app_data = BasicPSApp::instance().app_data_;
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 	int index = 0;
 
 	// Record all the draw commands needed for a 3D object
@@ -46,21 +46,8 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 			vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				app_data->materials_[material->getID()]->graphics_pipeline_);
 
-
-			// Initialize uniform buffers and descriptor sets if they're not
-			if (app_data->scene_descriptor_sets_.size() == 0) {
-				app_data->createUniformBuffers(sizeof(SceneUBO), app_data->scene_uniform_buffers_);
-				app_data->createDynamicUniformBuffers(app_data->models_uniform_buffers_);
-				app_data->populateSceneDescriptorSets();
-				app_data->populateModelsDescriptorSets();
-			}
-			if (material->getInstanceData()->getDescriptorSets().size() == 0) {
-				app_data->createUniformBuffers(sizeof(OpaqueUBO), material->getInstanceData()->uniform_buffers_);
-				material->getInstanceData()->populateDescriptorSets();
-			}
-
-
 			uint32_t dynamic_offset = index * static_cast<uint32_t>(dynamic_alignment_);
+			uint32_t opaque_dynamic_offset = index * static_cast<uint32_t>(opaque_dynamic_alignment_);
 			// Bind descriptor set (update is not here)
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				app_data->materials_[material->getID()]->pipeline_layout_, 
@@ -70,7 +57,7 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 				1, 1, &app_data->models_descriptor_sets_[cmd_buffer_image], 1, &dynamic_offset);
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				app_data->materials_[material->getID()]->pipeline_layout_, 
-				2, 1, &material->getInstanceData()->getDescriptorSets()[cmd_buffer_image], 0, nullptr);
+				2, 1, &app_data->opaque_descriptor_sets_[cmd_buffer_image], 1, &opaque_dynamic_offset);
 				
 			// Draw
 			vkCmdDrawIndexed(cmd_buffer,
@@ -86,12 +73,12 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 
 void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Entity*> &entities){
 
-	BasicPSApp::AppData* app_data = BasicPSApp::instance().app_data_;
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
 	// Fill the ubo with the updated data
 	SceneUBO scene_ubo{};
-	scene_ubo.view = BasicPSApp::instance().getCamera()->getViewMatrix();
-	scene_ubo.projection = BasicPSApp::instance().getCamera()->getProjectionMatrix();
+	scene_ubo.view = ParticleEditor::instance().getCamera()->getViewMatrix();
+	scene_ubo.projection = ParticleEditor::instance().getCamera()->getProjectionMatrix();
 	//Map memory to GPU
 	app_data->updateUniformBuffer(scene_ubo, app_data->scene_uniform_buffers_[current_image]);
 
@@ -102,34 +89,12 @@ void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Enti
 	app_data->updateUniformBuffer(app_data->models_ubo_, getNumberOfObjects(entities), 
 		app_data->models_uniform_buffers_[current_image]);
 
-	// Update opaque pipeline buffers
-	for (auto entity : entities) {
-		if (hasRequiredComponents(entity)) {
+	// Update per object uniforms and textures
+	app_data->opaque_ubo_.packed_uniforms = getObjectOpaqueData(entities);
 
-			auto material = static_cast<ComponentMaterial*>
-				(entity->getComponent(Component::kComponentKind_Material));
-			auto material_data = material->getInstanceData();
-
-			OpaqueUBO opaque_ubo{};
-			opaque_ubo.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-			app_data->updateUniformBuffer(opaque_ubo, material_data->getUniformBuffers()[current_image]);
-		}
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void SystemDrawObjects::deleteUniformBuffers(std::vector<Entity*>& entities){
-
-	for (auto entity : entities) {
-		if (hasRequiredComponents(entity)) {
-			auto material = static_cast<ComponentMaterial*>(entity->getComponent(Component::kComponentKind_Material));
-			BasicPSApp::instance().app_data_->cleanUniformBuffers(material->getInstanceData()->uniform_buffers_);
-			material->getInstanceData()->getDescriptorSets().clear();
-		}
-	}
+	// Map the memory from the CPU to GPU
+	app_data->updateUniformBuffer(app_data->opaque_ubo_, getNumberOfObjects(entities),
+		app_data->opaque_uniform_buffers_[current_image]);
 
 }
 
@@ -153,13 +118,12 @@ int SystemDrawObjects::getNumberOfObjects(std::vector<Entity*>& entities){
 
 glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 
-	BasicPSApp::AppData* app_data = BasicPSApp::instance().app_data_;
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
 	glm::mat4* model_mat = nullptr;
 	int index = 0;
 
-	//will store all the objects models matrices in a vector
-	// Prepare the uniform buffer for the scene's 3D objects
+	// store all the objects models matrices
 	for (auto entity : entities) {
 		if (hasRequiredComponents(entity)) {
 
@@ -177,7 +141,50 @@ glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 		}
 	}
 
+	model_mat = (glm::mat4*)((uint64_t)app_data->models_ubo_.models);
+
 	return model_mat;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities){
+
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+
+	glm::mat4* packed_uniforms = nullptr;
+	glm::mat4 aux = glm::mat4(0.0f);
+	int index = 0;
+
+	// store all the objects colors and texture_ids
+	for (auto entity : entities) {
+		if (hasRequiredComponents(entity)) {
+		
+			auto material = static_cast<ComponentMaterial*>
+				(entity->getComponent(Component::ComponentKind::kComponentKind_Material));
+			auto opaque_data = static_cast<ComponentMaterial::OpaqueData*>(material->getInstanceData());
+
+			// Update color
+			aux[0] = opaque_data->color_;
+			
+			//Update texture ids
+			aux[1] = opaque_data->getTextureIDs();
+
+			// Do the dynamic offset things
+			packed_uniforms = (glm::mat4*)(((uint64_t)app_data->opaque_ubo_.packed_uniforms + (index * opaque_dynamic_alignment_)));
+
+			// Update uniforms
+			*packed_uniforms = aux;
+
+			++index;
+
+		}
+	}
+
+	packed_uniforms = (glm::mat4*)((uint64_t)app_data->opaque_ubo_.packed_uniforms);
+
+	return packed_uniforms;
 
 }
 

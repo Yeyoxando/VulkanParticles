@@ -20,7 +20,7 @@ public:
   
   void loadMeshFromFile(const char* model_path);
 
-  void loadDefaultMesh(BasicPSApp::DefaultMesh default_mesh);
+  void loadDefaultMesh(ParticleEditor::DefaultMesh default_mesh);
 
   int getID() { return mesh_buffer_id_; }
 

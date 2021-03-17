@@ -23,7 +23,7 @@ struct ModelsUBO;
 // ------------------------------------------------------------------------- //
 
 class SystemDrawObjects : public System{
-  friend class BasicPSApp::AppData;
+  friend class ParticleEditor::AppData;
 public:
   SystemDrawObjects();
   ~SystemDrawObjects();
@@ -35,19 +35,18 @@ public:
 	void updateUniformBuffers(int current_image, std::vector<Entity*>& entities);
 
 
-
-	// It will delete current uniform buffers of all material components, for swap chain cleanup
-	void deleteUniformBuffers(std::vector<Entity*>& entities);
-
-
   // Return the current number of objects from the entities list
   int getNumberOfObjects(std::vector<Entity*>& entities);
 
 protected:
   // Return the model matrix for all the objects
-  glm::mat4* getObjectModels(std::vector<Entity*> &entities); // It'll be used for dynamic buffers
+  glm::mat4* getObjectModels(std::vector<Entity*> &entities);
   
+  // Return the opaque data for all the objects
+  glm::mat4* getObjectOpaqueData(std::vector<Entity*>& entities);
+
   size_t dynamic_alignment_;
+  size_t opaque_dynamic_alignment_;
 
 
 };

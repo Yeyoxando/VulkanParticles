@@ -45,7 +45,7 @@ project "ParticleEditor"
 	includedirs{
 	  "./include/",
 	  "./src/internal/",
-	  "C:/Program Files/VulkanSDK/1.2.154.1/Include/",
+	  "C:/Program Files/VulkanSDK/1.2.162.0/Include/",
 	  "C:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
 	  "C:/VSLibraries/glm/",
 	  "C:/VSLibraries/SingleHeaderFiles/stb_image/",
@@ -64,7 +64,7 @@ project "ParticleEditor"
 		"./resources/**.frag", 
 
 		-- Vulkan
-		--"C:/Program Files/VulkanSDK/1.2.154.1/Include/",
+		--"C:/Program Files/VulkanSDK/1.2.162.0/Include/",
 		
 		--GLM
 		--"./deps/glm/*.h",
@@ -76,6 +76,7 @@ project "ParticleEditor"
 	}
 
 	defines { 	
+                "VK_USE_PLATFORM_WIN32_KHR",
 		"GLFW_INCLUDE_VULKAN",
 		"WIN32",
 		"_WIN32",
@@ -87,7 +88,7 @@ project "ParticleEditor"
 	}	 
 	
 	links{
-		"C:/Program Files/VulkanSDK/1.2.154.1/Lib/vulkan-1",
+		"C:/Program Files/VulkanSDK/1.2.162.0/Lib/vulkan-1",
 		"C:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
 	}
 

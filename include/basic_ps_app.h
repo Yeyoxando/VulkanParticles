@@ -28,13 +28,13 @@ struct AppSettings {
 
 // ------------------------------------------------------------------------- //
 
-class BasicPSApp {
+class ParticleEditor {
   friend class ComponentMesh;
   friend class ComponentMaterial;
   friend class SystemDrawObjects;
 public:
 	// Main base app instance, use it to run the editor
-	static BasicPSApp& instance();
+	static ParticleEditor& instance();
 
   // Correspond to internal vertex and index buffers for these geometries
 	enum DefaultMesh {
@@ -64,8 +64,8 @@ public:
 	Scene* getScene();
 
 private:
-  BasicPSApp();
-  ~BasicPSApp();
+  ParticleEditor();
+  ~ParticleEditor();
 
   void init();
   void shutDown();
