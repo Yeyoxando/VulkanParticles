@@ -126,7 +126,7 @@ int ComponentMaterial::loadTexture(const char* texture_path){
 	it = ParticleEditor::instance().app_data_->loaded_textures_.cbegin();
 	while (it != ParticleEditor::instance().app_data_->loaded_textures_.cend()) {
 		if (!strcmp(texture_path, it->second)) {
-			printf("\Texture has been loaded earlier. Assigning id");
+			printf("\nTexture has been loaded earlier. Assigning id.");
 			// Return previous assigned id
 			return it->first;
 		}

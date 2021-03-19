@@ -11,10 +11,11 @@
 
 #include <vector>
 
+#include <Vulkan/vulkan.h>
+#include <glm/glm.hpp>
+
+#include "particle_editor.h"
 #include "systems/system.h"
-#include "glm/glm.hpp"
-#include "vulkan/vulkan.h"
-#include "basic_ps_app.h"
 
 // ------------------------------------------------------------------------- //
 

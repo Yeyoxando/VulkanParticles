@@ -11,98 +11,15 @@
 
 #include "common_def.h"
 #include "vulkan_utils.h"
-#include "../src/internal/internal_gpu_resources.h"
 #include "systems/system_draw_objects.h"
+#include "../src/internal/internal_gpu_resources.h"
 
 #include <GLFW/glfw3.h>
 
-#include <optional>
-#include <array>
-#include <stdexcept>
-#include <cstring>
 #include <vector>
-#include <set>
-#include <chrono>
-#include <unordered_map>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/hash.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-// ------------------------------------------------------------------------- //
-
-struct QueueFamilyIndices {
-  std::optional<uint32_t> graphics_family;
-  std::optional<uint32_t> present_family;
-
-  bool isComplete() {
-    return graphics_family.has_value() && present_family.has_value();
-  }
-};
-
-// ------------------------------------------------------------------------- //
-
-struct SwapChainSupportDetails {
-  VkSurfaceCapabilitiesKHR capabilities;
-  std::vector<VkSurfaceFormatKHR> formats;
-  std::vector<VkPresentModeKHR> present_modes;
-};
-
-// ------------------------------------------------------------------------- //
-
-struct Vertex {
-
-  glm::vec3 position;
-  glm::vec3 color;
-  glm::vec2 tex_coord;
-
-  static VkVertexInputBindingDescription getBindingDescription() {
-    VkVertexInputBindingDescription binding_desc{};
-    binding_desc.binding = 0;
-    binding_desc.stride = sizeof(Vertex);
-    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    return binding_desc;
-  }
-
-  static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription() {
-    std::array<VkVertexInputAttributeDescription, 3> attribute_descs{};
-    attribute_descs[0].binding = 0;
-    attribute_descs[0].location = 0;
-    attribute_descs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribute_descs[0].offset = offsetof(Vertex, position);
-
-    attribute_descs[1].binding = 0;
-    attribute_descs[1].location = 1;
-    attribute_descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribute_descs[1].offset = offsetof(Vertex, color);
-
-    attribute_descs[2].binding = 0;
-    attribute_descs[2].location = 2;
-    attribute_descs[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attribute_descs[2].offset = offsetof(Vertex, tex_coord);
-
-    return attribute_descs;
-  }
-
-  bool operator ==(const Vertex& other) const {
-    return position == other.position && color == other.color && tex_coord == other.tex_coord;
-  }
-
-};
-
-// ------------------------------------------------------------------------- //
-
-// Custom implementation for adding compatibility with Vertex struct and unordered maps
-namespace std {
-  template<> struct hash<Vertex> {
-    size_t operator()(Vertex const& vertex) const {
-      return ((hash<glm::vec3>()(vertex.position) ^
-        (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-        (hash<glm::vec2>()(vertex.tex_coord) << 1);
-    }
-  };
-};
 
 // ------------------------------------------------------------------------- //
 
@@ -133,8 +50,11 @@ struct LightsUBO{
 
 // ------------------------------------------------------------------------- //
 
-// All data used in the application, the majority are Vulkan elements
+// All data used in the application, including Vulkan instance and resources
+// Some Vulkan helper functionalities are extracted in "vulkan_utils.h" and "internal_gpu_resources.h"
 struct ParticleEditor::AppData {
+
+// --------------- VARIABLES ---------------
 
   // ----- WINDOW -----
   GLFWwindow* window_;
@@ -168,7 +88,12 @@ struct ParticleEditor::AppData {
   std::vector<VkFence> in_flight_fences_;
   std::vector<VkFence> images_in_flight_;
 	VkSampleCountFlagBits msaa_samples_;
-  int current_frame_;
+	int current_frame_;
+
+
+	// ----- SYSTEMS (ECS) -----
+	SystemDrawObjects* system_draw_objects_;
+
 
 
   // ----- RESOURCES -----
@@ -181,22 +106,22 @@ struct ParticleEditor::AppData {
   std::vector<Image*> texture_images_;
 	std::map<int, const char*> loaded_textures_;
 
-  // -- SPECIFIC UBOS SETTINGS --
-  // Scene UBO
+  // ----- SPECIFIC UBOS SETTINGS-----
+  // - Scene UBO -
 	VkDescriptorSetLayout scene_descriptor_set_layout_; 
 	VkDescriptorPool scene_descriptor_pool_; 
 	std::vector<VkDescriptorSet> scene_descriptor_sets_; // one per swap chain image.
 	std::vector<Buffer*> scene_uniform_buffers_; // one per swap chain image.
-	// SceneUBO scene_ubo_;
+	SceneUBO scene_ubo_;
 
-  // Models UBO
+  // - Models UBO -
 	VkDescriptorSetLayout models_descriptor_set_layout_;
 	VkDescriptorPool models_descriptor_pool_;
 	std::vector<VkDescriptorSet> models_descriptor_sets_; // one per swap chain image.
 	std::vector<Buffer*> models_uniform_buffers_; // one per swap chain image.
   ModelsUBO models_ubo_;
 
-	// Opaque UBO 
+	// - Opaque UBO -
 	VkDescriptorSetLayout opaque_descriptor_set_layout_;
 	VkDescriptorPool opaque_descriptor_pool_;
 	std::vector<VkDescriptorSet> opaque_descriptor_sets_; // one per swap chain image.
@@ -206,18 +131,14 @@ struct ParticleEditor::AppData {
   // TranslucentUBO/Particles
 
 
-  // ----- SYSTEMS -----
-	SystemDrawObjects* system_draw_objects_;
+// --------------- METHODS ---------------
 
-
-
-// ----------- METHODS -----------
-
-  // -- Constructor --
+  // ----- Constructor -----
   AppData();
   ~AppData();
 
-  // -- Init and close --
+
+  // ----- Init and close -----
   // Initializes GLFW and creates a window
   void initWindow(int width = 800, int height = 600);
   // Allocates all the necessary Vulkan resources
@@ -227,10 +148,13 @@ struct ParticleEditor::AppData {
   // Frees all the allocated resources and close the app
   void closeVulkan();
 
-  // -- VULKAN SETUP --
+
+  // ----- Vulkan setup -----
   // Creates a Vulkan instance and checks for extensions support
   void createInstance();
-  // Creates a surface handle for the current window
+	// Creates a custom debug messenger
+	void setupDebugMessenger();
+	// Creates a surface handle for the current window
   void createSurface();
   // Select a physical device that supports the requested features
   void pickPhysicalDevice();
@@ -257,7 +181,8 @@ struct ParticleEditor::AppData {
   // Creates the semaphores needed for rendering
   void createSyncObjects();
 
-  // -- Frame --
+
+  // ----- Frame -----
   // Updates frame logic
   void updateFrame();
   // Updates the uniform buffers and map their memory
@@ -265,7 +190,8 @@ struct ParticleEditor::AppData {
   // Draw using the recorded command buffers
   void drawFrame();
 
-  // -- Swap chain recreation --
+
+  // ----- Swap chain recreation -----
   // Recreate the swap chain to make it compatible with the current requirements
   void recreateSwapChain();
   // Cleans all the swapchain objects
@@ -273,53 +199,30 @@ struct ParticleEditor::AppData {
   // GLFW callback for window resize
   static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-  // -- Helper functions --
-  // Check if the device fits with the necessary operations
-  bool isDeviceSuitable(VkPhysicalDevice device);
-  // Return true if the selected depth format has a stencil component
-  bool hasStencilComponent(VkFormat format);
-  // Queries which swap chain details are supported on the device
-  SwapChainSupportDetails querySwapChainSupportDetails(VkPhysicalDevice device);
-  // Chooses the best swap chain surface formats from the available
-  VkSurfaceFormatKHR chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats);
-  // Chooses the best swap chain surface present mode from the available
-  VkPresentModeKHR  chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes);
-  // Choose a swap chain extent (resolution) with the device capabilities
-  VkExtent2D chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-  // Get GLFW required extensions
-  std::vector<const char*> getRequiredExtensions();
-  // Checks if the selected validation layers are supported
-  bool checkValidationLayerSupport();
-  // Creates a custom debug messenger
-  void setupDebugMessenger();
-  // Fills the messenger info struct
-  void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
-  // Debug callback to interpret validation layers messages
-  static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData);
-	// Create a shader module with the given bytecode // TODO: Move this to Vulkan utils
+
+  // ----- Helper functions -----
+	// Create a shader module with the given bytecode
 	VkShaderModule createShaderModule(const std::vector<char>& bytecode);
-  // Handles layout transitions
-  void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
-  // Find the memory type for the given type filter
-  uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
-  // Find a supported image format with a list of candidates
-  VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-  // Check if the extensions are supported on the device
-  bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-  // Checks which queue families are supported on the device
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-  // Find a depth format
-  VkFormat findDepthFormat();
-  // Get the maximum number of samples supported by physical device
-  VkSampleCountFlagBits getMaxUsableSampleCount();
+	// Handles layout transitions
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
  
   
-  // -- Internal structure (Resource manager) --
-  // DESCRIPTOR SETS AND BUFFERS
+	// ----- Internal structure (Resource manager) -----
+	// - MESHES -
+	// Loads all the requested OBJ models
+	void loadModels();
+	// Creates the vertex buffers using the internal geometries and loaded models
+	void setupVertexBuffers();
+	// Creates the index buffers using the internal geometries and loaded models
+	void setupIndexBuffers();
+
+	// - MATERIALS / TEXTURES -
+	// Creates the internal material parents and set their values
+	void setupMaterials();
+	// Creates all the texture images marked for load
+	void createTextureImages();
+
+  // - DESCRIPTOR SETS AND BUFFERS -
 	// Creates the descriptor layout to upload uniforms to the shader
 	void createDescriptorSetLayouts();
 	// Creates the pipeline layout for the different graphics pipelines
@@ -332,11 +235,11 @@ struct ParticleEditor::AppData {
   void initializeDescriptorSets();
   
   // Creates the uniform buffers for a material
-	void createUniformBuffers(int size, std::vector<Buffer*>& buffers_);
+	void createSceneUniformBuffers(std::vector<Buffer*>& buffers);
 	// Creates the uniform dynamic buffers for a material
-	void createDynamicUniformBuffers(std::vector<Buffer*>& buffers_);
+	void createModelDynamicUniformBuffers(std::vector<Buffer*>& buffers);
 	// Creates the uniform dynamic buffers for a opaque material
-	void createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers_);
+	void createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers);
 	// Updates the scene uniform buffer
 	void updateUniformBuffer(SceneUBO ubo, Buffer* buffer);
 	// Updates the object models buffer
@@ -345,7 +248,7 @@ struct ParticleEditor::AppData {
 	void updateUniformBuffer(OpaqueUBO ubo, int objects, Buffer* buffer);
 	// Updates a uniform translucent buffer
 	//void updateUniformBuffer(TranslucentUBO ubo, Buffer* buffer);
-  // Clean up the uniform buffers from a material
+  // Clean up the uniform buffers independent from their origin
   void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
 
   // Populates the descriptor set for the scene
@@ -354,20 +257,6 @@ struct ParticleEditor::AppData {
 	void populateModelsDescriptorSets();
 	// Populates the descriptor set for the objects opaque pipeline uniforms and textures
 	void populateOpaqueDescriptorSets();
-
-  // MESHES
-	// Loads all the requested OBJ models
-	void loadModels();
-  // Creates the vertex buffers using the internal geometries and loaded models
-  void setupVertexBuffers();
-  // Creates the index buffers using the internal geometries and loaded models
-  void setupIndexBuffers();
-
-  // MATERIALS
-  // Creates the internal material parents and set their values
-  void setupMaterials();
-	// Creates all the texture images marked for load
-	void createTextureImages();
 
 };
 

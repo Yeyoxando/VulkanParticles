@@ -21,7 +21,7 @@ public:
   Camera();
   ~Camera();
 
-  void setupProjection(float fov_degrees, float aspect_ratio, float near, float far);
+  void setupProjection(float fov_degrees, float aspect_ratio, float cam_near, float cam_far);
 
   void updateViewMatrix(glm::vec2 new_mouse_pos);
 

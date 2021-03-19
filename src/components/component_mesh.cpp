@@ -36,7 +36,7 @@ void ComponentMesh::loadMeshFromFile(const char* model_path){
 	it = ParticleEditor::instance().app_data_->loaded_models_.cbegin();
 	while (it != ParticleEditor::instance().app_data_->loaded_models_.cend()){
 		if (!strcmp(model_path, it->second)) {
-			printf("\nModel has been loaded earlier. Assigning id");
+			printf("\nModel has been loaded earlier. Assigning id.");
 			mesh_buffer_id_ = it->first;
 			return;
 		}

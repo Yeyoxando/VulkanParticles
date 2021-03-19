@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <cstdlib>
 
-#include "basic_ps_app.h"
+#include "particle_editor.h"
 
 #include "components/component_mesh.h"
 #include "components/component_material.h"
@@ -22,10 +22,6 @@
 
 /*
 TODO (ordered):
-  - draw lots of objects with dynamic uniforms
-      - Move all the opaque things into another dynamic buffer instead of having lots of descriptor sets
-      - update the dynamic buffer being careful with the offset and alignment
-      - memory mapping and unmapping should only be done 1 time
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
   - implement radix sort    

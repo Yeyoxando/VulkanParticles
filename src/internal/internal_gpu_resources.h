@@ -102,11 +102,21 @@ public:
     vkFreeMemory(logical_device, buffer_memory_, nullptr);
   }
 
+  void map(VkDevice logical_device, VkDeviceSize size) {
+		vkMapMemory(logical_device, buffer_memory_, 0,
+			size, 0, &mapped_memory_);
+  }
+
+  void unmap(VkDevice logical_device) {
+    vkUnmapMemory(logical_device, buffer_memory_);
+  }
+
 
   BufferType buffer_type_;
 
   VkBuffer buffer_;
   VkDeviceMemory buffer_memory_;
+  void* mapped_memory_;
 
   uint32_t data_count_;
 

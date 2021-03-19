@@ -6,19 +6,21 @@
 
 // ------------------------------------------------------------------------- //
 
-#include "basic_ps_app.h"
+#include "particle_editor.h"
 #include "../src/internal/internal_app_data.h"
+
+#include <stdexcept>
+
+#include <tiny_obj_loader.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <tiny_obj_loader.h>
 
 #define VK_USE_PLATFORM_WIN32_KHR
 
+
 // Provisional
-#include "components/component_mesh.h"
-#include "components/component_material.h"
 #include "components/component_transform.h"
 
 // ----------------------- Functions definition ---------------------------- //
@@ -189,7 +191,7 @@ void ParticleEditor::AppData::createInstance() {
 
   // Check for validation layers
   if (kEnableValidationLayers && !checkValidationLayerSupport()) {
-    throw std::runtime_error("Requested validation layers are not available.");
+    throw std::runtime_error("\nRequested validation layers are not available.");
   }
 
   // Custom application info
@@ -225,7 +227,7 @@ void ParticleEditor::AppData::createInstance() {
 
   // Create the instance
   if (vkCreateInstance(&create_info, nullptr, &instance_) != VK_SUCCESS) {
-    throw std::runtime_error("Vulkan instance creation failed.");
+    throw std::runtime_error("\nVulkan instance creation failed.");
   }
 
   // Report available Vulkan extensions
@@ -235,7 +237,7 @@ void ParticleEditor::AppData::createInstance() {
   std::vector<VkExtensionProperties> extension_properties(available_extensions);
   vkEnumerateInstanceExtensionProperties(nullptr, &available_extensions, extension_properties.data());
 
-  printf("Available Vulkan extensions:");
+  printf("\nAvailable Vulkan extensions:");
   for (uint32_t i = 0; i < available_extensions; i++) {
     printf("\n\t. %s", extension_properties[i].extensionName);
   }
@@ -247,7 +249,7 @@ void ParticleEditor::AppData::createInstance() {
 void ParticleEditor::AppData::createSurface() {
 
   if (glfwCreateWindowSurface(instance_, window_, nullptr, &surface_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create window surface.");
+    throw std::runtime_error("\nFailed to create window surface.");
   }
 
 }
@@ -261,22 +263,22 @@ void ParticleEditor::AppData::pickPhysicalDevice() {
   vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
 
   if (device_count == 0) {
-    throw std::runtime_error("The device does not have any GPUs supporting Vulkan.");
+    throw std::runtime_error("\nThe device does not have any GPUs supporting Vulkan.");
   }
 
   std::vector<VkPhysicalDevice> devices(device_count);
   vkEnumeratePhysicalDevices(instance_, &device_count, devices.data());
 
   for (uint32_t i = 0; i < devices.size(); i++) {
-    if (isDeviceSuitable(devices[i])) {
+    if (isDeviceSuitable(devices[i], surface_)) {
       physical_device_ = devices[i];
-      msaa_samples_ = getMaxUsableSampleCount();
+      msaa_samples_ = getMaxUsableSampleCount(physical_device_);
       break;
     }
   }
 
   if (physical_device_ == VK_NULL_HANDLE) {
-    throw std::runtime_error("The device's GPUs are not suitable for the requested functionality.");
+    throw std::runtime_error("\nThe device's GPUs are not suitable for the requested functionality.");
   }
 
 }
@@ -286,7 +288,7 @@ void ParticleEditor::AppData::pickPhysicalDevice() {
 void ParticleEditor::AppData::createLogicalDevice() {
 
   // Create needed queues
-  QueueFamilyIndices indices = findQueueFamilies(physical_device_);
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
   float queue_priority = 1.0f;
 
   // Store unique queues
@@ -304,7 +306,7 @@ void ParticleEditor::AppData::createLogicalDevice() {
     queue_create_infos.push_back(queue_create_info);
   }
 
-  // Set needed vulkan features
+  // Set needed Vulkan features
   VkPhysicalDeviceFeatures device_features{};
   device_features.samplerAnisotropy = VK_TRUE;
 
@@ -327,7 +329,7 @@ void ParticleEditor::AppData::createLogicalDevice() {
   }
 
   if (vkCreateDevice(physical_device_, &device_create_info, nullptr, &logical_device_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create Vulkan logical device.");
+    throw std::runtime_error("\nFailed to create Vulkan logical device.");
   }
 
   // Store graphics queue handle
@@ -345,11 +347,11 @@ void ParticleEditor::AppData::createSwapChain() {
   if (window_width_ == 0 || window_height_ == 0) return;
 
   // Choose preferred details
-  SwapChainSupportDetails details = querySwapChainSupportDetails(physical_device_);
+  SwapChainSupportDetails details = querySwapChainSupportDetails(physical_device_, surface_);
 
   VkSurfaceFormatKHR format = chooseSwapChainSurfaceFormat(details.formats);
   VkPresentModeKHR present_mode = chooseSwapChainPresentMode(details.present_modes);
-  VkExtent2D extent = chooseSwapChainExtent(details.capabilities);
+  VkExtent2D extent = chooseSwapChainExtent(window_, details.capabilities);
 
   // Request one more image than the min to prevent waiting for them
   uint32_t image_count = details.capabilities.minImageCount + 1;
@@ -369,7 +371,7 @@ void ParticleEditor::AppData::createSwapChain() {
   create_info.imageArrayLayers = 1;
   create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;//VK_IMAGE_USAGE_TRANSFER_DST_BIT for rendering to another buffer i.e.
 
-  QueueFamilyIndices indices = findQueueFamilies(physical_device_);
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
   uint32_t queue_family_indices[] = { indices.graphics_family.value(), indices.present_family.value() };
   if (indices.graphics_family != indices.present_family) {
     // Used in multiple queues
@@ -394,7 +396,7 @@ void ParticleEditor::AppData::createSwapChain() {
   create_info.oldSwapchain = VK_NULL_HANDLE; // Set later when resizing or something like that
 
   if (vkCreateSwapchainKHR(logical_device_, &create_info, nullptr, &swap_chain_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create swap chain.");
+    throw std::runtime_error("\nFailed to create swap chain.");
   }
 
   // Store image handles for render operation
@@ -444,7 +446,7 @@ void ParticleEditor::AppData::createRenderPass() {
 
   // How to load and store the received info for depth
   VkAttachmentDescription depth_attachment{};
-  depth_attachment.format = findDepthFormat();
+  depth_attachment.format = findDepthFormat(physical_device_);
   depth_attachment.samples = msaa_samples_;
   depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -504,7 +506,7 @@ void ParticleEditor::AppData::createRenderPass() {
   render_pass_info.pDependencies = &subpass_dependency;
 
   if (vkCreateRenderPass(logical_device_, &render_pass_info, nullptr, &render_pass_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the render pass");
+    throw std::runtime_error("\nFailed to create the render pass");
   }
 
 }
@@ -545,7 +547,7 @@ void ParticleEditor::AppData::createDescriptorSetLayouts() {
 	dsl_models_create_info.pBindings = &models_ubo_layout_binding;
 
 	if (vkCreateDescriptorSetLayout(logical_device_, &dsl_models_create_info, nullptr, &models_descriptor_set_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create models descriptor set layout.");
+		throw std::runtime_error("\nFailed to create models descriptor set layout.");
 	}
 
 
@@ -575,7 +577,7 @@ void ParticleEditor::AppData::createDescriptorSetLayouts() {
   opaque_create_info.pBindings = opaque_bindings.data();
 
   if (vkCreateDescriptorSetLayout(logical_device_, &opaque_create_info, nullptr, &opaque_descriptor_set_layout_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create opaque descriptor set layout.");
+    throw std::runtime_error("\nFailed to create opaque descriptor set layout.");
   }
 
 
@@ -598,7 +600,7 @@ void ParticleEditor::AppData::createDescriptorSetLayouts() {
 	translucent_create_info.pBindings = translucent_bindings.data();
 
 	if (vkCreateDescriptorSetLayout(logical_device_, &translucent_create_info, nullptr, &materials_[1]->descriptor_set_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create translucent descriptor set layout.");
+		throw std::runtime_error("\nFailed to create translucent descriptor set layout.");
 	}*/
 
 }
@@ -621,7 +623,7 @@ void ParticleEditor::AppData::createPipelineLayouts(){
 	opaque_layout_info.pPushConstantRanges = nullptr;
 
 	if (vkCreatePipelineLayout(logical_device_, &opaque_layout_info, nullptr, &materials_[0]->pipeline_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create opaque pipeline layout.");
+		throw std::runtime_error("\nFailed to create opaque pipeline layout.");
 	}
 
 
@@ -640,7 +642,7 @@ void ParticleEditor::AppData::createPipelineLayouts(){
 	translucent_layout_info.pPushConstantRanges = nullptr;
 
 	if (vkCreatePipelineLayout(logical_device_, &translucent_layout_info, nullptr, &materials_[1]->pipeline_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create translucent pipeline layout.");
+		throw std::runtime_error("\nFailed to create translucent pipeline layout.");
 	}
 
 }
@@ -654,8 +656,8 @@ void ParticleEditor::AppData::createGraphicsPipelines() {
   // OPAQUE MATERIAL PIPELINE
 
   // Load shaders
-  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_triangle.spv");
-  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_hello_triangle.spv");
+  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_default.spv");
+  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_default.spv");
 
   VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
   VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
@@ -820,16 +822,17 @@ void ParticleEditor::AppData::createGraphicsPipelines() {
 
   if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &opaque_pipeline_info,
     nullptr, &materials_[0]->graphics_pipeline_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the opaque graphics pipeline.");
+    throw std::runtime_error("\nFailed to create the opaque graphics pipeline.");
   }
 
 
   // TRANSLUCENT MATERIAL PIPELINE
   // Modification of the 1st one
 
-  // VShader
-  vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_hello_billboard.spv");
+  // Shaders
+  vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_billboard.spv");
   VkShaderModule billboard_vert_shader_module = createShaderModule(vert_shader_code);
+  // Add billboard fragment shader
 
 	VkPipelineShaderStageCreateInfo billboard_shader_stage_info = vert_shader_stage_info;
 	billboard_shader_stage_info.module = billboard_vert_shader_module;
@@ -871,7 +874,7 @@ void ParticleEditor::AppData::createGraphicsPipelines() {
 
 	if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &translucent_pipeline_info,
 		nullptr, &materials_[1]->graphics_pipeline_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create the translucent graphics pipeline.");
+		throw std::runtime_error("\nFailed to create the translucent graphics pipeline.");
 	}
 
   // Destroy shader modules as they're not used anymore
@@ -893,7 +896,7 @@ VkShaderModule ParticleEditor::AppData::createShaderModule(const std::vector<cha
   VkShaderModule shader_module;
 
   if (vkCreateShaderModule(logical_device_, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the shader module.");
+    throw std::runtime_error("\nFailed to create the shader module.");
   }
 
   return shader_module;
@@ -925,7 +928,7 @@ void ParticleEditor::AppData::createFramebuffers() {
     framebuffer_info.layers = 1;
 
     if (vkCreateFramebuffer(logical_device_, &framebuffer_info, nullptr, &swap_chain_framebuffers_[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create framebuffer.");
+      throw std::runtime_error("\nFailed to create framebuffer.");
     }
   }
 
@@ -935,7 +938,7 @@ void ParticleEditor::AppData::createFramebuffers() {
 
 void ParticleEditor::AppData::createCommandPool() {
 
-  QueueFamilyIndices indices = findQueueFamilies(physical_device_);
+  QueueFamilyIndices indices = findQueueFamilies(physical_device_, surface_);
 
   VkCommandPoolCreateInfo command_pool_info{};
   command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -943,7 +946,7 @@ void ParticleEditor::AppData::createCommandPool() {
   command_pool_info.flags = 0; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT means that command buffers will be rerecorded with new commands very often
 
   if (vkCreateCommandPool(logical_device_, &command_pool_info, nullptr, &command_pool_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create command pool.");
+    throw std::runtime_error("\nFailed to create command pool.");
   }
 
 }
@@ -967,7 +970,7 @@ void ParticleEditor::AppData::createColorResources() {
 
 void ParticleEditor::AppData::createDepthResources() {
 
-  VkFormat format = findDepthFormat();
+  VkFormat format = findDepthFormat(physical_device_);
 
   depth_image_ = new Image(Image::kImageType_Framebuffer);
 
@@ -1001,7 +1004,7 @@ void ParticleEditor::AppData::createTextureImages() {
     image_size = tex_width * tex_height * 4;
 
     if (!pixels) {
-      throw std::runtime_error("Failed to load texture.");
+      throw std::runtime_error("\nFailed to load texture.");
     }
 
     // Create a staging buffer to transfer it to the device memory
@@ -1081,8 +1084,6 @@ void ParticleEditor::AppData::loadModels() {
 					attrib.texcoords[2 * index.texcoord_index + 0],
 					1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
 				};
-
-				vertex.color = { 1.0f, 1.0f, 1.0f };
 
 				if (unique_vertices.count(vertex) == 0) {
 					unique_vertices[vertex] = static_cast<uint32_t>(vertices.size());
@@ -1192,7 +1193,7 @@ void ParticleEditor::AppData::createDescriptorPools() {
 	scene_dp_create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 	
   if (vkCreateDescriptorPool(logical_device_, &scene_dp_create_info, nullptr, &scene_descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create scene descriptor pool.");
+		throw std::runtime_error("\nFailed to create scene descriptor pool.");
 	}
 
   // Models
@@ -1207,7 +1208,7 @@ void ParticleEditor::AppData::createDescriptorPools() {
 	models_dp_create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 
 	if (vkCreateDescriptorPool(logical_device_, &models_dp_create_info, nullptr, &models_descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create models descriptor pool.");
+		throw std::runtime_error("\nFailed to create models descriptor pool.");
 	}
 
 
@@ -1230,7 +1231,7 @@ void ParticleEditor::AppData::createDescriptorPools() {
   create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
 
   if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &opaque_descriptor_pool_) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create opaque descriptor pool.");
+    throw std::runtime_error("\nFailed to create opaque descriptor pool.");
   }
 
 
@@ -1250,7 +1251,7 @@ void ParticleEditor::AppData::createDescriptorPools() {
 	create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());*/
 
 	/*if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create translucent descriptor pool.");
+		throw std::runtime_error("\nFailed to create translucent descriptor pool.");
 	}*/
 
 }
@@ -1259,8 +1260,8 @@ void ParticleEditor::AppData::createDescriptorPools() {
 
 void ParticleEditor::AppData::initializeDescriptorSets(){
 
-	createUniformBuffers(sizeof(SceneUBO), scene_uniform_buffers_);
-	createDynamicUniformBuffers(models_uniform_buffers_);
+	createSceneUniformBuffers(scene_uniform_buffers_);
+	createModelDynamicUniformBuffers(models_uniform_buffers_);
 	createOpaqueDynamicUniformBuffers(opaque_uniform_buffers_);
 	populateSceneDescriptorSets();
 	populateModelsDescriptorSets();
@@ -1284,7 +1285,7 @@ void ParticleEditor::AppData::createCommandBuffers() {
   allocate_info.commandBufferCount = (uint32_t)command_buffers_.size();
 
   if (vkAllocateCommandBuffers(logical_device_, &allocate_info, command_buffers_.data()) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create command buffers.");
+    throw std::runtime_error("\nFailed to create command buffers.");
   }
 
   // Record the command buffers
@@ -1296,7 +1297,7 @@ void ParticleEditor::AppData::createCommandBuffers() {
     begin_info.pInheritanceInfo = nullptr;
 
     if (vkBeginCommandBuffer(command_buffers_[i], &begin_info) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to begin command buffer recording.");
+      throw std::runtime_error("\nFailed to begin command buffer recording.");
     }
 
     // Set the render pass begin info
@@ -1323,7 +1324,7 @@ void ParticleEditor::AppData::createCommandBuffers() {
     vkCmdEndRenderPass(command_buffers_[i]);
 
     if (vkEndCommandBuffer(command_buffers_[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to end command buffer recording.");
+      throw std::runtime_error("\nFailed to end command buffer recording.");
     }
 
   }
@@ -1351,7 +1352,7 @@ void ParticleEditor::AppData::createSyncObjects() {
       vkCreateSemaphore(logical_device_, &semaphore_info, nullptr, &finished_render_semaphores_[i]) ||
       vkCreateFence(logical_device_, &fence_info, nullptr, &in_flight_fences_[i]))
       != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create synchronization objects for a frame.");
+      throw std::runtime_error("\nFailed to create synchronization objects for a frame.");
     }
   }
 
@@ -1383,11 +1384,11 @@ void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
   
-  // Get model matrix (this will be on the system somehow
-  //auto transform = static_cast<ComponentTransform*>(BasicPSApp::instance().active_scene_->getEntities()[0]->
-  //  getComponent(Component::ComponentKind::kComponentKind_Transform));
-  // test to see transform comp working
-  //transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));
+  // Get transform and rotate (this should be on the scene update callback)
+  /*auto transform = static_cast<ComponentTransform*>(ParticleEditor::instance().active_scene_->getEntities()[0]->
+    getComponent(Component::ComponentKind::kComponentKind_Transform));
+   //test to see transform comp working
+  transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));*/
   
 
   // Update the dynamic buffer using the draw system
@@ -1414,7 +1415,7 @@ void ParticleEditor::AppData::drawFrame() {
     recreateSwapChain();
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-    throw std::runtime_error("Failed to acquire swap chain image.");
+    throw std::runtime_error("\nFailed to acquire swap chain image.");
   }
 
   // Check if a previous frame is using the image
@@ -1445,7 +1446,7 @@ void ParticleEditor::AppData::drawFrame() {
   vkResetFences(logical_device_, 1, &in_flight_fences_[current_frame_]);
 
   if (vkQueueSubmit(graphics_queue_, 1, &submit_info, in_flight_fences_[current_frame_]) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to submit draw command buffer.");
+    throw std::runtime_error("\nFailed to submit draw command buffer.");
   }
 
   // Return the image to the swap chain for presentation
@@ -1466,7 +1467,7 @@ void ParticleEditor::AppData::drawFrame() {
     recreateSwapChain();
   }
   else if (result != VK_SUCCESS) {
-    throw std::runtime_error("Failed to present swap chain image.");
+    throw std::runtime_error("\nFailed to present swap chain image.");
   }
 
   current_frame_ = (current_frame_ + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -1571,196 +1572,6 @@ void ParticleEditor::AppData::framebufferResizeCallback(GLFWwindow* window, int 
 
 // ------------------------------------------------------------------------- //
 
-bool ParticleEditor::AppData::isDeviceSuitable(VkPhysicalDevice device) {
-
-  // Basic device properties
-  VkPhysicalDeviceProperties device_properties;
-  vkGetPhysicalDeviceProperties(device, &device_properties);
-
-  // Tex compression, 64-bit floats and multi-viewport rendering
-  VkPhysicalDeviceFeatures device_features;
-  vkGetPhysicalDeviceFeatures(device, &device_features);
-
-  // Return false if a requested feature is not supported
-  if (!device_features.samplerAnisotropy) {
-    return false;
-  }
-
-  // Check if device supports graphic and present queues
-  QueueFamilyIndices indices = findQueueFamilies(device);
-
-  // Check if the required extensions are supported
-  bool extensions_supported = checkDeviceExtensionSupport(device);
-
-  // Check if the swap chain details are adequate on the device
-  bool adequate_swap_chain = false;
-  if (extensions_supported) {
-    SwapChainSupportDetails details = querySwapChainSupportDetails(device);
-    adequate_swap_chain = !details.formats.empty() && !details.present_modes.empty();
-  }
-
-  // Expand this function with necessary features
-
-  return indices.isComplete() && extensions_supported && adequate_swap_chain;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-bool ParticleEditor::AppData::hasStencilComponent(VkFormat format) {
-
-  return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-SwapChainSupportDetails ParticleEditor::AppData::querySwapChainSupportDetails(VkPhysicalDevice device) {
-
-  SwapChainSupportDetails details;
-
-  // Request device supported capabilities
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface_, &details.capabilities);
-
-  // Request device supported formats
-  uint32_t formats_count;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, nullptr);
-  if (formats_count != 0) {
-    details.formats.resize(formats_count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface_, &formats_count, details.formats.data());
-  }
-
-  // Request device supported present modes
-  uint32_t present_modes_count;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, nullptr);
-  if (present_modes_count != 0) {
-    details.present_modes.resize(present_modes_count);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface_, &present_modes_count, details.present_modes.data());
-  }
-
-  return details;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkSurfaceFormatKHR ParticleEditor::AppData::chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
-
-  // Search if any of the available formats has the desired features
-  for (int i = 0; i < available_formats.size(); i++) {
-    if (available_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
-      available_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-
-      return available_formats[i];
-
-    }
-  }
-
-  // If not fits we could tank the available formats to choose the better one
-  // Just pick the first one in this case
-  return available_formats[0];
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkPresentModeKHR ParticleEditor::AppData::chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
-
-  // Search if any of the available present modes are mailbox (triple buffering support)
-  for (int i = 0; i < available_present_modes.size(); i++) {
-    if (available_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-      return available_present_modes[i];
-    }
-  }
-
-  // Always available (double buffering)
-  return VK_PRESENT_MODE_FIFO_KHR;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkExtent2D ParticleEditor::AppData::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-
-  if (capabilities.currentExtent.width != UINT32_MAX) {
-    // Some window managers set this by default, if is not equal to this it can be modified
-    return capabilities.currentExtent;
-  }
-  else {
-    // Choose best window resolution fit between the current and min/max image extent
-    int width;
-    int height;
-    glfwGetFramebufferSize(window_, &width, &height);
-
-    VkExtent2D window_extent = {
-      static_cast<uint32_t>(width),
-      static_cast<uint32_t>(height)
-    };
-
-    window_extent.width = std::max(capabilities.minImageExtent.width,
-      std::min(capabilities.maxImageExtent.width, window_extent.width));
-    window_extent.height = std::max(capabilities.minImageExtent.height,
-      std::min(capabilities.maxImageExtent.height, window_extent.height));
-
-    return window_extent;
-  }
-
-}
-
-// ------------------------------------------------------------------------- //
-
-std::vector<const char*> ParticleEditor::AppData::getRequiredExtensions() {
-
-  // Get supported extensions
-  uint32_t glfw_extension_count = 0;
-  const char** glfw_extensions;
-  glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
-
-  std::vector<const char*> extensions(glfw_extensions, glfw_extensions + glfw_extension_count);
-
-  // Be sure to add EXT_DEBUG_UTILS if validation layers are enabled
-  if (kEnableValidationLayers) {
-    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-  }
-
-  return extensions;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-bool ParticleEditor::AppData::checkValidationLayerSupport() {
-
-  // Count available layers
-  uint32_t layers_count = 0;
-  vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
-
-  // Request available layers data
-  std::vector<VkLayerProperties> layer_properties(layers_count);
-  vkEnumerateInstanceLayerProperties(&layers_count, layer_properties.data());
-
-  // Iterate over requested layers and check if they are available
-  for (uint32_t i = 0; i < kVkValidationLayers.size(); ++i) {
-    bool found_layer = false;
-
-    for (uint32_t l = 0; l < layers_count; ++l) {
-      if (strcmp(kVkValidationLayers[i], layer_properties[l].layerName) == 0) {
-        found_layer = true;
-        break;
-      }
-    }
-
-    if (!found_layer) {
-      return false;
-    }
-  }
-
-  return true;
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void ParticleEditor::AppData::setupDebugMessenger() {
 
   if (!kEnableValidationLayers) return;
@@ -1769,50 +1580,8 @@ void ParticleEditor::AppData::setupDebugMessenger() {
   populateDebugMessengerCreateInfo(messenger_info);
 
   if (CreateDebugUtilsMessengerEXT(instance_, &messenger_info, nullptr, &debug_messenger_) != VK_SUCCESS) {
-    throw std::runtime_error("Debug Messenger creation has failed.");
+    throw std::runtime_error("\nDebug Messenger creation has failed.");
   }
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info) {
-
-  create_info = {};
-  create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  create_info.pfnUserCallback = debugCallback;
-  create_info.pUserData = nullptr;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VKAPI_ATTR VkBool32 VKAPI_CALL ParticleEditor::AppData::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-
-  // Not finished, it could show the information of other lot of things
-  // it could even show it trough a log in the app, which can be divided in different message sections
-
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-    //printf("\nValidation layer (VERBOSE): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    //printf("\nValidation layer (INFO): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    printf("\nValidation layer (WARNING): %s.", pCallbackData->pMessage);
-  }
-  if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    printf("\nValidation layer (ERROR): %s.", pCallbackData->pMessage);
-  }
-
-  return VK_FALSE;
 
 }
 
@@ -1869,7 +1638,7 @@ void ParticleEditor::AppData::transitionImageLayout(VkImage image, VkFormat form
     destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
   }
   else {
-    throw std::runtime_error("Unsupported layout transition.");
+    throw std::runtime_error("\nUnsupported layout transition.");
   }
 
   vkCmdPipelineBarrier(cmd_buffer, source_stage, destination_stage,
@@ -1882,161 +1651,33 @@ void ParticleEditor::AppData::transitionImageLayout(VkImage image, VkFormat form
 
 // ------------------------------------------------------------------------- //
 
-uint32_t ParticleEditor::AppData::findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties) {
-
-  // Request supported memory properties from the graphics card
-  VkPhysicalDeviceMemoryProperties mem_properties;
-  vkGetPhysicalDeviceMemoryProperties(physical_device_, &mem_properties);
-
-  // Find a suitable memory type (Mask memory type bit and property flags)
-  for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-    if (type_filter & (1 << i) &&
-      (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
-      return i;
-    }
-  }
-
-  throw std::runtime_error("Failed to find a suitable memory type.");
-
-}
-
 // ------------------------------------------------------------------------- //
 
-VkFormat ParticleEditor::AppData::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
-
-  for (uint32_t i = 0; i < candidates.size(); i++) {
-    VkFormatProperties properties;
-    vkGetPhysicalDeviceFormatProperties(physical_device_, candidates[i], &properties);
-
-    if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
-      return candidates[i];
-    }
-    else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
-      return candidates[i];
-    }
-  }
-
-  throw std::runtime_error("Failed to find a supported a format.");
-
-}
-
-// ------------------------------------------------------------------------- //
-
-bool ParticleEditor::AppData::checkDeviceExtensionSupport(VkPhysicalDevice device) {
-
-  // Get supported device properties
-  uint32_t extension_count;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-
-  std::vector<VkExtensionProperties> available_extensions(extension_count);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
-
-  std::set<std::string> required_extensions(kDeviceExtensions.begin(), kDeviceExtensions.end());
-
-  // Delete the extension from the required extension vector if they are available
-  for (uint32_t i = 0; i < available_extensions.size(); i++) {
-    required_extensions.erase(available_extensions[i].extensionName);
-  }
-
-  // If the required extensions vector was emptied it means that they are supported
-  return required_extensions.empty();
-
-}
-
-// ------------------------------------------------------------------------- //
-
-QueueFamilyIndices ParticleEditor::AppData::findQueueFamilies(VkPhysicalDevice device) {
-
-  QueueFamilyIndices indices;
-
-  // Get device family queue properties
-  uint32_t queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
-
-  std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
-
-  for (uint32_t i = 0; i < queue_families.size(); i++) {
-    // Check if graphics queue is supported
-    if (queue_families[i].queueFlags && VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphics_family = i;
-    }
-
-    // Check if present queue is supported
-    VkBool32 present_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present_support);
-    if (present_support) {
-      indices.present_family = i;
-    }
-
-    // Break if both are found
-    if (indices.isComplete()) {
-      break;
-    }
-  }
-
-  return indices;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkFormat ParticleEditor::AppData::findDepthFormat() {
-
-  return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkSampleCountFlagBits ParticleEditor::AppData::getMaxUsableSampleCount() {
-
-	VkPhysicalDeviceProperties phys_device_properties;
-	vkGetPhysicalDeviceProperties(physical_device_, &phys_device_properties);
-
-	VkSampleCountFlags counts = phys_device_properties.limits.framebufferColorSampleCounts &
-		phys_device_properties.limits.framebufferDepthSampleCounts;
-
-	if (!ENABLE_MSAA) return VK_SAMPLE_COUNT_1_BIT;
-
-	if (counts & VK_SAMPLE_COUNT_64_BIT) return VK_SAMPLE_COUNT_64_BIT;
-	if (counts & VK_SAMPLE_COUNT_32_BIT) return VK_SAMPLE_COUNT_32_BIT;
-	if (counts & VK_SAMPLE_COUNT_16_BIT) return VK_SAMPLE_COUNT_16_BIT;
-	if (counts & VK_SAMPLE_COUNT_8_BIT)  return VK_SAMPLE_COUNT_8_BIT;
-	if (counts & VK_SAMPLE_COUNT_4_BIT)  return VK_SAMPLE_COUNT_4_BIT;
-	if (counts & VK_SAMPLE_COUNT_2_BIT)  return VK_SAMPLE_COUNT_2_BIT;
-
-	return VK_SAMPLE_COUNT_1_BIT;
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::createUniformBuffers(int size, std::vector<Buffer*>& buffers_) {
+void ParticleEditor::AppData::createSceneUniformBuffers(std::vector<Buffer*>& buffers) {
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
-	buffers_.resize(swap_chain_images_.size());
+  buffers.resize(swap_chain_images_.size());
 
-	VkDeviceSize buffer_size = size;
+	VkDeviceSize buffer_size = sizeof(SceneUBO);
 
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
-		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
-		buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
+    buffers[i]->create(physical_device_, logical_device_, buffer_size,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    buffers[i]->map(logical_device_, buffer_size);
 	}
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& buffers_){
+void ParticleEditor::AppData::createModelDynamicUniformBuffers(std::vector<Buffer*>& buffers){
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
-	buffers_.resize(swap_chain_images_.size());
+  buffers.resize(swap_chain_images_.size());
 
   // Return false if a requested feature is not supported
 	VkPhysicalDeviceProperties device_properties;
@@ -2063,25 +1704,22 @@ void ParticleEditor::AppData::createDynamicUniformBuffers(std::vector<Buffer*>& 
 
 	// Uniform buffer object with per-object matrices
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
-		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
-		buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
+    buffers[i]->create(physical_device_, logical_device_, buffer_size,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    buffers[i]->map(logical_device_, buffer_size);
 	}
-
-  // Update for the first frame
-	/*system_draw_objects_->updateUniformBuffers(current_frame_,
-		BasicPSApp::instance().getScene()->getEntities());*/
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers_){
+void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers){
 
 	if (window_width_ == 0 || window_height_ == 0) return;
 
-	buffers_.resize(swap_chain_images_.size());
+  buffers.resize(swap_chain_images_.size());
 
 	// Return false if a requested feature is not supported
 	VkPhysicalDeviceProperties device_properties;
@@ -2108,10 +1746,11 @@ void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buff
 
 	// Uniform buffer object with per-object matrices
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
-		buffers_[i] = new Buffer(Buffer::kBufferType_Uniform);
-		buffers_[i]->create(physical_device_, logical_device_, buffer_size,
+    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
+    buffers[i]->create(physical_device_, logical_device_, buffer_size,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    buffers[i]->map(logical_device_, buffer_size);
 	}
 
 }
@@ -2120,11 +1759,7 @@ void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buff
 
 void ParticleEditor::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
 
-	void* data;
-	vkMapMemory(logical_device_, buffer->buffer_memory_, 0,
-		sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(logical_device_, buffer->buffer_memory_);
+	memcpy(buffer->mapped_memory_, &ubo, sizeof(ubo));
 
 }
 
@@ -2132,14 +1767,12 @@ void ParticleEditor::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) 
 
 void ParticleEditor::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer) {
 
-  void* data;
   uint32_t size = objects * system_draw_objects_->dynamic_alignment_;
-  vkMapMemory(logical_device_, buffer->buffer_memory_, 0, size, 0, &data);
 
 	for (int i = 0; i < objects; ++i) {
 		// Do the dynamic offset things
 		uint32_t offset = (i * system_draw_objects_->dynamic_alignment_);
-    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)data + offset));
+    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)buffer->mapped_memory_ + offset));
 		glm::mat4* model = (glm::mat4*)(((uint64_t)ubo.models + offset));
 		memcpy((void*)mem_offset, *(&model), system_draw_objects_->dynamic_alignment_);
 	}
@@ -2150,28 +1783,21 @@ void ParticleEditor::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Bu
   memoryRange.size = uniformBuffers.dynamic.size;
   vkFlushMappedMemoryRanges(device, 1, &memoryRange);*/
 
-  vkUnmapMemory(logical_device_, buffer->buffer_memory_);
-
 }
 
 // ------------------------------------------------------------------------- //
 
 void ParticleEditor::AppData::updateUniformBuffer(OpaqueUBO ubo, int objects, Buffer* buffer){
 
-	void* data;
   uint32_t size = objects * system_draw_objects_->opaque_dynamic_alignment_;
-	vkMapMemory(logical_device_, buffer->buffer_memory_, 0, size, 0, &data);
 
   for (int i = 0; i < objects; ++i) {
     // Do the dynamic offset things
     uint64_t offset = (i * system_draw_objects_->opaque_dynamic_alignment_);
-    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)data + offset));
+    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)buffer->mapped_memory_ + offset));
     glm::mat4* packed_uniform = (glm::mat4*)(((uint64_t)ubo.packed_uniforms + offset));
 	  memcpy((void*)mem_offset, *(&packed_uniform), system_draw_objects_->opaque_dynamic_alignment_);
   }
-
-
-	vkUnmapMemory(logical_device_, buffer->buffer_memory_);
 
 }
 
@@ -2180,6 +1806,7 @@ void ParticleEditor::AppData::updateUniformBuffer(OpaqueUBO ubo, int objects, Bu
 void ParticleEditor::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
 
 	for (int i = 0; i < swap_chain_images_.size(); i++) {
+    buffers_[i]->unmap(logical_device_);
     buffers_[i]->clean(logical_device_);
 		delete buffers_[i];
 	}
@@ -2201,7 +1828,7 @@ void ParticleEditor::AppData::populateSceneDescriptorSets() {
 
 	scene_descriptor_sets_.resize(swap_chain_images_.size());
 	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, scene_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create scene descriptor sets.");
+		throw std::runtime_error("\nFailed to create scene descriptor sets.");
 	}
 
 
@@ -2240,7 +1867,7 @@ void ParticleEditor::AppData::populateModelsDescriptorSets() {
 
 	models_descriptor_sets_.resize(swap_chain_images_.size());
 	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, models_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create models descriptor sets.");
+		throw std::runtime_error("\nFailed to create models descriptor sets.");
 	}
 
 
@@ -2279,7 +1906,7 @@ void ParticleEditor::AppData::populateOpaqueDescriptorSets() {
 
 	opaque_descriptor_sets_.resize(swap_chain_images_.size());
 	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, opaque_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create opaque descriptor sets.");
+		throw std::runtime_error("\nFailed to create opaque descriptor sets.");
 	}
 
 
@@ -2334,10 +1961,10 @@ void ParticleEditor::AppData::setupVertexBuffers(){
 	std::vector<Vertex> quad_vertices;
   // Quad
   quad_vertices = {
-		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		{{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f}},
+		{{ 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f}},
+		{{ 0.5f,  0.5f, 0.0f}, {0.0f, 1.0f}},
+		{{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f}}
 	};
 
   createVertexBuffer(quad_vertices);

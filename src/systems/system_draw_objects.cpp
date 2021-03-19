@@ -75,12 +75,9 @@ void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Enti
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
-	// Fill the ubo with the updated data
-	SceneUBO scene_ubo{};
-	scene_ubo.view = ParticleEditor::instance().getCamera()->getViewMatrix();
-	scene_ubo.projection = ParticleEditor::instance().getCamera()->getProjectionMatrix();
+	// Scene ubo only got updated when camera moves
 	//Map memory to GPU
-	app_data->updateUniformBuffer(scene_ubo, app_data->scene_uniform_buffers_[current_image]);
+	app_data->updateUniformBuffer(app_data->scene_ubo_, app_data->scene_uniform_buffers_[current_image]);
 
 	// Update model matrices
 	app_data->models_ubo_.models = getObjectModels(entities);

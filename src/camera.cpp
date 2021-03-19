@@ -5,6 +5,8 @@
  */
 
 #include "camera.h"
+#include "particle_editor.h"
+#include "../src/internal/internal_app_data.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <math.h>
@@ -34,12 +36,14 @@ Camera::~Camera() {
 
 // ------------------------------------------------------------------------- // 
 
-void Camera::setupProjection(float fov_degrees, float aspect_ratio, float near, float far){
+void Camera::setupProjection(float fov_degrees, float aspect_ratio, float cam_near, float cam_far){
 
-	projection_ = glm::perspective(glm::radians(fov_degrees), aspect_ratio, near, far);
-	
+	projection_ = glm::perspective(glm::radians(fov_degrees), aspect_ratio, cam_near, cam_far);
+
 	// Invert clip Y due to GLM works with OpenGL and its inverted
-  projection_[1][1] *= -1;
+	projection_[1][1] *= -1;
+
+	updateViewMatrix();
 
 }
 
@@ -60,6 +64,12 @@ void Camera::updateViewMatrix() {
   view_ = trans_mat * rot_mat;
 
   view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
+
+
+  ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+	// Fill the ubo with the updated data
+  app_data->scene_ubo_.view = view_;
+  app_data->scene_ubo_.projection = projection_;
 
 }
 
@@ -94,7 +104,13 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 	view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
 
 
-  last_mouse_pos_ = new_mouse_pos;
+	last_mouse_pos_ = new_mouse_pos;
+
+
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+	// Fill the ubo with the updated data
+	app_data->scene_ubo_.view = view_;
+	app_data->scene_ubo_.projection = projection_;
 
 }
 
