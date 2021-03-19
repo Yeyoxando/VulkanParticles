@@ -7,10 +7,59 @@
  // ------------------------------------------------------------------------- //
 
 #include "components/component_mesh.h"
+#include "../src/internal/internal_app_data.h"
 
  // ------------------------------------------------------------------------- //
 
 ComponentMesh::ComponentMesh() : Component(Component::kComponentKind_Mesh) {
+
+	mesh_buffer_id_ = -1;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentMesh::loadMeshFromFile(const char* model_path){
+
+	// Add model to load it later when empty
+	auto it = ParticleEditor::instance().app_data_->loaded_models_.cbegin();
+	if (it == ParticleEditor::instance().app_data_->loaded_models_.cend()) {
+		// Not any object insert it
+		ParticleEditor::instance().app_data_->loaded_models_.insert(
+			std::pair<int, const char*>(ParticleEditor::instance().app_data_->default_geometries, model_path));
+		// Store new id
+		mesh_buffer_id_ = ParticleEditor::instance().app_data_->default_geometries;
+		return;
+	}
+
+	// Check if model was previously loaded to not load it again
+	it = ParticleEditor::instance().app_data_->loaded_models_.cbegin();
+	while (it != ParticleEditor::instance().app_data_->loaded_models_.cend()){
+		if (!strcmp(model_path, it->second)) {
+			printf("\nModel has been loaded earlier. Assigning id.");
+			mesh_buffer_id_ = it->first;
+			return;
+		}
+		++it;
+	}
+
+	// Save it if its not added yet
+	ParticleEditor::instance().app_data_->loaded_models_.insert(
+		std::pair<int, const char*>(ParticleEditor::instance().app_data_->default_geometries + 
+			ParticleEditor::instance().app_data_->loaded_models_.size(), model_path));
+	// Store new id
+	mesh_buffer_id_ = ParticleEditor::instance().app_data_->default_geometries +
+		ParticleEditor::instance().app_data_->loaded_models_.size();
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentMesh::loadDefaultMesh(ParticleEditor::DefaultMesh default_mesh){
+
+	// it will use one of the default geometries created in the internal resources
+	// simply use the parameter as id
+	mesh_buffer_id_ = (int)default_mesh;
 
 }
 

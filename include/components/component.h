@@ -17,18 +17,18 @@ class Component {
 public:
 
   enum ComponentKind {
-    kComponentKind_Invalid = -1,
-    kComponentKind_Mesh = 0,
-    kComponentKind_Material,
-    kComponentKind_ParticleSystem,
+    kComponentKind_Transform = 0,
+    kComponentKind_Mesh = 1,
+    kComponentKind_Material = 2,
+    kComponentKind_ParticleSystem = 3,
   };
 
   explicit Component(ComponentKind comp_kind) : component_kind_(comp_kind) {};
+  virtual ~Component();
 
   ComponentKind component_kind_;
 
 protected:
-  ~Component();
 
   int entity_reference_id_;
 

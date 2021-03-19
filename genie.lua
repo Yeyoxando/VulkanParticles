@@ -44,11 +44,12 @@ project "ParticleEditor"
 
 	includedirs{
 	  "./include/",
-	  "D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
-	  "D:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
-	  "D:/VSLibraries/glm/",
-	  "D:/VSLibraries/SingleHeaderFiles/stb_image/",
-	  "D:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/",
+	  "./src/internal/",
+	  "C:/Program Files/VulkanSDK/1.2.162.0/Include/",
+	  "C:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
+	  "C:/VSLibraries/glm/",
+	  "C:/VSLibraries/SingleHeaderFiles/stb_image/",
+	  "C:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/",
 	}
 
 	--Common files
@@ -57,20 +58,25 @@ project "ParticleEditor"
 		"./include/**.h",
 		"./src/**.cpp",
 		"./src/internal/**.h",
+		"./src/internal/**.cpp",
 		"./tests/**.cpp", 
 		"./resources/**.vert", 
 		"./resources/**.frag", 
 
 		-- Vulkan
-		--"D:/ProgramFiles/VulkanSDK/1.2.154.1/Include/",
+		--"C:/Program Files/VulkanSDK/1.2.162.0/Include/",
 		
 		--GLM
 		--"./deps/glm/*.h",
 		--"./deps/glm/*.hpp",
 
+		"C:/VSLibraries/SingleHeaderFiles/stb_image/**.h",
+		"C:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/**.h"
+
 	}
 
 	defines { 	
+                "VK_USE_PLATFORM_WIN32_KHR",
 		"GLFW_INCLUDE_VULKAN",
 		"WIN32",
 		"_WIN32",
@@ -78,12 +84,11 @@ project "ParticleEditor"
 		"GLM_FORCE_RADIANS",
 		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
 		"GLM_ENABLE_EXPERIMENTAL",
-		"STB_IMAGE_IMPLEMENTATION",
 		"TINYOBJLOADER_IMPLEMENTATION",
 	}	 
 	
 	links{
-		"D:/ProgramFiles/VulkanSDK/1.2.154.1/Lib/vulkan-1",
-		"D:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
+		"C:/Program Files/VulkanSDK/1.2.162.0/Lib/vulkan-1",
+		"C:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
 	}
 

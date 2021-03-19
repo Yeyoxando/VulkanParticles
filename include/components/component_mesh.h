@@ -10,15 +10,24 @@
 // ------------------------------------------------------------------------- // 
 
 #include "component.h"
+#include "particle_editor.h"
 
 // ------------------------------------------------------------------------- //
 
 class ComponentMesh : public Component {
 public:
   ComponentMesh();
+  
+  void loadMeshFromFile(const char* model_path);
+
+  void loadDefaultMesh(ParticleEditor::DefaultMesh default_mesh);
+
+  int getID() { return mesh_buffer_id_; }
 
 protected:
-  ~ComponentMesh();
+	~ComponentMesh();
+
+  int mesh_buffer_id_;
 
 };
 

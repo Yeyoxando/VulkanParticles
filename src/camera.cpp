@@ -5,6 +5,8 @@
  */
 
 #include "camera.h"
+#include "particle_editor.h"
+#include "../src/internal/internal_app_data.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <math.h>
@@ -13,19 +15,14 @@
 
 Camera::Camera() {
 
-  camera_distance_ = 1.0f;
-  dist_x = 0.0f;
-  dist_y = 2.0f;
+  position_ = glm::vec3(0.0f, 0.0f, -1.0f);
+  rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+  view_pos_ = glm::vec4();
 
-  position_ = glm::vec3(camera_distance_ * cos(dist_x), 
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
-  target_ = glm::vec3(0.0f, 0.0f, 0.0f);
-  up_ = glm::vec3(0.0f, 0.0f, 1.0f);
+  last_mouse_pos_ = glm::vec2(-1.0f, -1.0f);
+  is_moving_ = false;
 
-  view_ = glm::lookAt(position_, target_, up_);
-
-  last_mouse_pos_ = glm::vec2(400.0f, 300.0f);
-  is_rotating_ = false;
+  updateViewMatrix();
 
 }
 
@@ -39,16 +36,14 @@ Camera::~Camera() {
 
 // ------------------------------------------------------------------------- // 
 
-void Camera::moveFront(float offset) {
+void Camera::setupProjection(float fov_degrees, float aspect_ratio, float cam_near, float cam_far){
 
-  camera_distance_ -= offset;
-  updateViewMatrix();
+	projection_ = glm::perspective(glm::radians(fov_degrees), aspect_ratio, cam_near, cam_far);
 
-}
+	// Invert clip Y due to GLM works with OpenGL and its inverted
+	projection_[1][1] *= -1;
 
-// ------------------------------------------------------------------------- // 
-
-void Camera::rotateYOrbital() {
+	updateViewMatrix();
 
 }
 
@@ -56,10 +51,25 @@ void Camera::rotateYOrbital() {
 
 void Camera::updateViewMatrix() {
 
-  position_ = glm::vec3(camera_distance_ * cos(dist_x),
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
+  glm::mat4 rot_mat = glm::mat4(1.0f);
+  glm::mat4 trans_mat;
+
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
+  rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
   
-  view_ = glm::lookAt(position_, target_, up_);
+  trans_mat = glm::translate(glm::mat4(1.0f), position_);
+
+  view_ = trans_mat * rot_mat;
+
+  view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
+
+
+  ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+	// Fill the ubo with the updated data
+  app_data->scene_ubo_.view = view_;
+  app_data->scene_ubo_.projection = projection_;
 
 }
 
@@ -67,35 +77,40 @@ void Camera::updateViewMatrix() {
 
 void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 
-  // position
-  if (is_rotating_) {
-    dist_x += (last_mouse_pos_.r - new_mouse_pos.r) * 0.001f;
-
-    float diff = (last_mouse_pos_.g - new_mouse_pos.g) * 0.002f;
-    // Limit movement in top and bottom
-    if (sin(dist_y + diff) < 0.99f && sin(dist_y + diff) > -0.99f) {
-      dist_y += diff;
-    }
-
-  }
-  else {
-    is_rotating_ = true;
+  if (!is_moving_) {
+    last_mouse_pos_ = new_mouse_pos;
+    is_moving_ = true;
+    return;
   }
 
-  last_mouse_pos_ = new_mouse_pos;
+	float dist_x_ = last_mouse_pos_.x - new_mouse_pos.x;
+	float dist_y_ = last_mouse_pos_.y - new_mouse_pos.y;
+
+  rotation_ += glm::vec3(-dist_y_, 0.0f, -dist_x_);
   
-  position_ = glm::vec3(camera_distance_ * cos(dist_x), 
-    camera_distance_ * sin(dist_x), camera_distance_ * sin(dist_y));
 
-  view_ = glm::lookAt(position_, target_, up_);
+	glm::mat4 rot_mat = glm::mat4(1.0f);
+	glm::mat4 trans_mat;
 
-}
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
-// ------------------------------------------------------------------------- // 
 
-void Camera::setRotating(bool is_rotating) {
+	trans_mat = glm::translate(glm::mat4(1.0f), position_);
 
-  is_rotating_ = is_rotating;
+	view_ = trans_mat * rot_mat;
+
+	view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
+
+
+	last_mouse_pos_ = new_mouse_pos;
+
+
+	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+	// Fill the ubo with the updated data
+	app_data->scene_ubo_.view = view_;
+	app_data->scene_ubo_.projection = projection_;
 
 }
 
@@ -104,6 +119,26 @@ void Camera::setRotating(bool is_rotating) {
 glm::mat4x4 Camera::getViewMatrix() {
 
   return view_;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+glm::mat4 Camera::getProjectionMatrix() {
+
+	return projection_;
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+void Camera::zoom(float wheel_offset){
+
+  glm::vec3 front_ = glm::vec3(0.0f, 0.0f, 0.0f) - position_;
+
+  position_ += front_ * wheel_offset;
+
+  updateViewMatrix();
 
 }
 

@@ -10,7 +10,9 @@
 // ------------------------------------------------------------------------- //
 
 #include "vulkan/vulkan.h"
-#include "internal/internal_commands.h"
+#include "../src/internal/internal_commands.h"
+
+#include <stdexcept>
 
 // ------------------------------------------------------------------------- //
 
@@ -18,9 +20,10 @@ static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_f
 
 class GPUResource {
 public:
+  GPUResource() { id_ = -1; }
+  ~GPUResource() {}
 
   uint32_t id_;
-protected:
 
 };
 
@@ -45,7 +48,7 @@ public:
 
   // Creates a buffer and allocate its memory
   void create(VkPhysicalDevice phys_device, VkDevice logical_device, VkDeviceSize size, VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties) {
+    VkMemoryPropertyFlags properties, uint32_t data_count = 0) {
 
     // Create the  buffer
     VkBufferCreateInfo buffer_info{};
@@ -74,10 +77,12 @@ public:
 
     // Bind buffer and memory together
     vkBindBufferMemory(logical_device, buffer_, buffer_memory_, 0);
-  
+    
+    data_count_ = data_count;
+
   }
 
-  // // Copy a buffer from the cpu to the device local memory through a staging buffer
+  // Copy a buffer from the cpu to the device local memory through a staging buffer
   void copy(VkDevice logical_device, VkCommandPool cmd_pool, VkQueue submit_queue,
     Buffer& src_buffer, VkDeviceSize size) {
     VkCommandBuffer command_buffer = beginSingleTimeCommands(logical_device, cmd_pool);
@@ -97,11 +102,23 @@ public:
     vkFreeMemory(logical_device, buffer_memory_, nullptr);
   }
 
+  void map(VkDevice logical_device, VkDeviceSize size) {
+		vkMapMemory(logical_device, buffer_memory_, 0,
+			size, 0, &mapped_memory_);
+  }
+
+  void unmap(VkDevice logical_device) {
+    vkUnmapMemory(logical_device, buffer_memory_);
+  }
+
 
   BufferType buffer_type_;
 
   VkBuffer buffer_;
   VkDeviceMemory buffer_memory_;
+  void* mapped_memory_;
+
+  uint32_t data_count_;
 
 };
 
@@ -276,6 +293,24 @@ public:
 
   uint32_t width_;
   uint32_t height_;
+
+};
+
+// ------------------------------------------------------------------------- //
+
+class Material : public GPUResource {
+public:
+  Material() { material_id_ = -1; }
+  ~Material() {}
+
+
+  // maybe it would be better with ids, as these things will be created in the internal file
+  // so they could be in an array or something like the buffers
+
+	VkPipeline graphics_pipeline_; // uses the descSet layout
+	VkPipelineLayout pipeline_layout_; // defines the layout of the descriptor set layouts on the pipeline
+	
+  int material_id_;
 
 };
 

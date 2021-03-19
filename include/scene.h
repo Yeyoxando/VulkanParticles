@@ -9,23 +9,45 @@
 
 // ------------------------------------------------------------------------- // 
 
-// Includes
+#include <vector>
+
+#include "entity.h"
 
 // ------------------------------------------------------------------------- //
 
-/*
-  - It'll include a list of gameobjects
-  - Also global settings
+struct SceneSettings {
+	// This will be send as parameter to the scene to initialize certain values
 
-  - Upload uniform buffer at rendering
-*/
+  // name
+	// settings like fog
+  // Global lighting
+  // ...
+
+};
+
+// ------------------------------------------------------------------------- //
 
 class Scene{
 public:
   Scene();
   ~Scene();
 
+  void setName(const char* scene_name);
+
+  void addEntity(Entity* entity);
+  // void removeEntity (Not for the moment due to dynamic buffers, until know how they work)
+
+  void init();
+  void update();
+  // draw(), will be needed, or it will get the entities and do the commands from them
+  // Or should it be a command like in suffer engine which draws the thing with its components and things
+
+  std::vector<Entity*> getEntities();
+
 private:
+  const char* name_;
+
+  std::vector<Entity*> entities_;
 
 };
 

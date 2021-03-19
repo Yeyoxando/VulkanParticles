@@ -21,30 +21,28 @@ public:
   Camera();
   ~Camera();
 
-  void moveFront(float offset);
-  void rotateYOrbital();
+  void setupProjection(float fov_degrees, float aspect_ratio, float cam_near, float cam_far);
 
-  void updateViewMatrix();
   void updateViewMatrix(glm::vec2 new_mouse_pos);
 
-  void setRotating(bool is_rotating);
+  glm::mat4 getViewMatrix();
+  glm::mat4 getProjectionMatrix();
 
-  glm::mat4x4 getViewMatrix();
+  void zoom(float wheeel_offset);
+  void finishMoving() { is_moving_ = false; }
 
 private:
-  float distance_to_center_;
+  void updateViewMatrix();
+
   glm::vec3 position_;
-  glm::vec3 up_;
-  glm::vec3 target_;
+  glm::vec3 rotation_;
+  glm::vec4 view_pos_;
   
-  glm::mat4x4 view_;
+  glm::mat4 view_;
+  glm::mat4 projection_;
 
   glm::vec2 last_mouse_pos_;
-  float dist_x;
-  float dist_y;
-  float camera_distance_;
-  bool is_rotating_;
-  //glm::mat4x4 projection_matrix_;
+  bool is_moving_;
 
 };
 
