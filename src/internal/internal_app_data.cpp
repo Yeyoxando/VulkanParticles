@@ -16,10 +16,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-
-#define VK_USE_PLATFORM_WIN32_KHR
-
-
 // Provisional
 #include "components/component_transform.h"
 
@@ -763,7 +759,8 @@ void ParticleEditor::AppData::createIndexBuffer(std::vector<uint32_t>& indices) 
   Buffer* staging_buffer = new Buffer(Buffer::kBufferType_Index);
   staging_buffer->create(physical_device_, logical_device_,
     buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indices.size());
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+    static_cast<uint32_t>(indices.size()));
 
   // Map the memory from the CPU to GPU
   void* data;
@@ -774,7 +771,7 @@ void ParticleEditor::AppData::createIndexBuffer(std::vector<uint32_t>& indices) 
   // Create the actual index buffer
   index_buffers_[index_buffers_.size() - 1]->create(physical_device_, logical_device_, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indices.size());
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(indices.size()));
   
   // Copy the content from the staging buffer to the vertex buffer (allocated in gpu memory)
   index_buffers_[index_buffers_.size() - 1]->copy(logical_device_, command_pool_, graphics_queue_, *staging_buffer, buffer_size);
@@ -885,6 +882,7 @@ void ParticleEditor::AppData::updateFrame() {
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();  
   
+  time;
 
 }
 
@@ -905,7 +903,7 @@ void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
     getComponent(Component::ComponentKind::kComponentKind_Transform));
    //test to see transform comp working
   transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));*/
-  
+  time;
 
   // Update the dynamic buffer using the draw system
   system_draw_objects_->updateUniformBuffers(current_image,

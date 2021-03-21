@@ -23,7 +23,7 @@ public:
 	// Not usable, base for the material instance data
 	// This is the material instance (data correspond to its parent descriptor set layout)
   struct MaterialData {
-    friend class ParticleEditor::AppData;
+    friend struct ParticleEditor::AppData;
     friend class SystemDrawObjects;
   public: 
 

@@ -34,6 +34,9 @@ void button_click_callback(GLFWwindow* window, int button, int action, int mods)
   if (button == GLFW_MOUSE_BUTTON_RIGHT) InputManager::getState()->right_click_action = (uint8_t)action;
   if (button == GLFW_MOUSE_BUTTON_LEFT) InputManager::getState()->left_click_action = (uint8_t)action;
 
+  mods;
+  window;
+
 }
 
 // ------------------------------------------------------------------------- // 
@@ -470,6 +473,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
   }
   }
 
+  mods;
+  scancode;
+  window;
+
 }
 
 // ------------------------------------------------------------------------- // 
@@ -477,6 +484,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void scroll_callback(GLFWwindow* window, double x_offset, double y_offset) {
 
   InputManager::getState()->wheel_offset = (float)y_offset;
+
+  window;
+  x_offset;
 
 }
 
@@ -945,6 +955,8 @@ bool InputManager::getKeyPressed(int key_code) {
     break;
   }
   }
+
+  return false;
 
 }
 

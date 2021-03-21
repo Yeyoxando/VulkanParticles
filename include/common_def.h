@@ -20,6 +20,10 @@
 
 // ------------------------------------------------------------------------- // 
 
+#pragma warning(disable: 26812)
+
+// ------------------------------------------------------------------------- // 
+
 // Vulkan validation layers
 const std::vector<const char*> kVkValidationLayers = {
   "VK_LAYER_KHRONOS_validation",

@@ -20,7 +20,7 @@
 // ------------------------------------------------------------------------- //
 
 class SystemDrawObjects : public System{
-  friend class ParticleEditor::AppData;
+  friend struct ParticleEditor::AppData;
 public:
   SystemDrawObjects();
   ~SystemDrawObjects();

@@ -13,7 +13,12 @@
 
 #include <stdexcept>
 
+#include "vulkan_utils.h"
 #include "../src/internal/internal_commands.h"
+
+// ------------------------------------------------------------------------- //
+
+#pragma warning(disable: 26812)
 
 // ------------------------------------------------------------------------- //
 // --------------------------------- BASE ---------------------------------- //
@@ -24,7 +29,7 @@ public:
   GPUResource() { id_ = -1; }
   ~GPUResource() {}
 
-  uint32_t id_;
+  int id_;
 
 };
 
@@ -45,6 +50,8 @@ public:
   explicit Buffer(BufferType type) : buffer_type_(type) {
     buffer_ = VK_NULL_HANDLE;
     buffer_memory_ = VK_NULL_HANDLE;
+    data_count_ = 0;
+    mapped_memory_ = nullptr;
   };
 
   ~Buffer() {}
@@ -142,6 +149,8 @@ public:
     image_memory_ = VK_NULL_HANDLE;
     image_view_ = VK_NULL_HANDLE;
     texture_sampler_ = VK_NULL_HANDLE;
+    width_ = 0;
+    height_ = 0;
   };
 
   ~Image() {}

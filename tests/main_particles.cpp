@@ -22,7 +22,7 @@
 
 /*
 TODO (ordered):
-  - create a translucent material for objects first and prepare everyhing for particles, even also radix sort
+  - create a translucent material for objects first and prepare everything for particles, even also radix sort
   - fix translucent pipeline transparency borders
   - take a look to the command buffer construction, if objects are ordered it can be done
     only one bind pipeline,

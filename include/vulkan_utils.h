@@ -25,6 +25,10 @@
 #include <glm/gtx/hash.hpp>
 
 // ------------------------------------------------------------------------- // 
+
+#pragma warning(disable: 26812)
+
+// ------------------------------------------------------------------------- // 
 // ---------------------------- PHYSICAL DEVICE ---------------------------- // 
 // ------------------------------------------------------------------------- // 
 
@@ -42,7 +46,7 @@ struct QueueFamilyIndices {
 
 // 
 struct SwapChainSupportDetails {
-	VkSurfaceCapabilitiesKHR capabilities;
+	VkSurfaceCapabilitiesKHR capabilities{};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
 };
@@ -231,6 +235,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
 	if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 		printf("\nValidation layer (ERROR): %s.", pCallbackData->pMessage);
 	}
+
+	pUserData;
+	messageType;
 
 	return VK_FALSE;
 
