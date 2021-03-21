@@ -281,6 +281,26 @@ static std::vector<char> readFile(const char* file_name) {
 }
 
 // ------------------------------------------------------------------------- // 
+
+// Create a shader module with the given bytecode
+static VkShaderModule createShaderModule(VkDevice* logical_device, const std::vector<char>& bytecode) {
+
+	VkShaderModuleCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.codeSize = bytecode.size();
+	create_info.pCode = reinterpret_cast<const uint32_t*>(bytecode.data());
+
+	VkShaderModule shader_module;
+
+	if (vkCreateShaderModule(*logical_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+		throw std::runtime_error("\nFailed to create the shader module.");
+	}
+
+	return shader_module;
+
+}
+
+// ------------------------------------------------------------------------- // 
 // -------------------------------- MEMORY --------------------------------- // 
 // ------------------------------------------------------------------------- // 
 
@@ -301,6 +321,27 @@ static void* alignedAlloc(size_t size, size_t alignment){
 static void alignedFree(void* data){
 
 	_aligned_free(data);
+
+}
+
+// ------------------------------------------------------------------------- // 
+
+// Finds a valid memory type with the given parameters
+static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags properties) {
+
+	// Request supported memory properties from the graphics card
+	VkPhysicalDeviceMemoryProperties mem_properties;
+	vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_properties);
+
+	// Find a suitable memory type (Mask memory type bit and property flags)
+	for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+		if (type_filter & (1 << i) &&
+			(mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("\nFailed to find a suitable memory type.");
 
 }
 

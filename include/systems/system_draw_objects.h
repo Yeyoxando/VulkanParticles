@@ -35,19 +35,12 @@ public:
 	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
 	void updateUniformBuffers(int current_image, std::vector<Entity*>& entities);
 
-
-  // Return the current number of objects from the entities list
-  int getNumberOfObjects(std::vector<Entity*>& entities);
-
 protected:
   // Return the model matrix for all the objects
   glm::mat4* getObjectModels(std::vector<Entity*> &entities);
   
   // Return the opaque data for all the objects
   glm::mat4* getObjectOpaqueData(std::vector<Entity*>& entities);
-
-  size_t dynamic_alignment_;
-  size_t opaque_dynamic_alignment_;
 
 
 };

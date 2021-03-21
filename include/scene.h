@@ -42,7 +42,9 @@ public:
   // draw(), will be needed, or it will get the entities and do the commands from them
   // Or should it be a command like in suffer engine which draws the thing with its components and things
 
-  std::vector<Entity*> getEntities();
+	std::vector<Entity*> getEntities();
+  // Return the current number of objects from the entities list
+	int getNumberOfObjects();
 
 private:
   const char* name_;

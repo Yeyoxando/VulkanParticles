@@ -1,6 +1,6 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 08/01/2020
+ *  Date: 08/01/2021
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
@@ -9,14 +9,15 @@
 
 // ------------------------------------------------------------------------- //
 
-#include "vulkan/vulkan.h"
-#include "../src/internal/internal_commands.h"
+#include <vulkan/vulkan.h>
 
 #include <stdexcept>
 
-// ------------------------------------------------------------------------- //
+#include "../src/internal/internal_commands.h"
 
-static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags properties);
+// ------------------------------------------------------------------------- //
+// --------------------------------- BASE ---------------------------------- //
+// ------------------------------------------------------------------------- //
 
 class GPUResource {
 public:
@@ -27,6 +28,8 @@ public:
 
 };
 
+// ------------------------------------------------------------------------- //
+// -------------------------------- BUFFERS -------------------------------- //
 // ------------------------------------------------------------------------- //
 
 class Buffer : public GPUResource {
@@ -122,6 +125,8 @@ public:
 
 };
 
+// ------------------------------------------------------------------------- //
+// --------------------------------- IMAGE --------------------------------- //
 // ------------------------------------------------------------------------- //
 
 class Image : public GPUResource {
@@ -283,7 +288,7 @@ public:
   }
 
 
-
+  // Vulkan resources
   ImageType image_type_;
 
   VkImage image_;
@@ -297,47 +302,7 @@ public:
 };
 
 // ------------------------------------------------------------------------- //
-
-class Material : public GPUResource {
-public:
-  Material() { material_id_ = -1; }
-  ~Material() {}
-
-
-  // maybe it would be better with ids, as these things will be created in the internal file
-  // so they could be in an array or something like the buffers
-
-	VkPipeline graphics_pipeline_; // uses the descSet layout
-	VkPipelineLayout pipeline_layout_; // defines the layout of the descriptor set layouts on the pipeline
-	
-  int material_id_;
-
-};
-
 // ------------------------------------------------------------------------- //
-
-// ------------------------------------------------------------------------- //
-
-// ------------------------------------------------------------------------- //
-
-static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t type_filter, VkMemoryPropertyFlags properties) {
-
-  // Request supported memory properties from the graphics card
-  VkPhysicalDeviceMemoryProperties mem_properties;
-  vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_properties);
-
-  // Find a suitable memory type (Mask memory type bit and property flags)
-  for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-    if (type_filter & (1 << i) &&
-      (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
-      return i;
-    }
-  }
-
-  throw std::runtime_error("Failed to find a suitable memory type.");
-
-}
-
 // ------------------------------------------------------------------------- //
 
 #endif // __INTERNAL_GPU_RESOURCES_H__

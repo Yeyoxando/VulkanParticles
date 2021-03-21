@@ -13,6 +13,7 @@
 #include "vulkan_utils.h"
 #include "systems/system_draw_objects.h"
 #include "../src/internal/internal_gpu_resources.h"
+#include "../src/internal/internal_materials.h"
 
 #include <GLFW/glfw3.h>
 
@@ -23,7 +24,7 @@
 
 // ------------------------------------------------------------------------- //
 
-struct SceneUBO {
+/*struct SceneUBO {
 	glm::mat4 view;
 	glm::mat4 projection;
 };
@@ -35,12 +36,11 @@ struct ModelsUBO {
 struct OpaqueUBO {
   glm::mat4* packed_uniforms = nullptr;
 };
-/*
-struct TranslucentUBO{
-	glm::vec4 color;
-	// Textures should be bind on these sets
-}
 
+struct TranslucentUBO {
+  glm::mat4* packed_uniforms = nullptr;
+};*/
+/*
 // Special UBO for the lights, as they are the same for all objects
 struct LightsUBO{
 	// Will contain a limited number of lights data
@@ -108,7 +108,7 @@ struct ParticleEditor::AppData {
 
   // ----- SPECIFIC UBOS SETTINGS-----
   // - Scene UBO -
-	VkDescriptorSetLayout scene_descriptor_set_layout_; 
+	/*VkDescriptorSetLayout scene_descriptor_set_layout_; 
 	VkDescriptorPool scene_descriptor_pool_; 
 	std::vector<VkDescriptorSet> scene_descriptor_sets_; // one per swap chain image.
 	std::vector<Buffer*> scene_uniform_buffers_; // one per swap chain image.
@@ -126,9 +126,21 @@ struct ParticleEditor::AppData {
 	VkDescriptorPool opaque_descriptor_pool_;
 	std::vector<VkDescriptorSet> opaque_descriptor_sets_; // one per swap chain image.
 	std::vector<Buffer*> opaque_uniform_buffers_; // one per swap chain image.
-	OpaqueUBO opaque_ubo_;
+	OpaqueUBO opaque_ubo_;*/
 
-  // TranslucentUBO/Particles
+	// - Transparent Models UBO -
+	/*VkDescriptorSetLayout t_models_descriptor_set_layout_;
+	VkDescriptorPool t_models_descriptor_pool_;
+	std::vector<VkDescriptorSet> t_models_descriptor_sets_; // one per swap chain image.
+	std::vector<Buffer*> t_models_uniform_buffers_; // one per swap chain image.
+	ModelsUBO t_models_ubo_;
+
+	// - TranslucentUBO/Particles -
+	VkDescriptorSetLayout translucent_descriptor_set_layout_;
+	VkDescriptorPool translucent_descriptor_pool_;
+	std::vector<VkDescriptorSet> translucent_descriptor_sets_; // one per swap chain image.
+	std::vector<Buffer*> translucent_uniform_buffers_; // one per swap chain image.
+	TranslucentUBO translucent_ubo_;*/
 
 
 // --------------- METHODS ---------------
@@ -201,8 +213,6 @@ struct ParticleEditor::AppData {
 
 
   // ----- Helper functions -----
-	// Create a shader module with the given bytecode
-	VkShaderModule createShaderModule(const std::vector<char>& bytecode);
 	// Handles layout transitions
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
  
@@ -216,47 +226,13 @@ struct ParticleEditor::AppData {
 	// Creates the index buffers using the internal geometries and loaded models
 	void setupIndexBuffers();
 
-	// - MATERIALS / TEXTURES -
-	// Creates the internal material parents and set their values
-	void setupMaterials();
+	// - TEXTURES -
 	// Creates all the texture images marked for load
 	void createTextureImages();
 
-  // - DESCRIPTOR SETS AND BUFFERS -
-	// Creates the descriptor layout to upload uniforms to the shader
-	void createDescriptorSetLayouts();
-	// Creates the pipeline layout for the different graphics pipelines
-	void createPipelineLayouts();
-	// Creates a default graphic pipeline for opaque objects with vertex and fragment shaders
-	void createGraphicsPipelines();
-	// Creates a descriptor pool to allocate the descriptor sets for the uniforms
-	void createDescriptorPools();
-  // Initialize uniform buffers and descriptor sets 
-  void initializeDescriptorSets();
-  
-  // Creates the uniform buffers for a material
-	void createSceneUniformBuffers(std::vector<Buffer*>& buffers);
-	// Creates the uniform dynamic buffers for a material
-	void createModelDynamicUniformBuffers(std::vector<Buffer*>& buffers);
-	// Creates the uniform dynamic buffers for a opaque material
-	void createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers);
-	// Updates the scene uniform buffer
-	void updateUniformBuffer(SceneUBO ubo, Buffer* buffer);
-	// Updates the object models buffer
-	void updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer);
-	// Updates a uniform opaque buffer
-	void updateUniformBuffer(OpaqueUBO ubo, int objects, Buffer* buffer);
-	// Updates a uniform translucent buffer
-	//void updateUniformBuffer(TranslucentUBO ubo, Buffer* buffer);
-  // Clean up the uniform buffers independent from their origin
-  void cleanUniformBuffers(std::vector<Buffer*>& buffers_);
-
-  // Populates the descriptor set for the scene
-  void populateSceneDescriptorSets();
-  // Populates the descriptor set for the objects models
-	void populateModelsDescriptorSets();
-	// Populates the descriptor set for the objects opaque pipeline uniforms and textures
-	void populateOpaqueDescriptorSets();
+	// - MATERIALS -
+	// Creates the internal material parents and set their values
+	void setupMaterials();
 
 };
 

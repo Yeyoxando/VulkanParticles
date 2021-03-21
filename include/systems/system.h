@@ -21,7 +21,6 @@ public:
   System();
   virtual ~System();
 
-protected:
   // Check if the entity has the components required by the system
   bool hasRequiredComponents(Entity* entity);
   
@@ -32,6 +31,7 @@ protected:
   void setRequiredArchetype(Entity::Archetype archetype);
 
 
+protected:
   std::vector<Component::ComponentKind> required_components_;
 
 };

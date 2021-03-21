@@ -22,12 +22,21 @@
 
 /*
 TODO (ordered):
+	- pack all the ubo thing into a class with its functionality
+  - fix translucent pipeline transparency borders
+  - add a simple directional light and a specular texture to the opaque material
+  - take a look to the command buffer construction, if objects are ordered it can be done only one bind pipeline,
+     or only one bind vertex and idx (combined with packed vertex buffers for normal objects
+     not needed for particles as they are all going to be quads
+
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
+
   - implement radix sort    
+
   - add a callback for the scene update to customize it from the outside as a scripting method
   - clean everything and made a little example (add node system?)
-  - Move Vulkan things to internal app (material, etc)
+
   - finished step 2
 
   - start step 3 -> min to do for the submission (Complete principal objectives, Modular DOD-Vulkan)

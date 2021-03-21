@@ -33,6 +33,7 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 
 			auto mesh = static_cast<ComponentMesh*>(entities[i]->getComponent(Component::kComponentKind_Mesh));
 			auto material = static_cast<ComponentMaterial*>(entities[i]->getComponent(Component::kComponentKind_Material));
+			auto material_parent = app_data->materials_[material->getID()];
 
 			// Vertex and index buffers
 			VkBuffer vertex_buffers[] = {
@@ -44,26 +45,27 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 
 			// Bind pipeline
 			vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				app_data->materials_[material->getID()]->graphics_pipeline_);
+				material_parent->graphics_pipeline_);
 
-			uint32_t dynamic_offset = index * static_cast<uint32_t>(dynamic_alignment_);
-			uint32_t opaque_dynamic_offset = index * static_cast<uint32_t>(opaque_dynamic_alignment_);
+			uint32_t dynamic_offset = index * static_cast<uint32_t>(material_parent->models_dynamic_alignment_);
+			uint32_t opaque_dynamic_offset = index * static_cast<uint32_t>(material_parent->specific_dynamic_alignment_);
 			// Bind descriptor set (update is not here)
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				app_data->materials_[material->getID()]->pipeline_layout_, 
-				0, 1, &app_data->scene_descriptor_sets_[cmd_buffer_image], 0, nullptr);
+				material_parent->pipeline_layout_, 
+				0, 1, &material_parent->scene_descriptor_sets_[cmd_buffer_image], 0, nullptr);
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				app_data->materials_[material->getID()]->pipeline_layout_, 
-				1, 1, &app_data->models_descriptor_sets_[cmd_buffer_image], 1, &dynamic_offset);
+				material_parent->pipeline_layout_,
+				1, 1, &material_parent->models_descriptor_sets_[cmd_buffer_image], 1, &dynamic_offset);
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				app_data->materials_[material->getID()]->pipeline_layout_, 
-				2, 1, &app_data->opaque_descriptor_sets_[cmd_buffer_image], 1, &opaque_dynamic_offset);
+				material_parent->pipeline_layout_,
+				2, 1, &material_parent->specific_descriptor_sets_[cmd_buffer_image], 1, &opaque_dynamic_offset);
 				
 			// Draw
 			vkCmdDrawIndexed(cmd_buffer,
 				app_data->index_buffers_[mesh->getID()]->data_count_, 1, 0, 0, 0);
 
 			++index;
+
 		}
 	}
 
@@ -73,41 +75,21 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 
 void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Entity*> &entities){
 
-	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
+	auto material_parent = ParticleEditor::instance().app_data_->materials_[0];
 
 	// Scene ubo only got updated when camera moves
 	//Map memory to GPU
-	app_data->updateUniformBuffer(app_data->scene_ubo_, app_data->scene_uniform_buffers_[current_image]);
+	material_parent->updateSceneUBO(current_image);
 
 	// Update model matrices
-	app_data->models_ubo_.models = getObjectModels(entities);
-
+	material_parent->models_ubo_.models = getObjectModels(entities);
 	// Map the memory from the CPU to GPU
-	app_data->updateUniformBuffer(app_data->models_ubo_, getNumberOfObjects(entities), 
-		app_data->models_uniform_buffers_[current_image]);
+	material_parent->updateModelsUBO(current_image);
 
 	// Update per object uniforms and textures
-	app_data->opaque_ubo_.packed_uniforms = getObjectOpaqueData(entities);
-
+	material_parent->specific_ubo_.packed_uniforms = getObjectOpaqueData(entities);
 	// Map the memory from the CPU to GPU
-	app_data->updateUniformBuffer(app_data->opaque_ubo_, getNumberOfObjects(entities),
-		app_data->opaque_uniform_buffers_[current_image]);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-int SystemDrawObjects::getNumberOfObjects(std::vector<Entity*>& entities){
-
-	int objects = 0;
-
-	for (auto entity : entities) {
-		if (hasRequiredComponents(entity)) {
-			objects++;
-		}
-	}
-
-	return objects;
+	material_parent->updateSpecificUBO(current_image);
 
 }
 
@@ -118,6 +100,7 @@ glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
 	glm::mat4* model_mat = nullptr;
+	auto material_parent = app_data->materials_[0];
 	int index = 0;
 
 	// store all the objects models matrices
@@ -128,7 +111,8 @@ glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 				(entity->getComponent(Component::ComponentKind::kComponentKind_Transform));
 
 			// Do the dynamic offset things
-			model_mat = (glm::mat4*)(((uint64_t)app_data->models_ubo_.models + (index * dynamic_alignment_)));
+			model_mat = (glm::mat4*)(((uint64_t)material_parent->models_ubo_.models + 
+				(index * material_parent->models_dynamic_alignment_)));
 
 			// Update matrices
 			*model_mat = transform->getModelMatrix();
@@ -138,7 +122,7 @@ glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 		}
 	}
 
-	model_mat = (glm::mat4*)((uint64_t)app_data->models_ubo_.models);
+	model_mat = (glm::mat4*)((uint64_t)material_parent->models_ubo_.models);
 
 	return model_mat;
 
@@ -151,6 +135,7 @@ glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
 	glm::mat4* packed_uniforms = nullptr;
+	auto material_parent = app_data->materials_[0];
 	glm::mat4 aux = glm::mat4(0.0f);
 	int index = 0;
 
@@ -169,7 +154,8 @@ glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities
 			aux[1] = opaque_data->getTextureIDs();
 
 			// Do the dynamic offset things
-			packed_uniforms = (glm::mat4*)(((uint64_t)app_data->opaque_ubo_.packed_uniforms + (index * opaque_dynamic_alignment_)));
+			packed_uniforms = (glm::mat4*)(((uint64_t)material_parent->specific_ubo_.packed_uniforms
+				+ (index * material_parent->specific_dynamic_alignment_)));
 
 			// Update uniforms
 			*packed_uniforms = aux;
@@ -179,7 +165,7 @@ glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities
 		}
 	}
 
-	packed_uniforms = (glm::mat4*)((uint64_t)app_data->opaque_ubo_.packed_uniforms);
+	packed_uniforms = (glm::mat4*)((uint64_t)material_parent->specific_ubo_.packed_uniforms);
 
 	return packed_uniforms;
 

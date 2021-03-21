@@ -90,6 +90,9 @@ private:
 
   // Friends to access app_data
 	friend class Camera;
+	friend class Material;
+	friend class OpaqueMaterial;
+	friend class TranslucentMaterial;
 	friend class ComponentMesh;
 	friend class ComponentMaterial;
 	friend class SystemDrawObjects;
@@ -99,7 +102,8 @@ private:
 // ------------------------------------------------------------------------- //
 
 
- /* Notes Other classes to create
+ /* Notes
+ Other classes to create
 
 Editor
  - ImGUI

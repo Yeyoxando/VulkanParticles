@@ -65,10 +65,6 @@ ParticleEditor::AppData::AppData() {
 
 ParticleEditor::AppData::~AppData(){
 
-  for (int i = 0; i < materials_.size(); i++) {
-    delete materials_[i];
-  }
-
   delete system_draw_objects_;
 
 }
@@ -106,9 +102,12 @@ void ParticleEditor::AppData::initVulkan() {
   createSwapChain();
   createRenderPass();
   setupMaterials();
-  createDescriptorSetLayouts();
-  createPipelineLayouts();
-  createGraphicsPipelines();
+  for (int i = 0; i < materials_.size(); ++i) {
+    if (window_width_ == 0 || window_height_ == 0) break;
+    materials_[i]->createDescriptorSetLayout();
+    materials_[i]->createPipelineLayout();
+    materials_[i]->createGraphicPipeline();
+  }
   createCommandPool();
   createColorResources();
   createDepthResources();
@@ -117,8 +116,11 @@ void ParticleEditor::AppData::initVulkan() {
   setupVertexBuffers();
 	setupIndexBuffers();
 	loadModels();
-	createDescriptorPools();
-	initializeDescriptorSets();
+  for (int i = 0; i < materials_.size(); ++i) {
+    if (window_width_ == 0 || window_height_ == 0) break;
+    materials_[i]->createDescriptorPools();
+    materials_[i]->initDescriptorSets();
+  }
   createCommandBuffers();
   createSyncObjects();
 
@@ -145,11 +147,10 @@ void ParticleEditor::AppData::closeVulkan() {
     delete texture_images_[i];
   }
 
-
-  vkDestroyDescriptorSetLayout(logical_device_, scene_descriptor_set_layout_, nullptr);
-  vkDestroyDescriptorSetLayout(logical_device_, models_descriptor_set_layout_, nullptr);
-  vkDestroyDescriptorSetLayout(logical_device_, opaque_descriptor_set_layout_, nullptr);
-
+  for (int i = 0; i < materials_.size(); i++) {
+    materials_[i]->deleteMaterialResources();
+    delete materials_[i];
+  }
 
   for (int i = 0; i < index_buffers_.size(); i++) {
     index_buffers_[i]->clean(logical_device_);
@@ -513,398 +514,6 @@ void ParticleEditor::AppData::createRenderPass() {
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::createDescriptorSetLayouts() {
-
-  // COMMON 
-  // (Scene descriptor set layout)
-	VkDescriptorSetLayoutBinding vp_ubo_layout_binding{};
-	vp_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	vp_ubo_layout_binding.binding = 0;
-	vp_ubo_layout_binding.descriptorCount = 1;
-	vp_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	vp_ubo_layout_binding.pImmutableSamplers = nullptr;
-
-	VkDescriptorSetLayoutCreateInfo dsl_scene_create_info{};
-	dsl_scene_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_scene_create_info.bindingCount = 1;
-	dsl_scene_create_info.pBindings = &vp_ubo_layout_binding;
-
-	if (vkCreateDescriptorSetLayout(logical_device_, &dsl_scene_create_info, nullptr, &scene_descriptor_set_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to create scene descriptor set layout.");
-	}
-
-  // (Models descriptor set layout)
-	VkDescriptorSetLayoutBinding models_ubo_layout_binding{};
-	models_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	models_ubo_layout_binding.binding = 0;
-	models_ubo_layout_binding.descriptorCount = 1;
-	models_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	models_ubo_layout_binding.pImmutableSamplers = nullptr;
-
-	VkDescriptorSetLayoutCreateInfo dsl_models_create_info{};
-	dsl_models_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	dsl_models_create_info.bindingCount = 1;
-	dsl_models_create_info.pBindings = &models_ubo_layout_binding;
-
-	if (vkCreateDescriptorSetLayout(logical_device_, &dsl_models_create_info, nullptr, &models_descriptor_set_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create models descriptor set layout.");
-	}
-
-
-
-  // MATERIAL OPAQUE
-  // Create the binding for the vertex shader MVP matrices
-  VkDescriptorSetLayoutBinding opaque_ubo_layout_binding{};
-  opaque_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-  opaque_ubo_layout_binding.binding = 0;
-  opaque_ubo_layout_binding.descriptorCount = 1;
-  opaque_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-  opaque_ubo_layout_binding.pImmutableSamplers = nullptr;
-
-  VkDescriptorSetLayoutBinding sampler_layout_binding{};
-  sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  sampler_layout_binding.binding = 1;
-  sampler_layout_binding.descriptorCount = loaded_textures_.size();
-  sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-  sampler_layout_binding.pImmutableSamplers = nullptr;
-
-  // Create the descriptor set layout
-  std::array<VkDescriptorSetLayoutBinding, 2> opaque_bindings = { opaque_ubo_layout_binding, sampler_layout_binding };
-
-  VkDescriptorSetLayoutCreateInfo opaque_create_info{};
-  opaque_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  opaque_create_info.bindingCount = static_cast<uint32_t>(opaque_bindings.size());
-  opaque_create_info.pBindings = opaque_bindings.data();
-
-  if (vkCreateDescriptorSetLayout(logical_device_, &opaque_create_info, nullptr, &opaque_descriptor_set_layout_) != VK_SUCCESS) {
-    throw std::runtime_error("\nFailed to create opaque descriptor set layout.");
-  }
-
-
-
-  // MATERIAL TRANSLUCENT
-	/*// Create the binding for the vertex shader MVP matrices
-	VkDescriptorSetLayoutBinding translucent_ubo_layout_binding{};
-	translucent_ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	translucent_ubo_layout_binding.binding = 0;
-	translucent_ubo_layout_binding.descriptorCount = 1;
-	translucent_ubo_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	translucent_ubo_layout_binding.pImmutableSamplers = nullptr;
-
-	// Create the descriptor set layout
-	std::array<VkDescriptorSetLayoutBinding, 2> translucent_bindings = { translucent_ubo_layout_binding, sampler_layout_binding };
-
-	VkDescriptorSetLayoutCreateInfo translucent_create_info{};
-	translucent_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	translucent_create_info.bindingCount = static_cast<uint32_t>(translucent_bindings.size());
-	translucent_create_info.pBindings = translucent_bindings.data();
-
-	if (vkCreateDescriptorSetLayout(logical_device_, &translucent_create_info, nullptr, &materials_[1]->descriptor_set_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create translucent descriptor set layout.");
-	}*/
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::createPipelineLayouts(){
-
-	// OPAQUE MATERIAL PIPELINE LAYOUT
-  std::array<VkDescriptorSetLayout, 3> opaque_descriptor_set_layouts{ 
-    scene_descriptor_set_layout_, models_descriptor_set_layout_, 
-    opaque_descriptor_set_layout_
-  };
-
-  VkPipelineLayoutCreateInfo opaque_layout_info{};
-	opaque_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	opaque_layout_info.setLayoutCount = static_cast<uint32_t>(opaque_descriptor_set_layouts.size());
-	opaque_layout_info.pSetLayouts = opaque_descriptor_set_layouts.data();
-	opaque_layout_info.pushConstantRangeCount = 0;
-	opaque_layout_info.pPushConstantRanges = nullptr;
-
-	if (vkCreatePipelineLayout(logical_device_, &opaque_layout_info, nullptr, &materials_[0]->pipeline_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create opaque pipeline layout.");
-	}
-
-
-
-	// TRANSLUCENT MATERIAL PIPELINE LAYOUT
-	std::array<VkDescriptorSetLayout, 3> translucent_descriptor_set_layouts{
-		scene_descriptor_set_layout_, models_descriptor_set_layout_,
-		opaque_descriptor_set_layout_
-	};
-
-	VkPipelineLayoutCreateInfo translucent_layout_info{};
-	translucent_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  translucent_layout_info.setLayoutCount = static_cast<uint32_t>(translucent_descriptor_set_layouts.size());
-	translucent_layout_info.pSetLayouts = translucent_descriptor_set_layouts.data();
-	translucent_layout_info.pushConstantRangeCount = 0;
-	translucent_layout_info.pPushConstantRanges = nullptr;
-
-	if (vkCreatePipelineLayout(logical_device_, &translucent_layout_info, nullptr, &materials_[1]->pipeline_layout_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create translucent pipeline layout.");
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::createGraphicsPipelines() {
-
-  if (window_width_ == 0 || window_height_ == 0) return;
-
-  // OPAQUE MATERIAL PIPELINE
-
-  // Load shaders
-  auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_default.spv");
-  auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_default.spv");
-
-  VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
-  VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
-
-  
-  VkPipelineShaderStageCreateInfo vert_shader_stage_info{};
-  vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-  vert_shader_stage_info.module = vert_shader_module;
-  vert_shader_stage_info.pName = "main";
-  vert_shader_stage_info.pSpecializationInfo = nullptr; // Constants can be defined here
-  
-  // Fragment shader num textures constant
-  VkSpecializationMapEntry entry{};
-  entry.constantID = 0;
-  entry.offset = 0;
-  entry.size = sizeof(int32_t);
-  VkSpecializationInfo spec_info{};
-  spec_info.mapEntryCount = 1;
-  spec_info.pMapEntries = &entry;
-  spec_info.dataSize = sizeof(uint32_t);
-  uint32_t data = loaded_textures_.size();
-  spec_info.pData = &data;
-
-  VkPipelineShaderStageCreateInfo frag_shader_stage_info{};
-  frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-  frag_shader_stage_info.module = frag_shader_module;
-  frag_shader_stage_info.pName = "main";
-  frag_shader_stage_info.pSpecializationInfo = &spec_info; // Constants can be defined here
-
-  VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
-
-  // Set vertex input format
-  auto binding_desc = Vertex::getBindingDescription();
-  auto attribute_desc = Vertex::getAttributeDescription();
-
-  VkPipelineVertexInputStateCreateInfo vertex_input_info{};
-  vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertex_input_info.vertexBindingDescriptionCount = 1;
-  vertex_input_info.pVertexBindingDescriptions = &binding_desc;
-  vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_desc.size());
-  vertex_input_info.pVertexAttributeDescriptions = attribute_desc.data();
-
-  // Set input assembly settings
-  VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
-  input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-  input_assembly_info.primitiveRestartEnable = VK_FALSE; // True to use index buffers with triangle strip
-
-  // Create viewport area to draw
-  VkViewport viewport{};
-  viewport.x = 0.0f;
-  viewport.y = 0.0f;
-  viewport.width = (float)swap_chain_extent_.width;
-  viewport.height = (float)swap_chain_extent_.height;
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-
-  // Create scissor rectangle with extent size
-  VkRect2D scissor{};
-  scissor.offset = { 0, 0 };
-  scissor.extent = swap_chain_extent_;
-
-  VkPipelineViewportStateCreateInfo viewport_state_info{};
-  viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-  viewport_state_info.viewportCount = 1;
-  viewport_state_info.pViewports = &viewport;
-  viewport_state_info.scissorCount = 1;
-  viewport_state_info.pScissors = &scissor;
-
-  // Create the rasterizer settings
-  VkPipelineRasterizationStateCreateInfo rasterizer_state_info{};
-  rasterizer_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-  rasterizer_state_info.depthClampEnable = VK_FALSE;
-  rasterizer_state_info.rasterizerDiscardEnable = VK_FALSE;
-  rasterizer_state_info.polygonMode = VK_POLYGON_MODE_FILL; // Line to draw wire frame but require a GPU feature
-  rasterizer_state_info.lineWidth = 1.0f;
-  rasterizer_state_info.cullMode = VK_CULL_MODE_BACK_BIT;
-  rasterizer_state_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Turned counter-clockwise due to glm y clip flip on the projection matrix
-  rasterizer_state_info.depthBiasEnable = VK_FALSE;
-  rasterizer_state_info.depthBiasClamp = 0.0f;
-  rasterizer_state_info.depthBiasConstantFactor = 0.0f;
-  rasterizer_state_info.depthBiasSlopeFactor = 0.0f;
-
-  // Create multi sampling settings
-  VkPipelineMultisampleStateCreateInfo multisample_state_info{};
-  multisample_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-  multisample_state_info.sampleShadingEnable = VK_FALSE;
-  multisample_state_info.rasterizationSamples = msaa_samples_;
-  multisample_state_info.minSampleShading = 1.0f;
-  multisample_state_info.pSampleMask = nullptr;
-  multisample_state_info.alphaToCoverageEnable = VK_FALSE;
-  multisample_state_info.alphaToOneEnable = VK_FALSE;
-
-  // Create depth and stencil settings for the framebuffer
-  VkPipelineDepthStencilStateCreateInfo depth_stencil_info{};
-  depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-  depth_stencil_info.depthTestEnable = VK_TRUE;
-  depth_stencil_info.depthWriteEnable = VK_TRUE;
-  depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
-  depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
-  depth_stencil_info.minDepthBounds = 0.0f;
-  depth_stencil_info.maxDepthBounds = 1.0f;
-  depth_stencil_info.stencilTestEnable = VK_FALSE;
-  depth_stencil_info.front = {};
-  depth_stencil_info.back = {};
-
-  // Create color blend settings
-  VkPipelineColorBlendAttachmentState color_blend_attachment{};
-  color_blend_attachment.blendEnable = VK_FALSE;
-  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-  color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-  // Alpha blending
-  color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-  color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-  color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-  color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-    VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-  VkPipelineColorBlendStateCreateInfo blend_state_info{};
-  blend_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  blend_state_info.logicOpEnable = VK_FALSE;
-  blend_state_info.logicOp = VK_LOGIC_OP_COPY;
-  blend_state_info.attachmentCount = 1;
-  blend_state_info.pAttachments = &color_blend_attachment;
-  /*blend_state_info.blendConstants[0] = 0.0f;
-  blend_state_info.blendConstants[1] = 0.0f;
-  blend_state_info.blendConstants[2] = 0.0f;
-  blend_state_info.blendConstants[3] = 0.0f;*/
-
-  // Create dynamic settings of the pipeline
-  VkDynamicState dynamic_states[] = {
-    VK_DYNAMIC_STATE_VIEWPORT,
-    VK_DYNAMIC_STATE_LINE_WIDTH,
-  };
-
-  VkPipelineDynamicStateCreateInfo dynamic_state_info{};
-  dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamic_state_info.dynamicStateCount = 2;
-  dynamic_state_info.pDynamicStates = dynamic_states;
-
-  // Create the actual graphics pipeline
-  VkGraphicsPipelineCreateInfo opaque_pipeline_info{};
-  opaque_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  opaque_pipeline_info.stageCount = 2;
-  opaque_pipeline_info.pStages = shader_stages;
-  opaque_pipeline_info.pVertexInputState = &vertex_input_info;
-  opaque_pipeline_info.pInputAssemblyState = &input_assembly_info;
-  opaque_pipeline_info.pViewportState = &viewport_state_info;
-  opaque_pipeline_info.pRasterizationState = &rasterizer_state_info;
-  opaque_pipeline_info.pMultisampleState = &multisample_state_info;
-  opaque_pipeline_info.pDepthStencilState = &depth_stencil_info;
-  opaque_pipeline_info.pColorBlendState = &blend_state_info;
-  opaque_pipeline_info.pDynamicState = nullptr;
-  opaque_pipeline_info.layout = materials_[0]->pipeline_layout_;
-  opaque_pipeline_info.renderPass = render_pass_;
-  opaque_pipeline_info.subpass = 0;
-  opaque_pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // derive from other graphics pipeline with flags VK_PIPELINE_CREATE_DERIVATIVE_BIT
-  opaque_pipeline_info.basePipelineIndex = -1;
-
-  if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &opaque_pipeline_info,
-    nullptr, &materials_[0]->graphics_pipeline_) != VK_SUCCESS) {
-    throw std::runtime_error("\nFailed to create the opaque graphics pipeline.");
-  }
-
-
-  // TRANSLUCENT MATERIAL PIPELINE
-  // Modification of the 1st one
-
-  // Shaders
-  vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_billboard.spv");
-  VkShaderModule billboard_vert_shader_module = createShaderModule(vert_shader_code);
-  // Add billboard fragment shader
-
-	VkPipelineShaderStageCreateInfo billboard_shader_stage_info = vert_shader_stage_info;
-	billboard_shader_stage_info.module = billboard_vert_shader_module;
-
-  VkPipelineShaderStageCreateInfo billboard_shader_stages[] = { billboard_shader_stage_info, frag_shader_stage_info };
-
-  // Blend
-	VkPipelineColorBlendAttachmentState translucent_color_blend_attachment = color_blend_attachment;
-  translucent_color_blend_attachment.blendEnable = VK_TRUE;
-	translucent_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-	translucent_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	translucent_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-	translucent_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	translucent_color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	translucent_color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-  translucent_color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-  
-	VkPipelineColorBlendStateCreateInfo translucent_blend_state_info = blend_state_info;
-  translucent_blend_state_info.pAttachments = &translucent_color_blend_attachment;
-
-  // Depth
-	VkPipelineDepthStencilStateCreateInfo translucent_depth_stencil_info = depth_stencil_info;
-	translucent_depth_stencil_info.depthTestEnable = VK_FALSE;
-
-	// MSAA
-	//VkPipelineMultisampleStateCreateInfo translucent_multisample_state_info = multisample_state_info;
-  //translucent_multisample_state_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-
-  // Translucent pipeline
-	VkGraphicsPipelineCreateInfo translucent_pipeline_info = opaque_pipeline_info;
-  translucent_pipeline_info.stageCount = 2;
-  translucent_pipeline_info.pStages = billboard_shader_stages;
-	translucent_pipeline_info.layout = materials_[1]->pipeline_layout_;
-  translucent_pipeline_info.pColorBlendState = &translucent_blend_state_info;
-  translucent_pipeline_info.pDepthStencilState = &translucent_depth_stencil_info;
-  //translucent_pipeline_info.pMultisampleState = &translucent_multisample_state_info;
-
-	if (vkCreateGraphicsPipelines(logical_device_, VK_NULL_HANDLE, 1, &translucent_pipeline_info,
-		nullptr, &materials_[1]->graphics_pipeline_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create the translucent graphics pipeline.");
-	}
-
-  // Destroy shader modules as they're not used anymore
-  vkDestroyShaderModule(logical_device_, vert_shader_module, nullptr);
-  vkDestroyShaderModule(logical_device_, billboard_vert_shader_module, nullptr);
-  vkDestroyShaderModule(logical_device_, frag_shader_module, nullptr);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-VkShaderModule ParticleEditor::AppData::createShaderModule(const std::vector<char>& bytecode) {
-
-  VkShaderModuleCreateInfo create_info{};
-  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  create_info.codeSize = bytecode.size();
-  create_info.pCode = reinterpret_cast<const uint32_t*>(bytecode.data());
-
-  VkShaderModule shader_module;
-
-  if (vkCreateShaderModule(logical_device_, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-    throw std::runtime_error("\nFailed to create the shader module.");
-  }
-
-  return shader_module;
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void ParticleEditor::AppData::createFramebuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -1178,99 +787,6 @@ void ParticleEditor::AppData::createIndexBuffer(std::vector<uint32_t>& indices) 
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::createDescriptorPools() {
-
-  // COMMON DESCRIPTOR POOLS 
-  // Scene
-  VkDescriptorPoolSize scene_pool_size{};
-  scene_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  scene_pool_size.descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-
-	VkDescriptorPoolCreateInfo scene_dp_create_info{};
-	scene_dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	scene_dp_create_info.poolSizeCount = 1;
-	scene_dp_create_info.pPoolSizes = &scene_pool_size;
-	scene_dp_create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
-	
-  if (vkCreateDescriptorPool(logical_device_, &scene_dp_create_info, nullptr, &scene_descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create scene descriptor pool.");
-	}
-
-  // Models
-	VkDescriptorPoolSize models_pool_size{};
-  models_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-  models_pool_size.descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-
-	VkDescriptorPoolCreateInfo models_dp_create_info{};
-	models_dp_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	models_dp_create_info.poolSizeCount = 1;
-	models_dp_create_info.pPoolSizes = &models_pool_size;
-	models_dp_create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
-
-	if (vkCreateDescriptorPool(logical_device_, &models_dp_create_info, nullptr, &models_descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create models descriptor pool.");
-	}
-
-
-
-  // OPAQUE MATERIAL DESCRIPTOR POOL
-  // Create descriptor pool info
-  int num_textures = loaded_textures_.size();
-  std::vector<VkDescriptorPoolSize> pool_sizes = std::vector<VkDescriptorPoolSize>(1 + num_textures);
-  pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-	pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-  for (int i = 1; i < num_textures + 1; ++i) {
-    pool_sizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    pool_sizes[i].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-  }
-
-  VkDescriptorPoolCreateInfo create_info{};
-  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  create_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
-  create_info.pPoolSizes = pool_sizes.data();
-  create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());
-
-  if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &opaque_descriptor_pool_) != VK_SUCCESS) {
-    throw std::runtime_error("\nFailed to create opaque descriptor pool.");
-  }
-
-
-
-	// TRANSLUCENT MATERIAL DESCRIPTOR POOL
-	// Create descriptor pool info
-	/*std::array<VkDescriptorPoolSize, 2> pool_sizes{};
-	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pool_sizes[0].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_sizes[1].descriptorCount = static_cast<uint32_t>(swap_chain_images_.size());
-
-	VkDescriptorPoolCreateInfo create_info{};
-	create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	create_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
-	create_info.pPoolSizes = pool_sizes.data();
-	create_info.maxSets = static_cast<uint32_t>(swap_chain_images_.size());*/
-
-	/*if (vkCreateDescriptorPool(logical_device_, &create_info, nullptr, &materials_[1]->descriptor_pool_) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create translucent descriptor pool.");
-	}*/
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::initializeDescriptorSets(){
-
-	createSceneUniformBuffers(scene_uniform_buffers_);
-	createModelDynamicUniformBuffers(models_uniform_buffers_);
-	createOpaqueDynamicUniformBuffers(opaque_uniform_buffers_);
-	populateSceneDescriptorSets();
-	populateModelsDescriptorSets();
-	populateOpaqueDescriptorSets();
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void ParticleEditor::AppData::createCommandBuffers() {
 
   if (window_width_ == 0 || window_height_ == 0) return;
@@ -1492,13 +1008,19 @@ void ParticleEditor::AppData::recreateSwapChain() {
 
   createSwapChain();
 	createRenderPass();
-	createPipelineLayouts();
-  createGraphicsPipelines();
+  for (int i = 0; i < materials_.size(); i++) {
+    if (window_width_ == 0 || window_height_ == 0) break;
+    materials_[i]->createPipelineLayout();
+    materials_[i]->createGraphicPipeline();
+  }
   createColorResources();
   createDepthResources();
   createFramebuffers();
-  createDescriptorPools();
-  initializeDescriptorSets();
+  for (int i = 0; i < materials_.size(); i++) {
+    if (window_width_ == 0 || window_height_ == 0) break;
+    materials_[i]->createDescriptorPools();
+    materials_[i]->initDescriptorSets();
+  }
   createCommandBuffers();
 
 }
@@ -1525,25 +1047,11 @@ void ParticleEditor::AppData::cleanupSwapChain() {
   
   // Pipelines and all related to them
   for (int i = 0; i < materials_.size(); i++) {
-    vkDestroyPipeline(logical_device_, materials_[i]->graphics_pipeline_, nullptr);
-    vkDestroyPipelineLayout(logical_device_, materials_[i]->pipeline_layout_, nullptr);
+    materials_[i]->cleanMaterialResources();
   }
-  vkDestroyDescriptorPool(logical_device_, scene_descriptor_pool_, nullptr);
-  vkDestroyDescriptorPool(logical_device_, models_descriptor_pool_, nullptr);
-  vkDestroyDescriptorPool(logical_device_, opaque_descriptor_pool_, nullptr);
 
   // Render pass
   vkDestroyRenderPass(logical_device_, render_pass_, nullptr);
-
-  // Buffers
-	cleanUniformBuffers(scene_uniform_buffers_);
-	scene_descriptor_sets_.clear();
-
-	cleanUniformBuffers(models_uniform_buffers_);
-	models_descriptor_sets_.clear();
-	
-  cleanUniformBuffers(opaque_uniform_buffers_);
-	opaque_descriptor_sets_.clear();
 
   // Swap chain image views
   for (int i = 0; i < swap_chain_images_.size(); i++) {
@@ -1653,307 +1161,6 @@ void ParticleEditor::AppData::transitionImageLayout(VkImage image, VkFormat form
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::createSceneUniformBuffers(std::vector<Buffer*>& buffers) {
-
-	if (window_width_ == 0 || window_height_ == 0) return;
-
-  buffers.resize(swap_chain_images_.size());
-
-	VkDeviceSize buffer_size = sizeof(SceneUBO);
-
-	for (int i = 0; i < swap_chain_images_.size(); i++) {
-    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
-    buffers[i]->create(physical_device_, logical_device_, buffer_size,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    buffers[i]->map(logical_device_, buffer_size);
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::createModelDynamicUniformBuffers(std::vector<Buffer*>& buffers){
-
-	if (window_width_ == 0 || window_height_ == 0) return;
-
-  buffers.resize(swap_chain_images_.size());
-
-  // Return false if a requested feature is not supported
-	VkPhysicalDeviceProperties device_properties;
-	vkGetPhysicalDeviceProperties(physical_device_, &device_properties);
-
-  // Calculate required alignment  for the ubo based on minimum device offset alignment
-	size_t min_ubo_alignment = device_properties.limits.minUniformBufferOffsetAlignment;
-  system_draw_objects_->dynamic_alignment_ = sizeof(glm::mat4);
-	if (min_ubo_alignment > 0) {
-    system_draw_objects_->dynamic_alignment_ = (system_draw_objects_->dynamic_alignment_ +
-      min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
-	}
-
-  // Number of 3D objects * dynamic alignment
-	size_t buffer_size = system_draw_objects_->getNumberOfObjects(ParticleEditor::instance().getScene()->getEntities()) *
-    system_draw_objects_->dynamic_alignment_;
-
-  // Allocate the memory for the ubo
-  models_ubo_.models = (glm::mat4*)alignedAlloc(buffer_size, 
-    system_draw_objects_->dynamic_alignment_);
-  if (models_ubo_.models == nullptr) {
-    throw std::runtime_error("\nFailed to allocate dynamic uniform buffer.");
-  }
-
-	// Uniform buffer object with per-object matrices
-	for (int i = 0; i < swap_chain_images_.size(); i++) {
-    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
-    buffers[i]->create(physical_device_, logical_device_, buffer_size,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    buffers[i]->map(logical_device_, buffer_size);
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::createOpaqueDynamicUniformBuffers(std::vector<Buffer*>& buffers){
-
-	if (window_width_ == 0 || window_height_ == 0) return;
-
-  buffers.resize(swap_chain_images_.size());
-
-	// Return false if a requested feature is not supported
-	VkPhysicalDeviceProperties device_properties;
-	vkGetPhysicalDeviceProperties(physical_device_, &device_properties);
-
-	// Calculate required alignment  for the ubo based on minimum device offset alignment
-	size_t min_ubo_alignment = device_properties.limits.minUniformBufferOffsetAlignment;
-	system_draw_objects_->opaque_dynamic_alignment_ = sizeof(glm::mat4);
-	if (min_ubo_alignment > 0) {
-		system_draw_objects_->opaque_dynamic_alignment_ = (system_draw_objects_->opaque_dynamic_alignment_ +
-			min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
-	}
-
-	// Number of 3D objects * dynamic alignment
-	size_t buffer_size = system_draw_objects_->getNumberOfObjects(ParticleEditor::instance().getScene()->getEntities()) *
-		system_draw_objects_->opaque_dynamic_alignment_;
-
-	// Allocate the memory for the ubo (First half of the ubo)
-	opaque_ubo_.packed_uniforms = (glm::mat4*)alignedAlloc(buffer_size,
-		system_draw_objects_->opaque_dynamic_alignment_);
-	if (opaque_ubo_.packed_uniforms == nullptr) {
-		throw std::runtime_error("\nFailed to allocate color dynamic uniform buffer.");
-	}
-
-	// Uniform buffer object with per-object matrices
-	for (int i = 0; i < swap_chain_images_.size(); i++) {
-    buffers[i] = new Buffer(Buffer::kBufferType_Uniform);
-    buffers[i]->create(physical_device_, logical_device_, buffer_size,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    buffers[i]->map(logical_device_, buffer_size);
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::updateUniformBuffer(SceneUBO ubo, Buffer* buffer) {
-
-	memcpy(buffer->mapped_memory_, &ubo, sizeof(ubo));
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::updateUniformBuffer(ModelsUBO ubo, int objects, Buffer* buffer) {
-
-  uint32_t size = objects * system_draw_objects_->dynamic_alignment_;
-
-	for (int i = 0; i < objects; ++i) {
-		// Do the dynamic offset things
-		uint32_t offset = (i * system_draw_objects_->dynamic_alignment_);
-    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)buffer->mapped_memory_ + offset));
-		glm::mat4* model = (glm::mat4*)(((uint64_t)ubo.models + offset));
-		memcpy((void*)mem_offset, *(&model), system_draw_objects_->dynamic_alignment_);
-	}
-
-  // Flush to make changes visible to the host if visible host flag is not set
-  /*VkMappedMemoryRange memoryRange = vks::initializers::mappedMemoryRange();
-  memoryRange.memory = uniformBuffers.dynamic.memory;
-  memoryRange.size = uniformBuffers.dynamic.size;
-  vkFlushMappedMemoryRanges(device, 1, &memoryRange);*/
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::updateUniformBuffer(OpaqueUBO ubo, int objects, Buffer* buffer){
-
-  uint32_t size = objects * system_draw_objects_->opaque_dynamic_alignment_;
-
-  for (int i = 0; i < objects; ++i) {
-    // Do the dynamic offset things
-    uint64_t offset = (i * system_draw_objects_->opaque_dynamic_alignment_);
-    glm::mat4* mem_offset = (glm::mat4*)(((uint64_t)buffer->mapped_memory_ + offset));
-    glm::mat4* packed_uniform = (glm::mat4*)(((uint64_t)ubo.packed_uniforms + offset));
-	  memcpy((void*)mem_offset, *(&packed_uniform), system_draw_objects_->opaque_dynamic_alignment_);
-  }
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::cleanUniformBuffers(std::vector<Buffer*>& buffers_){
-
-	for (int i = 0; i < swap_chain_images_.size(); i++) {
-    buffers_[i]->unmap(logical_device_);
-    buffers_[i]->clean(logical_device_);
-		delete buffers_[i];
-	}
-
-  buffers_.clear();
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::populateSceneDescriptorSets() {
-
-	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), scene_descriptor_set_layout_);
-	VkDescriptorSetAllocateInfo allocate_info{};
-	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocate_info.descriptorPool = scene_descriptor_pool_;
-	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
-	allocate_info.pSetLayouts = descriptor_set_layouts.data();
-
-	scene_descriptor_sets_.resize(swap_chain_images_.size());
-	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, scene_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create scene descriptor sets.");
-	}
-
-
-	for (int i = 0; i < scene_descriptor_sets_.size(); i++) {
-		VkDescriptorBufferInfo buffer_info{};
-		buffer_info.buffer = scene_uniform_buffers_[i]->buffer_;
-		buffer_info.offset = 0;
-		buffer_info.range = sizeof(SceneUBO);
-
-		VkWriteDescriptorSet write_descriptor{};
-		write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor.dstSet = scene_descriptor_sets_[i];
-		write_descriptor.dstBinding = 0;
-		write_descriptor.dstArrayElement = 0;
-		write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_descriptor.descriptorCount = 1;
-		write_descriptor.pBufferInfo = &buffer_info;
-		write_descriptor.pImageInfo = nullptr; // Image data
-		write_descriptor.pTexelBufferView = nullptr; // Buffer views
-
-		vkUpdateDescriptorSets(logical_device_, 1, &write_descriptor, 0, nullptr);
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::populateModelsDescriptorSets() {
-
-	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), models_descriptor_set_layout_);
-	VkDescriptorSetAllocateInfo allocate_info{};
-	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocate_info.descriptorPool = models_descriptor_pool_;
-	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
-	allocate_info.pSetLayouts = descriptor_set_layouts.data();
-
-	models_descriptor_sets_.resize(swap_chain_images_.size());
-	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, models_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create models descriptor sets.");
-	}
-
-
-	for (int i = 0; i < models_descriptor_sets_.size(); i++) {
-		VkDescriptorBufferInfo buffer_info{};
-		buffer_info.buffer = models_uniform_buffers_[i]->buffer_;
-		buffer_info.offset = 0;
-    buffer_info.range = system_draw_objects_->dynamic_alignment_;
-
-		VkWriteDescriptorSet write_descriptor{};
-		write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor.dstSet = models_descriptor_sets_[i];
-		write_descriptor.dstBinding = 0;
-		write_descriptor.dstArrayElement = 0;
-		write_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		write_descriptor.descriptorCount = 1;
-		write_descriptor.pBufferInfo = &buffer_info;
-		write_descriptor.pImageInfo = nullptr; // Image data
-		write_descriptor.pTexelBufferView = nullptr; // Buffer views
-
-		vkUpdateDescriptorSets(logical_device_, 1, &write_descriptor, 0, nullptr);
-	}
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ParticleEditor::AppData::populateOpaqueDescriptorSets() {
-
-	std::vector<VkDescriptorSetLayout> descriptor_set_layouts(swap_chain_images_.size(), opaque_descriptor_set_layout_);
-	VkDescriptorSetAllocateInfo allocate_info{};
-	allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocate_info.descriptorPool = opaque_descriptor_pool_;
-	allocate_info.descriptorSetCount = static_cast<uint32_t>(swap_chain_images_.size());
-	allocate_info.pSetLayouts = descriptor_set_layouts.data();
-
-	opaque_descriptor_sets_.resize(swap_chain_images_.size());
-	if (vkAllocateDescriptorSets(logical_device_, &allocate_info, opaque_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create opaque descriptor sets.");
-	}
-
-
-	for (int i = 0; i < opaque_descriptor_sets_.size(); i++) {
-		VkDescriptorBufferInfo buffer_info{};
-		buffer_info.buffer = opaque_uniform_buffers_[i]->buffer_;
-		buffer_info.offset = 0;
-		buffer_info.range = system_draw_objects_->opaque_dynamic_alignment_;
-
-    const int num_textures = loaded_textures_.size();
-    std::vector<VkDescriptorImageInfo> image_info = std::vector<VkDescriptorImageInfo>(num_textures);
-    for (int j = 0; j < num_textures; ++j) {
-      image_info[j] = {};
-			image_info[j].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			image_info[j].imageView = ParticleEditor::instance().app_data_->
-				texture_images_[j]->image_view_;
-			image_info[j].sampler = ParticleEditor::instance().app_data_->
-				texture_images_[j]->texture_sampler_;
-    }
-
-    std::array<VkWriteDescriptorSet, 2> write_descriptors{};
-		write_descriptors[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptors[0].dstSet = opaque_descriptor_sets_[i];
-		write_descriptors[0].dstBinding = 0;
-		write_descriptors[0].dstArrayElement = 0;
-		write_descriptors[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		write_descriptors[0].descriptorCount = 1;
-		write_descriptors[0].pBufferInfo = &buffer_info;
-		write_descriptors[0].pImageInfo = nullptr; // Image data
-		write_descriptors[0].pTexelBufferView = nullptr; // Buffer views
-
-		write_descriptors[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptors[1].dstSet = opaque_descriptor_sets_[i];
-		write_descriptors[1].dstBinding = 1;
-		write_descriptors[1].dstArrayElement = 0;
-		write_descriptors[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write_descriptors[1].descriptorCount = num_textures;
-		write_descriptors[1].pBufferInfo = nullptr; // Buffer data
-		write_descriptors[1].pImageInfo = image_info.data();
-		write_descriptors[1].pTexelBufferView = nullptr; // Buffer views
-
-		vkUpdateDescriptorSets(logical_device_, static_cast<uint32_t>(write_descriptors.size()),
-			write_descriptors.data(), 0, nullptr);
-	}
-
-}
-
 // ------------------------------------------------------------------------- //
 
 void ParticleEditor::AppData::setupVertexBuffers(){
@@ -1999,17 +1206,16 @@ void ParticleEditor::AppData::setupIndexBuffers(){
 
 void ParticleEditor::AppData::setupMaterials(){
 
-  Material* opaque_material = new Material();
-  opaque_material->material_id_ = 0;
-
+  OpaqueMaterial* opaque_material = new OpaqueMaterial();
+  opaque_material->setInternalReferences(&logical_device_, &physical_device_,
+    static_cast<uint32_t>(swap_chain_images_.size()));
   materials_.push_back(opaque_material);
-  
-  
-  Material* translucent_material = new Material();
-  translucent_material->material_id_ = 1;
-
+  /*
+  TranslucentMaterial* translucent_material = new TranslucentMaterial();
+  translucent_material->setInternalReferences(&logical_device_, &physical_device_,
+    static_cast<uint32_t>(swap_chain_images_.size()));
   materials_.push_back(translucent_material);
-
+  */
 }
 
 // ------------------------------------------------------------------------- //

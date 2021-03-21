@@ -67,9 +67,13 @@ void Camera::updateViewMatrix() {
 
 
   ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
-	// Fill the ubo with the updated data
-  app_data->scene_ubo_.view = view_;
-  app_data->scene_ubo_.projection = projection_;
+
+	// Fill the ubos with the updated data
+  auto materials = app_data->materials_;
+  for (int i = 0; i < materials.size(); ++i) {
+    materials[i]->scene_ubo_.view = view_;
+    materials[i]->scene_ubo_.projection = projection_;
+  }
 
 }
 
@@ -108,9 +112,12 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
-	// Fill the ubo with the updated data
-	app_data->scene_ubo_.view = view_;
-	app_data->scene_ubo_.projection = projection_;
+	// Fill the ubos with the updated data
+	auto materials = app_data->materials_;
+	for (int i = 0; i < materials.size(); ++i) {
+		materials[i]->scene_ubo_.view = view_;
+		materials[i]->scene_ubo_.projection = projection_;
+	}
 
 }
 
