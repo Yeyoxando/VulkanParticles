@@ -22,24 +22,28 @@
 
 /*
 TODO (ordered):
-	- pack all the ubo thing into a class with its functionality
+  - create a translucent material for objects first and prepare everyhing for particles, even also radix sort
   - fix translucent pipeline transparency borders
-  - add a simple directional light and a specular texture to the opaque material
-  - take a look to the command buffer construction, if objects are ordered it can be done only one bind pipeline,
-     or only one bind vertex and idx (combined with packed vertex buffers for normal objects
-     not needed for particles as they are all going to be quads
+  - take a look to the command buffer construction, if objects are ordered it can be done
+    only one bind pipeline,
 
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
 
   - implement radix sort    
 
-  - add a callback for the scene update to customize it from the outside as a scripting method
-  - clean everything and made a little example (add node system?)
+  - Extra
+    - add texture tiling to opaque mat
+	  - add an update component with a callback to customize it from the outside as a scripting method
+		- only one bind vertex and idx (packed vertex buffers for normal objects)
+		  (not needed for particles as they are all going to be quads)
+	  - add a simple directional light and a specular texture to the opaque material
+    - node system?
 
+  - clean everything and made a little example
   - finished step 2
 
-  - start step 3 -> min to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
+  - start step 3 -> minimum to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
 
 */
 
@@ -65,7 +69,7 @@ int main(){
 
     // Load a model
     mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-    //mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
+    //mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
     // Get material component
@@ -101,7 +105,7 @@ int main(){
 
 		// Load a model
 		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-		//mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
+		//mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
 		// Get material component
@@ -128,7 +132,8 @@ int main(){
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(scenery3->getComponent(Component::kComponentKind_Transform));
 		// z, x, y
-		transform->translate(glm::vec3(0.0f, 0.0f, -1.6f));
+		transform->translate(glm::vec3(0.0f, 0.0f, -0.1f));
+		transform->scale(glm::vec3(5.0f, 5.0f, 1.0f));
 
 
 		// Get mesh component
@@ -136,8 +141,8 @@ int main(){
 			(scenery3->getComponent(Component::kComponentKind_Mesh));
 
 		// Load a model
-		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-		//mesh->loadDefaultMesh(BasicPSApp::DefaultMesh::kDefaultMesh_Quad);
+		//mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
 		// Get material component
@@ -149,7 +154,8 @@ int main(){
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/numerical_grid.jpg");
+    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(scenery3);
@@ -157,7 +163,7 @@ int main(){
 
 
   // Particle system creation and setting
-  /*Entity* particle_system = new Entity();
+  Entity* particle_system = new Entity();
   {
     particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
     
@@ -168,7 +174,7 @@ int main(){
     ps->init(500);
 
     scene->addEntity(particle_system);
-  }*/
+  }
   
   
 

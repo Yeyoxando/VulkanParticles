@@ -24,32 +24,6 @@
 
 // ------------------------------------------------------------------------- //
 
-/*struct SceneUBO {
-	glm::mat4 view;
-	glm::mat4 projection;
-};
-
-struct ModelsUBO {
-  glm::mat4* models = nullptr;
-};
-
-struct OpaqueUBO {
-  glm::mat4* packed_uniforms = nullptr;
-};
-
-struct TranslucentUBO {
-  glm::mat4* packed_uniforms = nullptr;
-};*/
-/*
-// Special UBO for the lights, as they are the same for all objects
-struct LightsUBO{
-	// Will contain a limited number of lights data
-  // For the moment start with one directional in the scene
-}
-*/
-
-// ------------------------------------------------------------------------- //
-
 // All data used in the application, including Vulkan instance and resources
 // Some Vulkan helper functionalities are extracted in "vulkan_utils.h" and "internal_gpu_resources.h"
 struct ParticleEditor::AppData {
@@ -102,46 +76,10 @@ struct ParticleEditor::AppData {
   std::vector<Buffer*> index_buffers_;
 	std::map<int, const char*> loaded_models_;
 
-  std::vector<Material*> materials_;
   std::vector<Image*> texture_images_;
 	std::map<int, const char*> loaded_textures_;
 
-  // ----- SPECIFIC UBOS SETTINGS-----
-  // - Scene UBO -
-	/*VkDescriptorSetLayout scene_descriptor_set_layout_; 
-	VkDescriptorPool scene_descriptor_pool_; 
-	std::vector<VkDescriptorSet> scene_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> scene_uniform_buffers_; // one per swap chain image.
-	SceneUBO scene_ubo_;
-
-  // - Models UBO -
-	VkDescriptorSetLayout models_descriptor_set_layout_;
-	VkDescriptorPool models_descriptor_pool_;
-	std::vector<VkDescriptorSet> models_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> models_uniform_buffers_; // one per swap chain image.
-  ModelsUBO models_ubo_;
-
-	// - Opaque UBO -
-	VkDescriptorSetLayout opaque_descriptor_set_layout_;
-	VkDescriptorPool opaque_descriptor_pool_;
-	std::vector<VkDescriptorSet> opaque_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> opaque_uniform_buffers_; // one per swap chain image.
-	OpaqueUBO opaque_ubo_;*/
-
-	// - Transparent Models UBO -
-	/*VkDescriptorSetLayout t_models_descriptor_set_layout_;
-	VkDescriptorPool t_models_descriptor_pool_;
-	std::vector<VkDescriptorSet> t_models_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> t_models_uniform_buffers_; // one per swap chain image.
-	ModelsUBO t_models_ubo_;
-
-	// - TranslucentUBO/Particles -
-	VkDescriptorSetLayout translucent_descriptor_set_layout_;
-	VkDescriptorPool translucent_descriptor_pool_;
-	std::vector<VkDescriptorSet> translucent_descriptor_sets_; // one per swap chain image.
-	std::vector<Buffer*> translucent_uniform_buffers_; // one per swap chain image.
-	TranslucentUBO translucent_ubo_;*/
-
+  std::vector<Material*> materials_;
 
 // --------------- METHODS ---------------
 

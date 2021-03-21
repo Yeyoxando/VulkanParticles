@@ -182,16 +182,16 @@ public:
 	TranslucentMaterial();
 	virtual ~TranslucentMaterial();
 
-	//
+	// Creates the descriptor layouts for translucent material to upload uniforms to the shader
 	virtual void createDescriptorSetLayout() override;
 	// Creates a pipeline layout for the translucent graphics pipeline 
 	virtual void createPipelineLayout() override;
 	// Creates a graphic pipeline for translucent objects
 	virtual void createGraphicPipeline() override;
-	//
+	// Creates a descriptor pool to allocate the descriptor sets for the translucent material uniforms
 	virtual void createDescriptorPools() override;
 
-	//
+	// Updates the object specific translucent dynamic buffer
 	virtual void updateSpecificUBO(int buffer_id) override;
 
 	// Clean up the translucent uniform buffers
@@ -202,9 +202,9 @@ public:
 	virtual void deleteMaterialResources() override;
 
 protected:
-	//
+	// Creates the translucent uniform dynamic buffers
 	virtual void createSpecificUniformBuffers() override;
-	//
+	// Populates the descriptor set for the opaque pipeline uniforms and textures
 	virtual void populateSpecificDescriptorSets() override;
 
 };

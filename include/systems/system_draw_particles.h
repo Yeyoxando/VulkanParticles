@@ -22,15 +22,18 @@ public:
 	SystemDrawParticles();
 	~SystemDrawParticles();
 
-	// It will create one command and it will add it to the current command buffer containing all the particles
-	void drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*>& entities);
+	// It will create one command and it will add it to the current command buffer containing all the objects
+	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
 
-	// Updates the uniform buffer where particles are rendered (max particles set somewhere)
-	void updateDynamicBuffer(std::vector<Entity*>& entities);
+	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
+	void updateUniformBuffers(int current_image, std::vector<Entity*>& entities);
 
 protected:
-	// Return the model matrix for all the particles
-	std::vector<glm::mat4> getObjectModels(std::vector<Entity*>& entities); // It'll be used for dynamic buffers
+	// Return the model matrix for all the objects
+	glm::mat4* getObjectModels(std::vector<Entity*>& entities);
+
+	// Return the translucent data for all the objects
+	glm::mat4* getObjectTranslucentData(std::vector<Entity*>& entities);
 
 };
 

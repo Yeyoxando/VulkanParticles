@@ -22,7 +22,8 @@ SystemDrawObjects::SystemDrawObjects(){
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities) {
+void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
+	std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 	int index = 0;
@@ -31,8 +32,10 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 	for (int i = 0; i < entities.size(); i++) {
 		if (hasRequiredComponents(entities[i])) {
 
-			auto mesh = static_cast<ComponentMesh*>(entities[i]->getComponent(Component::kComponentKind_Mesh));
-			auto material = static_cast<ComponentMaterial*>(entities[i]->getComponent(Component::kComponentKind_Material));
+			auto mesh = static_cast<ComponentMesh*>(entities[i]->
+				getComponent(Component::kComponentKind_Mesh));
+			auto material = static_cast<ComponentMaterial*>(entities[i]->
+				getComponent(Component::kComponentKind_Material));
 			auto material_parent = app_data->materials_[material->getID()];
 
 			// Vertex and index buffers
@@ -47,8 +50,11 @@ void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer
 			vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				material_parent->graphics_pipeline_);
 
-			uint32_t dynamic_offset = index * static_cast<uint32_t>(material_parent->models_dynamic_alignment_);
-			uint32_t opaque_dynamic_offset = index * static_cast<uint32_t>(material_parent->specific_dynamic_alignment_);
+			uint32_t dynamic_offset = index * static_cast<uint32_t>
+				(material_parent->models_dynamic_alignment_);
+			uint32_t opaque_dynamic_offset = index * static_cast<uint32_t>
+				(material_parent->specific_dynamic_alignment_);
+
 			// Bind descriptor set (update is not here)
 			vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				material_parent->pipeline_layout_, 
@@ -145,7 +151,8 @@ glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities
 		
 			auto material = static_cast<ComponentMaterial*>
 				(entity->getComponent(Component::ComponentKind::kComponentKind_Material));
-			auto opaque_data = static_cast<ComponentMaterial::OpaqueData*>(material->getInstanceData());
+			auto opaque_data = static_cast<ComponentMaterial::OpaqueData*>
+				(material->getInstanceData());
 
 			// Update color
 			aux[0] = opaque_data->color_;

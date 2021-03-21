@@ -18,17 +18,8 @@ SystemDrawParticles::SystemDrawParticles(){
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawParticles::drawObjectsCommand(VkCommandBuffer cmd_buffer, std::vector<Entity*>& entities){
-
-	// Record all the draw commands needed for a 3D object
-
-	// The same on system draw objects
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void SystemDrawParticles::updateDynamicBuffer(std::vector<Entity*>& entities){
+void SystemDrawParticles::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
+	std::vector<Entity*>& entities){
 
 
 
@@ -36,14 +27,25 @@ void SystemDrawParticles::updateDynamicBuffer(std::vector<Entity*>& entities){
 
 // ------------------------------------------------------------------------- //
 
-std::vector<glm::mat4> SystemDrawParticles::getObjectModels(std::vector<Entity*>& entities){
+void SystemDrawParticles::updateUniformBuffers(int current_image, std::vector<Entity*>& entities) {
 
-	//for all the particle systems
 
-	//will store all the particles models matrices in a vector
-	std::vector<glm::mat4> models = std::vector<glm::mat4>(0);
 
-	return models;
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::mat4* SystemDrawParticles::getObjectModels(std::vector<Entity*>& entities) {
+
+	return nullptr;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::mat4* SystemDrawParticles::getObjectTranslucentData(std::vector<Entity*>& entities) {
+
+	return nullptr;
 
 }
 

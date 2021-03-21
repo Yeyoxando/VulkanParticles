@@ -19,18 +19,16 @@
 
 // ------------------------------------------------------------------------- //
 
-struct ModelsUBO;
-
-// ------------------------------------------------------------------------- //
-
 class SystemDrawObjects : public System{
   friend class ParticleEditor::AppData;
 public:
   SystemDrawObjects();
   ~SystemDrawObjects();
 
-  // It will create one command and it will add it to the current command buffer containing all the objects
-	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
+  // It will create one command and it will add it to the current command buffer 
+  // containing all the objects
+	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
+    std::vector<Entity*>& entities);
 
 	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
 	void updateUniformBuffers(int current_image, std::vector<Entity*>& entities);
@@ -41,7 +39,6 @@ protected:
   
   // Return the opaque data for all the objects
   glm::mat4* getObjectOpaqueData(std::vector<Entity*>& entities);
-
 
 };
 

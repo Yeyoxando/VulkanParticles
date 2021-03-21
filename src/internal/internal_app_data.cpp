@@ -1210,12 +1210,12 @@ void ParticleEditor::AppData::setupMaterials(){
   opaque_material->setInternalReferences(&logical_device_, &physical_device_,
     static_cast<uint32_t>(swap_chain_images_.size()));
   materials_.push_back(opaque_material);
-  /*
+  
   TranslucentMaterial* translucent_material = new TranslucentMaterial();
   translucent_material->setInternalReferences(&logical_device_, &physical_device_,
     static_cast<uint32_t>(swap_chain_images_.size()));
   materials_.push_back(translucent_material);
-  */
+  
 }
 
 // ------------------------------------------------------------------------- //
