@@ -9,9 +9,9 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include "input.h"
-#include "camera.h"
-#include "scene.h"
+#include "engine/input.h"
+#include "engine/camera.h"
+#include "engine/scene.h"
 
 // ------------------------------------------------------------------------- //
 
@@ -33,14 +33,14 @@ public:
 	// Main base app instance, use it to run the editor
 	static ParticleEditor& instance();
 
-  // Correspond to internal vertex and index buffers for these geometries
+  // Correspond to engine_internal vertex and index buffers for these geometries
 	enum DefaultMesh {
 		kDefaultMesh_Quad = 0,
 		kDefaultMesh_Cube = 1,
 		// ...
 	};
 
-  // Correspond to internal material which have a pipeline and a descriptor set associated
+  // Correspond to engine_internal material which have a pipeline and a descriptor set associated
   enum MaterialParent {
     kMaterialParent_Opaque = 0,
     kMaterialParent_Translucent = 1,
@@ -96,6 +96,7 @@ private:
 	friend class ComponentMesh;
 	friend class ComponentMaterial;
 	friend class SystemDrawObjects;
+	friend class SystemDrawTranslucents;
 
 };
 

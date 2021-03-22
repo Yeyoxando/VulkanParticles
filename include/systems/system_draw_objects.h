@@ -1,6 +1,6 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 09/01/2020
+ *  Date: 09/01/2021
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
@@ -20,7 +20,6 @@
 // ------------------------------------------------------------------------- //
 
 class SystemDrawObjects : public System{
-  friend struct ParticleEditor::AppData;
 public:
   SystemDrawObjects();
   ~SystemDrawObjects();
@@ -39,6 +38,10 @@ protected:
   
   // Return the opaque data for all the objects
   glm::mat4* getObjectOpaqueData(std::vector<Entity*>& entities);
+
+
+
+  friend struct ParticleEditor::AppData;
 
 };
 

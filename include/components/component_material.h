@@ -23,8 +23,6 @@ public:
 	// Not usable, base for the material instance data
 	// This is the material instance (data correspond to its parent descriptor set layout)
   struct MaterialData {
-    friend struct ParticleEditor::AppData;
-    friend class SystemDrawObjects;
   public: 
 
     int getParentID() { return parent_id_; }
@@ -32,9 +30,14 @@ public:
   
 		int parent_id_;
     MaterialData() { parent_id_ = -1; }
-    virtual ~MaterialData();
+		virtual ~MaterialData();
+
+		glm::vec4 color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	  std::vector<int> texture_ids_; // textures array, identified later on the specific shader
 
+
+		friend struct ParticleEditor::AppData;
+  
   };
 
   // User can create one to set new material instance values for an opaque material
@@ -47,8 +50,6 @@ public:
     // void loadNormalMap
 
     virtual glm::vec4 getTextureIDs() override;
-
-    glm::vec4 color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	};
 

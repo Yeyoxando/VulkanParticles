@@ -44,7 +44,7 @@ project "ParticleEditor"
 
 	includedirs{
 	  "./include/",
-	  "./src/internal/",
+	  "./src/engine_internal/",
 	  "C:/Program Files/VulkanSDK/1.2.162.0/Include/",
 	  "C:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
 	  "C:/VSLibraries/glm/",
@@ -57,8 +57,8 @@ project "ParticleEditor"
 		--ParticleEditor
 		"./include/**.h",
 		"./src/**.cpp",
-		"./src/internal/**.h",
-		"./src/internal/**.cpp",
+		"./src/engine_internal/**.h",
+		"./src/engine_internal/**.cpp",
 		"./tests/**.cpp", 
 		"./resources/**.vert", 
 		"./resources/**.frag", 

@@ -1,16 +1,16 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 19/03/2020
+ *  Date: 19/03/2021
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
  // ------------------------------------------------------------------------- //
 
 #include "internal_materials.h"
-#include "vulkan_utils.h"
+#include "engine/vulkan_utils.h"
 
-#include "../src/internal/internal_gpu_resources.h"
-#include "../src/internal/internal_app_data.h"
+#include "../src/engine_internal/internal_gpu_resources.h"
+#include "../src/engine_internal/internal_app_data.h"
 
 // ------------------------------------------------------------------------- //
 // ----------------------------- MATERIAL BASE ----------------------------- //
@@ -115,8 +115,10 @@ void Material::createModelsUniformBuffers() {
 	}
 
 	// Number of 3D objects * dynamic alignment
-	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects() *
+	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_) *
 		models_dynamic_alignment_;
+	if (buffer_size == 0) buffer_size = 1; // prevent errors if there aren't objects of this kind
+
 
 	// Allocate the memory for the ubo
 	models_ubo_.models = (glm::mat4*)alignedAlloc(buffer_size, models_dynamic_alignment_);
@@ -225,7 +227,7 @@ void Material::updateSceneUBO(int buffer_id) {
 
 void Material::updateModelsUBO(int buffer_id) {
 
-	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects();
+	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_);
 	uint32_t size = objects * models_dynamic_alignment_;
 
 	for (int i = 0; i < objects; ++i) {
@@ -667,8 +669,9 @@ void OpaqueMaterial::createSpecificUniformBuffers() {
 	}
 
 	// Number of 3D objects * dynamic alignment
-	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects() *
+	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_) *
 		specific_dynamic_alignment_;
+	if (buffer_size == 0) buffer_size = 1; // prevent errors if there aren't objects of this kind
 
 	// Allocate the memory for the ubo (First half of the ubo)
 	specific_ubo_.packed_uniforms = (glm::mat4*)alignedAlloc(buffer_size, specific_dynamic_alignment_);
@@ -753,7 +756,7 @@ void OpaqueMaterial::populateSpecificDescriptorSets() {
 
 void OpaqueMaterial::updateSpecificUBO(int buffer_id) {
 
-	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects();
+	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_);
 	uint32_t size = objects * specific_dynamic_alignment_;
 
 	for (int i = 0; i < objects; ++i) {
@@ -1035,7 +1038,7 @@ void TranslucentMaterial::createGraphicPipeline() {
 	// Create depth and stencil settings for the framebuffer
 	VkPipelineDepthStencilStateCreateInfo translucent_depth_stencil_info{};
 	translucent_depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	translucent_depth_stencil_info.depthTestEnable = VK_FALSE;
+	translucent_depth_stencil_info.depthTestEnable = VK_TRUE;
 	translucent_depth_stencil_info.depthWriteEnable = VK_TRUE;
 	translucent_depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
 	translucent_depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
@@ -1048,7 +1051,7 @@ void TranslucentMaterial::createGraphicPipeline() {
 	// Create color blend settings
 	VkPipelineColorBlendAttachmentState translucent_color_blend_attachment{};
 	translucent_color_blend_attachment.blendEnable = VK_TRUE;
-	translucent_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	translucent_color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	translucent_color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	translucent_color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
 	translucent_color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -1063,10 +1066,10 @@ void TranslucentMaterial::createGraphicPipeline() {
 	translucent_blend_state_info.logicOp = VK_LOGIC_OP_COPY;
 	translucent_blend_state_info.attachmentCount = 1;
 	translucent_blend_state_info.pAttachments = &translucent_color_blend_attachment;
-	/*translucent_blend_state_info.blendConstants[0] = 0.0f;
+	translucent_blend_state_info.blendConstants[0] = 0.0f;
 	translucent_blend_state_info.blendConstants[1] = 0.0f;
 	translucent_blend_state_info.blendConstants[2] = 0.0f;
-	translucent_blend_state_info.blendConstants[3] = 0.0f;*/
+	translucent_blend_state_info.blendConstants[3] = 0.0f;
 
 	// Create dynamic settings of the pipeline
 	VkDynamicState dynamic_states[] = {
@@ -1186,8 +1189,9 @@ void TranslucentMaterial::createSpecificUniformBuffers() {
 	}
 
 	// Number of 3D objects * dynamic alignment
-	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects() *
+	size_t buffer_size = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_) *
 		specific_dynamic_alignment_;
+	if (buffer_size == 0) buffer_size = 1; // prevent errors if there aren't objects of this kind
 
 	// Allocate the memory for the ubo (First half of the ubo)
 	specific_ubo_.packed_uniforms = (glm::mat4*)alignedAlloc(buffer_size, specific_dynamic_alignment_);
@@ -1271,7 +1275,7 @@ void TranslucentMaterial::populateSpecificDescriptorSets() {
 
 void TranslucentMaterial::updateSpecificUBO(int buffer_id) {
 
-	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects();
+	uint32_t objects = ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_);
 	uint32_t size = objects * specific_dynamic_alignment_;
 
 	for (int i = 0; i < objects; ++i) {

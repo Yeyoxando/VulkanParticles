@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------- //
 
 #include "particle_editor.h"
-#include "internal/internal_app_data.h"
+#include "engine_internal/internal_app_data.h"
 
 // ------------------------------------------------------------------------- //
 

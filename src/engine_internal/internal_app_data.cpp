@@ -1,13 +1,13 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 07/01/2020
+ *  Date: 07/01/2021
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
 // ------------------------------------------------------------------------- //
 
 #include "particle_editor.h"
-#include "../src/internal/internal_app_data.h"
+#include "../src/engine_internal/internal_app_data.h"
 
 #include <stdexcept>
 
@@ -54,6 +54,7 @@ ParticleEditor::AppData::AppData() {
   close_window_ = false;
 
   system_draw_objects_ = new SystemDrawObjects();
+  system_draw_translucents_ = new SystemDrawTranslucents();
 
 }
 
@@ -62,6 +63,7 @@ ParticleEditor::AppData::AppData() {
 ParticleEditor::AppData::~AppData(){
 
   delete system_draw_objects_;
+  delete system_draw_translucents_;
 
 }
 
@@ -829,9 +831,12 @@ void ParticleEditor::AppData::createCommandBuffers() {
     // Begin recording the commands on the command buffer
     vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    // Call draw system to prepare the commands for all the entities
+    // Call draw systems to prepare the commands for all the entities
     system_draw_objects_->drawObjectsCommand(i, command_buffers_[i], 
-      ParticleEditor::instance().active_scene_->getEntities());
+      ParticleEditor::instance().active_scene_->getEntities(0)); // opaque entities
+
+		system_draw_translucents_->drawObjectsCommand(i, command_buffers_[i],
+			ParticleEditor::instance().active_scene_->getEntities(1)); // translucent entities
 
     // Finish recording commands
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -905,9 +910,12 @@ void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
   transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));*/
   time;
 
-  // Update the dynamic buffer using the draw system
+  // Update the dynamic buffer using the draw systems
   system_draw_objects_->updateUniformBuffers(current_image,
-    ParticleEditor::instance().active_scene_->getEntities());
+    ParticleEditor::instance().active_scene_->getEntities(0)); // opaque entities
+
+	system_draw_translucents_->updateUniformBuffers(current_image,
+		ParticleEditor::instance().active_scene_->getEntities(1)); // translucent entities
 
 }
 

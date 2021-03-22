@@ -7,8 +7,8 @@
  // ------------------------------------------------------------------------- //
 
 #include "components/component_material.h"
-#include "../src/internal/internal_app_data.h"
-#include "../src/internal/internal_gpu_resources.h"
+#include "../src/engine_internal/internal_app_data.h"
+#include "../src/engine_internal/internal_gpu_resources.h"
 
 #include <stdexcept>
 

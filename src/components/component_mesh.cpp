@@ -7,7 +7,7 @@
  // ------------------------------------------------------------------------- //
 
 #include "components/component_mesh.h"
-#include "../src/internal/internal_app_data.h"
+#include "../src/engine_internal/internal_app_data.h"
 
  // ------------------------------------------------------------------------- //
 
@@ -57,7 +57,7 @@ void ComponentMesh::loadMeshFromFile(const char* model_path){
 
 void ComponentMesh::loadDefaultMesh(ParticleEditor::DefaultMesh default_mesh){
 
-	// it will use one of the default geometries created in the internal resources
+	// it will use one of the default geometries created in the engine_internal resources
 	// simply use the parameter as id
 	mesh_buffer_id_ = (int)default_mesh;
 

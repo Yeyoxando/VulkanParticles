@@ -9,10 +9,22 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include <vector>
-
 #include "component.h"
-#include "particles_test/particle.h"
+
+#include <vector>
+#include <glm/glm.hpp>
+
+// ------------------------------------------------------------------------- //
+
+struct Particle {
+
+	glm::vec3 position_;
+	glm::vec3 velocity_;
+	float life_time_;
+	float distance_;
+	bool alive_;
+
+};
 
 // ------------------------------------------------------------------------- //
 
@@ -24,7 +36,7 @@ public:
 
 	// Setters for basic aspects
 
-	// It will use default internal mesh and material for now (quad and Billboard shader)
+	// It will use default engine_internal mesh and material for now (quad and Billboard shader)
 
 protected:
   ~ComponentParticleSystem();

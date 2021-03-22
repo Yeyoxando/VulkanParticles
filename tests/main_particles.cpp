@@ -6,7 +6,7 @@
  
 // ------------------------------------------------------------------------- // 
 
-#include "common_def.h"
+#include "engine/common_def.h"
 #ifdef MAIN_BILLBOARDS
 
 #include <iostream>
@@ -84,7 +84,7 @@ int main(){
     //opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
     mat->setInstanceData(opaque_instance_data);
 
-		scene->addEntity(scenery);
+		scene->addEntity(scenery, opaque_instance_data->getParentID());
   }
 
 
@@ -120,7 +120,7 @@ int main(){
     opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
     mat->setInstanceData(opaque_instance_data);
 
-		scene->addEntity(scenery2);
+		scene->addEntity(scenery2, opaque_instance_data->getParentID());
 	}
 
 
@@ -158,12 +158,46 @@ int main(){
     opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
-		scene->addEntity(scenery3);
+		scene->addEntity(scenery3, opaque_instance_data->getParentID());
+	}
+
+
+	Entity* translucent1 = new Entity();
+	{
+		translucent1->initAsArchetype(Entity::kArchetype_3DObject);
+
+		// Get transform component
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(translucent1->getComponent(Component::kComponentKind_Transform));
+		// z, x, y
+		transform->translate(glm::vec3(0.0f, 3.0f, 0.0f));
+
+
+		// Get mesh component
+		ComponentMesh* mesh = static_cast<ComponentMesh*>
+			(translucent1->getComponent(Component::kComponentKind_Mesh));
+		// Load a model
+		mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
+
+
+		// Get material component
+		ComponentMaterial* mat = static_cast<ComponentMaterial*>
+			(translucent1->getComponent(Component::kComponentKind_Material));
+		// Indicate material parent to internally set pipeline, descriptor set...
+		mat->setMaterialParent(ParticleEditor::kMaterialParent_Translucent);
+
+		// Create instance data
+		ComponentMaterial::TranslucentData* translucent_data = new ComponentMaterial::TranslucentData();
+		translucent_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		//translucent_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
+		mat->setInstanceData(translucent_data);
+
+		scene->addEntity(translucent1, translucent_data->getParentID());
 	}
 
 
   // Particle system creation and setting
-  Entity* particle_system = new Entity();
+  /*Entity* particle_system = new Entity();
   {
     particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
     
@@ -173,8 +207,8 @@ int main(){
     // Initialize particle system with max 500 particles
     ps->init(500);
 
-    scene->addEntity(particle_system);
-  }
+    scene->addEntity(particle_system, 2);
+  }*/
   
   
 
