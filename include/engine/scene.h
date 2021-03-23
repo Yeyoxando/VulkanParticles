@@ -39,7 +39,7 @@ public:
   // void removeEntity (Not for the moment due to dynamic buffers, until know how they work)
 
   void init();
-  void update();
+  void update(float time);
   // draw()?
 
   // Return a vector of the entities which contains the given material id

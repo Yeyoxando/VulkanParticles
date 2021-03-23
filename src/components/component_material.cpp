@@ -214,29 +214,3 @@ glm::vec4 ComponentMaterial::TranslucentData::getTextureIDs(){
 }
 
 // ------------------------------------------------------------------------- //
-
-ComponentMaterial::ParticlesData::ParticlesData(){
-
-	parent_id_ = 2;
-	texture_ids_ = std::vector<int>(1);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-void ComponentMaterial::ParticlesData::loadAlbedoTexture(const char* texture_path){
-
-	// stored id, and texture saved in singleton for loading them together later
-	texture_ids_[0] = loadTexture(texture_path);
-
-}
-
-// ------------------------------------------------------------------------- //
-
-glm::vec4 ComponentMaterial::ParticlesData::getTextureIDs(){
-
-	return glm::vec4(texture_ids_[0], -1, -1, -1);
-
-}
-
-// ------------------------------------------------------------------------- //

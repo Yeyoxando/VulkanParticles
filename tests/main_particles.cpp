@@ -196,18 +196,25 @@ int main(){
 
 
   // Particle system creation and setting
-  /*Entity* particle_system = new Entity();
+  Entity* particle_system = new Entity();
   {
     particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
     
+
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(translucent1->getComponent(Component::kComponentKind_Transform));
+		// z, x, y
+		transform->translate(glm::vec3(0.1f, 0.0f, 0.0f));
+
     // Get particle system component
     ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
       (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
-    ps->init(500);
+		ps->init(1, false);
+		ps->loadTexture("../../../resources/textures/smoke_texture_trasnparency.png");
 
-    scene->addEntity(particle_system, 2);
-  }*/
+    scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+  }
   
   
 

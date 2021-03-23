@@ -20,6 +20,8 @@ class ComponentMaterial : public Component{
 public:
   ComponentMaterial();
 
+
+
 	// Not usable, base for the material instance data
 	// This is the material instance (data correspond to its parent descriptor set layout)
   struct MaterialData {
@@ -40,8 +42,10 @@ public:
   
   };
 
+
+
   // User can create one to set new material instance values for an opaque material
-  struct OpaqueData : MaterialData{
+  struct OpaqueData : public MaterialData{
   public:
     OpaqueData();
 
@@ -53,8 +57,10 @@ public:
 
 	};
 
+
+
 	// User can create one to set new material instance values for a translucent material
-	struct TranslucentData : MaterialData {
+	struct TranslucentData : public MaterialData {
 	public:
     TranslucentData();
 
@@ -62,19 +68,6 @@ public:
 		void loadAlbedoTexture(const char* texture_path);
 
     virtual glm::vec4 getTextureIDs() override;
-
-	};
-
-
-	// User cannot create one particle, it is data for the internal material on emitters
-	struct ParticlesData : MaterialData {
-	public:
-    ParticlesData();
-
-
-		void loadAlbedoTexture(const char* texture_path);
-
-		virtual glm::vec4 getTextureIDs() override;
 
 	};
 

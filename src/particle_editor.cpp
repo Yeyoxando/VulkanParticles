@@ -150,8 +150,16 @@ void ParticleEditor::input() {
 
 void ParticleEditor::update() {
 
-  active_scene_->update();
-  app_data_->updateFrame();
+	// Calculate time since rendering started
+	static auto start_time = std::chrono::high_resolution_clock::now();
+
+	auto current_time = std::chrono::high_resolution_clock::now();
+
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+
+	
+  // TODO: Fix this shit
+  active_scene_->update(0.016666f);
 
 }
 

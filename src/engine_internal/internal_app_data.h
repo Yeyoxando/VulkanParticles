@@ -12,6 +12,7 @@
 #include "engine/common_def.h"
 #include "engine/vulkan_utils.h"
 #include "systems/system_draw_objects.h"
+#include "systems/system_draw_particles.h"
 #include "systems/system_draw_translucents.h"
 #include "../src/engine_internal/internal_gpu_resources.h"
 #include "../src/engine_internal/internal_materials.h"
@@ -69,6 +70,7 @@ struct ParticleEditor::AppData {
 	// ----- SYSTEMS (ECS) -----
 	SystemDrawObjects* system_draw_objects_;
 	SystemDrawTranslucents* system_draw_translucents_;
+	SystemDrawParticles* system_draw_particles_;
 
 
 

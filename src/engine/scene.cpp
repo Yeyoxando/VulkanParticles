@@ -8,6 +8,7 @@
 
 #include "engine/scene.h"
 #include "systems/system.h"
+#include "components/component_particle_system.h"
 
 #include <stdexcept>
 
@@ -78,9 +79,17 @@ void Scene::init(){
 
 // ------------------------------------------------------------------------- //
 
-void Scene::update(){
+void Scene::update(float time){
 
+	for (int i = 0; i < particle_entities_.size(); ++i){
 
+		auto ps = static_cast<ComponentParticleSystem*>
+			(particle_entities_[i]->getComponent(Component::ComponentKind::kComponentKind_ParticleSystem));
+		ps->emit();
+		ps->update(time);
+		ps->sort();
+
+	}
 
 }
 
@@ -125,7 +134,13 @@ int Scene::getNumberOfObjects(int material_id){
 		break;
 	}
 	case 2: {
-		return particle_entities_.size();
+		int num_particles = 0;
+		for (int i = 0; i < particle_entities_.size(); ++i) {
+			auto ps = static_cast<ComponentParticleSystem*>
+				(particle_entities_[i]->getComponent(Component::ComponentKind::kComponentKind_ParticleSystem));
+			num_particles += ps->getMaxParticles();
+		}
+		return num_particles;
 		break;
 	}
 	default: {

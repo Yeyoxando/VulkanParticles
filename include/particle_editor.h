@@ -100,8 +100,10 @@ private:
 
 	friend class ComponentMesh;
 	friend class ComponentMaterial;
+	friend class ComponentParticleSystem;
 	friend class SystemDrawObjects;
 	friend class SystemDrawTranslucents;
+	friend class SystemDrawParticles;
 
 };
 

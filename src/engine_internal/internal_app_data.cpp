@@ -55,6 +55,7 @@ ParticleEditor::AppData::AppData() {
 
   system_draw_objects_ = new SystemDrawObjects();
   system_draw_translucents_ = new SystemDrawTranslucents();
+  system_draw_particles_ = new SystemDrawParticles();
 
 }
 
@@ -64,6 +65,7 @@ ParticleEditor::AppData::~AppData(){
 
   delete system_draw_objects_;
   delete system_draw_translucents_;
+  delete system_draw_particles_;
 
 }
 
@@ -840,6 +842,9 @@ void ParticleEditor::AppData::createCommandBuffers() {
 		system_draw_translucents_->drawObjectsCommand(i, command_buffers_[i],
       scene->getEntities(1)); // translucent entities
 
+		system_draw_particles_->drawObjectsCommand(i, command_buffers_[i],
+			scene->getEntities(2)); // particle system entities
+
     // Finish recording commands
     vkCmdEndRenderPass(command_buffers_[i]);
 
@@ -880,40 +885,9 @@ void ParticleEditor::AppData::createSyncObjects() {
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::AppData::updateFrame() {
-
-  // Calculate time since rendering started
-  static auto start_time = std::chrono::high_resolution_clock::now();
-
-  auto current_time = std::chrono::high_resolution_clock::now();
-
-  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();  
-  
-  time;
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
 
-  // THIS SHOULD BE ON THE SCENE
-  // Calculate time since rendering started
-  static auto start_time = std::chrono::high_resolution_clock::now();
-
-  auto current_time = std::chrono::high_resolution_clock::now();
-
-  float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
-  time;
-  
   auto scene = ParticleEditor::instance().getScene();
-
-  // Get transform and rotate (this should be on the scene update callback)
-  /*auto transform = static_cast<ComponentTransform*>(scene->getEntities(0)[0]->
-    getComponent(Component::ComponentKind::kComponentKind_Transform));
-   //test to see transform comp working
-  transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));*/
-
 
   // Update the dynamic buffer using the draw systems
   // opaque entities
@@ -921,6 +895,9 @@ void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
 
   // translucent entities
 	system_draw_translucents_->updateUniformBuffers(current_image, scene->getEntities(1)); 
+
+  // particles entities
+  system_draw_particles_->updateUniformBuffers(current_image, scene->getEntities(2));
 
 }
 
@@ -1225,7 +1202,12 @@ void ParticleEditor::AppData::setupMaterials(){
   TranslucentMaterial* translucent_material = new TranslucentMaterial();
   translucent_material->setInternalReferences(&logical_device_, &physical_device_,
     static_cast<uint32_t>(swap_chain_images_.size()));
-  materials_.push_back(translucent_material);
+	materials_.push_back(translucent_material);
+
+  ParticlesMaterial* particles_material = new ParticlesMaterial();
+  particles_material->setInternalReferences(&logical_device_, &physical_device_,
+		static_cast<uint32_t>(swap_chain_images_.size()));
+	materials_.push_back(particles_material);
   
 }
 

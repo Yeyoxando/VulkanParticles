@@ -11,9 +11,13 @@
 
 #include <vector>
 
+#include <Vulkan/vulkan.h>
+#include <glm/glm.hpp>
+
 #include "systems/system.h"
-#include "glm/glm.hpp"
-#include "vulkan/vulkan.h"
+#include "particle_editor.h"
+
+struct Particle;
 
 // ------------------------------------------------------------------------- //
 
@@ -30,10 +34,10 @@ public:
 
 protected:
 	// Return the model matrix for all the objects
-	glm::mat4* getObjectModels(std::vector<Entity*>& entities);
+	glm::mat4* getParticlesModel(std::vector<Entity*>& entities);
 
 	// Return the translucent data for all the objects
-	glm::mat4* getObjectTranslucentData(std::vector<Entity*>& entities);
+	glm::mat4* getParticlesData(std::vector<Entity*>& entities);
 
 };
 

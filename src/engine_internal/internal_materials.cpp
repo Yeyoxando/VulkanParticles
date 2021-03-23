@@ -198,6 +198,9 @@ void Material::populateModelsDescriptorSets() {
 		buffer_info.buffer = models_uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
 		buffer_info.range = models_dynamic_alignment_;
+		if (ParticleEditor::instance().getScene()->getNumberOfObjects(material_id_) == 0) {
+			buffer_info.range = 1;
+		}
 
 		VkWriteDescriptorSet write_descriptor{};
 		write_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -746,6 +749,9 @@ void OpaqueMaterial::populateSpecificDescriptorSets() {
 		buffer_info.buffer = specific_uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
 		buffer_info.range = specific_dynamic_alignment_;
+		if (ParticleEditor::instance().getScene()->getNumberOfObjects(0) == 0) {
+			buffer_info.range = 1;
+		}
 
 		const int num_textures = app_data->loaded_textures_.size();
 		std::vector<VkDescriptorImageInfo> image_info = std::vector<VkDescriptorImageInfo>(num_textures);
@@ -1226,6 +1232,9 @@ void TranslucentMaterial::populateSpecificDescriptorSets() {
 		buffer_info.buffer = specific_uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
 		buffer_info.range = specific_dynamic_alignment_;
+		if (ParticleEditor::instance().getScene()->getNumberOfObjects(1) == 0) {
+			buffer_info.range = 1;
+		}
 
 		const int num_textures = app_data->loaded_textures_.size();
 		std::vector<VkDescriptorImageInfo> image_info = std::vector<VkDescriptorImageInfo>(num_textures);
@@ -1668,7 +1677,7 @@ void ParticlesMaterial::createSpecificUniformBuffers(){
 	// Allocate the memory for the ubo (First half of the ubo)
 	specific_ubo_.packed_uniforms = (glm::mat4*)alignedAlloc(buffer_size, specific_dynamic_alignment_);
 	if (specific_ubo_.packed_uniforms == nullptr) {
-		throw std::runtime_error("\nFailed to allocate translucent dynamic uniform buffer.");
+		throw std::runtime_error("\nFailed to allocate particles dynamic uniform buffer.");
 	}
 
 	// Uniform buffer object with per-object matrices
@@ -1697,7 +1706,7 @@ void ParticlesMaterial::populateSpecificDescriptorSets(){
 
 	specific_descriptor_sets_.resize(swap_chain_image_count_);
 	if (vkAllocateDescriptorSets(*logical_device_reference_, &allocate_info, specific_descriptor_sets_.data()) != VK_SUCCESS) {
-		throw std::runtime_error("\nFailed to create translucent descriptor sets.");
+		throw std::runtime_error("\nFailed to create particles descriptor sets.");
 	}
 
 
@@ -1706,6 +1715,9 @@ void ParticlesMaterial::populateSpecificDescriptorSets(){
 		buffer_info.buffer = specific_uniform_buffers_[i]->buffer_;
 		buffer_info.offset = 0;
 		buffer_info.range = specific_dynamic_alignment_;
+		if (ParticleEditor::instance().getScene()->getNumberOfObjects(2) == 0) {
+			buffer_info.range = 1;
+		}
 
 		const int num_textures = app_data->loaded_textures_.size();
 		std::vector<VkDescriptorImageInfo> image_info = std::vector<VkDescriptorImageInfo>(num_textures);
