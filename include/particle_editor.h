@@ -19,11 +19,12 @@ struct AppSettings {
   // This will be send as parameter to the app to initialize certain values
   int max_entities;
   int max_particles;
-  int max_objects;
+  int max_lights;
 
   // Global settings
-
   bool use_msaa;
+  // etc
+
 };
 
 // ------------------------------------------------------------------------- //
@@ -44,6 +45,7 @@ public:
   enum MaterialParent {
     kMaterialParent_Opaque = 0,
     kMaterialParent_Translucent = 1,
+    kMaterialParent_Particles = 2,
   }; 
 
 
@@ -90,9 +92,12 @@ private:
 
   // Friends to access app_data
 	friend class Camera;
-	friend class Material;
+	
+  friend class Material;
 	friend class OpaqueMaterial;
 	friend class TranslucentMaterial;
+	friend class ParticlesMaterial;
+
 	friend class ComponentMesh;
 	friend class ComponentMaterial;
 	friend class SystemDrawObjects;

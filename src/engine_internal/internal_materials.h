@@ -72,15 +72,15 @@ public:
 	// Updates the object specific pipeline dynamic buffer
 	virtual void updateSpecificUBO(int buffer_id) {}
 
-	// Clean up all the uniform buffers, specific ones must be added in the children virtual function
-	virtual void cleanUniformBuffers();
-	// Cleans the specific resources for swap chain recreation, children specific resources must be cleared in virtual function
-	virtual void cleanMaterialResources();
+	// Clean up all the uniform buffers
+	void cleanUniformBuffers();
+	// Cleans the specific resources for swap chain recreation
+	void cleanMaterialResources();
 	// Clean the rest of resources not attached to swap chain
-	virtual void deleteMaterialResources();
+	void deleteMaterialResources();
 
 
-
+	// -- VULKAN RESOURCES --
 	VkPipeline graphics_pipeline_;
 	VkPipelineLayout pipeline_layout_;
 
@@ -111,6 +111,7 @@ protected:
 	// Private constructor to only create children classes
 	Material();
 
+	// -- MATERIAL INTERNAL FUNCTIONS
 	// Creates the scene uniform buffer for a material
 	void createSceneUniformBuffers();
 	// Creates the models uniform dynamic buffers for a material
@@ -126,7 +127,7 @@ protected:
 	virtual void populateSpecificDescriptorSets() {}
 
 	
-
+	
 	int material_id_;
 
 	// Store a reference to not access continuously to the singleton
@@ -156,13 +157,6 @@ public:
 
 	// Updates the object specific opaque dynamic buffer
 	virtual void updateSpecificUBO(int buffer_id) override;
-
-	// Clean up the opaque uniform buffers
-	virtual void cleanUniformBuffers() override;
-	// Clean up the resources related with the swap chain
-	virtual void cleanMaterialResources() override;
-	// Clean the rest of resources not attached to swap chain
-	virtual void deleteMaterialResources() override;
 
 protected:
 	// Creates the opaque uniform dynamic buffers
@@ -194,17 +188,39 @@ public:
 	// Updates the object specific translucent dynamic buffer
 	virtual void updateSpecificUBO(int buffer_id) override;
 
-	// Clean up the translucent uniform buffers
-	virtual void cleanUniformBuffers() override;
-	// Clean up the resources related with the swap chain
-	virtual void cleanMaterialResources() override;
-	// Clean the rest of resources not attached to swap chain
-	virtual void deleteMaterialResources() override;
-
 protected:
 	// Creates the translucent uniform dynamic buffers
 	virtual void createSpecificUniformBuffers() override;
 	// Populates the descriptor set for the opaque pipeline uniforms and textures
+	virtual void populateSpecificDescriptorSets() override;
+
+};
+
+// ------------------------------------------------------------------------- //
+// -------------------------- MATERIAL PARTICLES --------------------------- //
+// ------------------------------------------------------------------------- //
+
+class ParticlesMaterial : public Material {
+public:
+	ParticlesMaterial();
+	virtual ~ParticlesMaterial();
+
+	// Creates the descriptor layouts for particles material to upload uniforms to the shader
+	virtual void createDescriptorSetLayout() override;
+	// Creates a pipeline layout for the particles graphics pipeline 
+	virtual void createPipelineLayout() override;
+	// Creates a graphic pipeline for particles
+	virtual void createGraphicPipeline() override;
+	// Creates a descriptor pool to allocate the descriptor sets for the particles material uniforms
+	virtual void createDescriptorPools() override;
+
+	// Updates the object specific particles dynamic buffer
+	virtual void updateSpecificUBO(int buffer_id) override;
+
+protected:
+	// Creates the particles uniform dynamic buffers
+	virtual void createSpecificUniformBuffers() override;
+	// Populates the descriptor set for the particles pipeline uniforms and textures
 	virtual void populateSpecificDescriptorSets() override;
 
 };

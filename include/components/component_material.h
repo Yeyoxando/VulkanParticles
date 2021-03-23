@@ -53,15 +53,28 @@ public:
 
 	};
 
+	// User can create one to set new material instance values for a translucent material
 	struct TranslucentData : MaterialData {
 	public:
     TranslucentData();
 
-    // loadUniforms
-		void loadAlbedoTexture(const char* texture_path);
     // This material will only have one texture for instance
+		void loadAlbedoTexture(const char* texture_path);
 
     virtual glm::vec4 getTextureIDs() override;
+
+	};
+
+
+	// User cannot create one particle, it is data for the internal material on emitters
+	struct ParticlesData : MaterialData {
+	public:
+    ParticlesData();
+
+
+		void loadAlbedoTexture(const char* texture_path);
+
+		virtual glm::vec4 getTextureIDs() override;
 
 	};
 

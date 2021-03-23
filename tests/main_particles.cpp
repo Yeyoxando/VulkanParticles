@@ -22,13 +22,11 @@
 
 /*
 TODO (ordered):
-  - create a translucent material for objects first and prepare everything for particles, even also radix sort
-  - fix translucent pipeline transparency borders
-  - take a look to the command buffer construction, if objects are ordered it can be done
-    only one bind pipeline,
-
   - implement the same for particles
   - use blend mode which not requires sorting (additive?)
+
+	- static getDefaultGraphicsPipelineCreateInfo and tweak only what its needed on each one
+	- order objects by mesh and call bindVertex and bindIndex only when needed
 
   - implement radix sort    
 
@@ -170,7 +168,8 @@ int main(){
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(translucent1->getComponent(Component::kComponentKind_Transform));
 		// z, x, y
-		transform->translate(glm::vec3(0.0f, 3.0f, 0.0f));
+		transform->translate(glm::vec3(0.0f, 2.0f, 0.0f));
+		transform->rotate(glm::vec3(0.0f, 0.0f, 0.0f));
 
 
 		// Get mesh component

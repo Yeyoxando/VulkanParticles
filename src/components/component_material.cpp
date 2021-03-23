@@ -112,21 +112,23 @@ ComponentMaterial::~ComponentMaterial() {
 
 int ComponentMaterial::loadTexture(const char* texture_path){
 
+	auto app_data = ParticleEditor::instance().app_data_;
+
 	// Add texture to load it later when empty
-	auto it = ParticleEditor::instance().app_data_->loaded_textures_.cbegin();
-	if (it == ParticleEditor::instance().app_data_->loaded_textures_.cend()) {
+	auto it = app_data->loaded_textures_.cbegin();
+	if (it == app_data->loaded_textures_.cend()) {
 		// Not any object insert it
-		ParticleEditor::instance().app_data_->loaded_textures_.insert(
+		app_data->loaded_textures_.insert(
 			std::pair<int, const char*>(0, texture_path));
 		// return new id
 		return 0;
 	}
 
 	// Check if texture was previously loaded to not load it again
-	it = ParticleEditor::instance().app_data_->loaded_textures_.cbegin();
-	while (it != ParticleEditor::instance().app_data_->loaded_textures_.cend()) {
+	it = app_data->loaded_textures_.cbegin();
+	while (it != app_data->loaded_textures_.cend()) {
 		if (!strcmp(texture_path, it->second)) {
-			printf("\nTexture has been loaded earlier. Assigning id.");
+			printf("\nTexture has been loaded earlier. Assigning correspondent id.");
 			// Return previous assigned id
 			return it->first;
 		}
@@ -134,11 +136,12 @@ int ComponentMaterial::loadTexture(const char* texture_path){
 	}
 
 	// Save it if its not added yet
-	ParticleEditor::instance().app_data_->loaded_textures_.insert(
-		std::pair<int, const char*>(ParticleEditor::instance().app_data_->loaded_textures_.size(), 
+	app_data->loaded_textures_.insert(
+		std::pair<int, const char*>(app_data->loaded_textures_.size(),
 			texture_path));
+
 	// return new id
-	return ParticleEditor::instance().app_data_->loaded_textures_.size() - 1;
+	return app_data->loaded_textures_.size() - 1;
 
 }
 
@@ -205,6 +208,32 @@ void ComponentMaterial::TranslucentData::loadAlbedoTexture(const char* texture_p
 // ------------------------------------------------------------------------- //
 
 glm::vec4 ComponentMaterial::TranslucentData::getTextureIDs(){
+
+	return glm::vec4(texture_ids_[0], -1, -1, -1);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+ComponentMaterial::ParticlesData::ParticlesData(){
+
+	parent_id_ = 2;
+	texture_ids_ = std::vector<int>(1);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentMaterial::ParticlesData::loadAlbedoTexture(const char* texture_path){
+
+	// stored id, and texture saved in singleton for loading them together later
+	texture_ids_[0] = loadTexture(texture_path);
+
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::vec4 ComponentMaterial::ParticlesData::getTextureIDs(){
 
 	return glm::vec4(texture_ids_[0], -1, -1, -1);
 

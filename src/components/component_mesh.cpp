@@ -21,22 +21,24 @@ ComponentMesh::ComponentMesh() : Component(Component::kComponentKind_Mesh) {
 
 void ComponentMesh::loadMeshFromFile(const char* model_path){
 
+	auto app_data = ParticleEditor::instance().app_data_;
+
 	// Add model to load it later when empty
-	auto it = ParticleEditor::instance().app_data_->loaded_models_.cbegin();
-	if (it == ParticleEditor::instance().app_data_->loaded_models_.cend()) {
+	auto it = app_data->loaded_models_.cbegin();
+	if (it == app_data->loaded_models_.cend()) {
 		// Not any object insert it
-		ParticleEditor::instance().app_data_->loaded_models_.insert(
-			std::pair<int, const char*>(ParticleEditor::instance().app_data_->default_geometries, model_path));
+		app_data->loaded_models_.insert(
+			std::pair<int, const char*>(app_data->default_geometries, model_path));
 		// Store new id
-		mesh_buffer_id_ = ParticleEditor::instance().app_data_->default_geometries;
+		mesh_buffer_id_ = app_data->default_geometries;
 		return;
 	}
 
 	// Check if model was previously loaded to not load it again
-	it = ParticleEditor::instance().app_data_->loaded_models_.cbegin();
-	while (it != ParticleEditor::instance().app_data_->loaded_models_.cend()){
+	it = app_data->loaded_models_.cbegin();
+	while (it != app_data->loaded_models_.cend()){
 		if (!strcmp(model_path, it->second)) {
-			printf("\nModel has been loaded earlier. Assigning id.");
+			printf("\nModel has been loaded earlier. Assigning correspondent id.");
 			mesh_buffer_id_ = it->first;
 			return;
 		}
@@ -44,12 +46,12 @@ void ComponentMesh::loadMeshFromFile(const char* model_path){
 	}
 
 	// Save it if its not added yet
-	ParticleEditor::instance().app_data_->loaded_models_.insert(
-		std::pair<int, const char*>(ParticleEditor::instance().app_data_->default_geometries + 
-			ParticleEditor::instance().app_data_->loaded_models_.size(), model_path));
+	app_data->loaded_models_.insert(
+		std::pair<int, const char*>(app_data->default_geometries +
+			app_data->loaded_models_.size(), model_path));
 	// Store new id
-	mesh_buffer_id_ = ParticleEditor::instance().app_data_->default_geometries +
-		ParticleEditor::instance().app_data_->loaded_models_.size();
+	mesh_buffer_id_ = app_data->default_geometries +
+		app_data->loaded_models_.size();
 
 }
 

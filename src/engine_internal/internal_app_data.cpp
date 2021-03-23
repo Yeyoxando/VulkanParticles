@@ -803,6 +803,8 @@ void ParticleEditor::AppData::createCommandBuffers() {
     throw std::runtime_error("\nFailed to create command buffers.");
   }
 
+  auto scene = ParticleEditor::instance().getScene();
+
   // Record the command buffers
   for (int i = 0; i < command_buffers_.size(); i++) {
     // Begin command buffers recording
@@ -833,10 +835,10 @@ void ParticleEditor::AppData::createCommandBuffers() {
 
     // Call draw systems to prepare the commands for all the entities
     system_draw_objects_->drawObjectsCommand(i, command_buffers_[i], 
-      ParticleEditor::instance().active_scene_->getEntities(0)); // opaque entities
+      scene->getEntities(0)); // opaque entities
 
 		system_draw_translucents_->drawObjectsCommand(i, command_buffers_[i],
-			ParticleEditor::instance().active_scene_->getEntities(1)); // translucent entities
+      scene->getEntities(1)); // translucent entities
 
     // Finish recording commands
     vkCmdEndRenderPass(command_buffers_[i]);
@@ -902,20 +904,23 @@ void ParticleEditor::AppData::updateUniformBuffers(uint32_t current_image) {
   auto current_time = std::chrono::high_resolution_clock::now();
 
   float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+  time;
   
+  auto scene = ParticleEditor::instance().getScene();
+
   // Get transform and rotate (this should be on the scene update callback)
-  /*auto transform = static_cast<ComponentTransform*>(ParticleEditor::instance().active_scene_->getEntities()[0]->
+  /*auto transform = static_cast<ComponentTransform*>(scene->getEntities(0)[0]->
     getComponent(Component::ComponentKind::kComponentKind_Transform));
    //test to see transform comp working
   transform->rotate(glm::vec3(0.0f, 0.0f, 5.0f * time));*/
-  time;
+
 
   // Update the dynamic buffer using the draw systems
-  system_draw_objects_->updateUniformBuffers(current_image,
-    ParticleEditor::instance().active_scene_->getEntities(0)); // opaque entities
+  // opaque entities
+  system_draw_objects_->updateUniformBuffers(current_image, scene->getEntities(0)); 
 
-	system_draw_translucents_->updateUniformBuffers(current_image,
-		ParticleEditor::instance().active_scene_->getEntities(1)); // translucent entities
+  // translucent entities
+	system_draw_translucents_->updateUniformBuffers(current_image, scene->getEntities(1)); 
 
 }
 
