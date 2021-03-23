@@ -9,6 +9,9 @@
 #include "particle_editor.h"
 #include "engine_internal/internal_app_data.h"
 
+#include <cstdlib>
+#include <ctime>
+
 // ------------------------------------------------------------------------- //
 
 ParticleEditor::ParticleEditor() {
@@ -67,6 +70,8 @@ Scene* ParticleEditor::getScene(){
 
 void ParticleEditor::init() {
 
+  srand(static_cast <unsigned> (time(0)));
+
 	input_ = new InputManager();
 	camera_ = new Camera();
 
@@ -79,7 +84,7 @@ void ParticleEditor::init() {
   app_data_->initVulkan();
 
   input_->init(app_data_->window_);
-	camera_->setupProjection(90.0f, (float)app_data_->window_width_ / (float)app_data_->window_height_, 0.1f, 10.0f);
+	camera_->setupProjection(90.0f, (float)app_data_->window_width_ / (float)app_data_->window_height_, 0.1f, 100.0f);
 
 
 }
@@ -159,7 +164,7 @@ void ParticleEditor::update() {
 
 	
   // TODO: Fix this shit
-  active_scene_->update(0.016666f);
+  active_scene_->update(0.01666f);
 
 }
 

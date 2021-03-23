@@ -133,7 +133,7 @@ glm::mat4* SystemDrawParticles::getParticlesModel(std::vector<Entity*>& entities
 
 				// Update matrices
 				glm::mat4 aux_model = glm::translate(glm::mat4(1.0f), particles[j]->position_);
-				aux_model = glm::scale(aux_model, glm::vec3(0.3f, 0.3f, 0.3f));
+				aux_model = glm::scale(aux_model, glm::vec3(0.2f, 0.2f, 0.2f));
 				
 				*model_mat = aux_model;
 

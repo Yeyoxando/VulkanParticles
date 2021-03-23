@@ -94,7 +94,8 @@ int main(){
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(scenery2->getComponent(Component::kComponentKind_Transform));
     // z, x, y
-    transform->translate(glm::vec3(0.0f, 0.0f, 1.6f));
+    transform->translate(glm::vec3(0.0f, 1.6f, 0.0f));
+    transform->rotate(glm::vec3(0.0f, 0.0f, -90.0f));
 
 
 		// Get mesh component
@@ -122,13 +123,13 @@ int main(){
 	}
 
 
-	Entity* scenery3 = new Entity();
+	Entity* floor = new Entity();
 	{
-		scenery3->initAsArchetype(Entity::kArchetype_3DObject);
+		floor->initAsArchetype(Entity::kArchetype_3DObject);
 
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(scenery3->getComponent(Component::kComponentKind_Transform));
+			(floor->getComponent(Component::kComponentKind_Transform));
 		// z, x, y
 		transform->translate(glm::vec3(0.0f, 0.0f, -0.1f));
 		transform->scale(glm::vec3(5.0f, 5.0f, 1.0f));
@@ -136,7 +137,7 @@ int main(){
 
 		// Get mesh component
 		ComponentMesh* mesh = static_cast<ComponentMesh*>
-			(scenery3->getComponent(Component::kComponentKind_Mesh));
+			(floor->getComponent(Component::kComponentKind_Mesh));
 
 		// Load a model
 		//mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
@@ -145,7 +146,7 @@ int main(){
 
 		// Get material component
 		ComponentMaterial* mat = static_cast<ComponentMaterial*>
-			(scenery3->getComponent(Component::kComponentKind_Material));
+			(floor->getComponent(Component::kComponentKind_Material));
 		// Indicate material parent to internally set pipeline, descriptor set...
 		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
 
@@ -156,7 +157,7 @@ int main(){
     opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
-		scene->addEntity(scenery3, opaque_instance_data->getParentID());
+		scene->addEntity(floor, opaque_instance_data->getParentID());
 	}
 
 
@@ -210,7 +211,7 @@ int main(){
     ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
       (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
-		ps->init(1, false);
+		ps->init(3000, 0.1f, 250.0f, false);
 		ps->loadTexture("../../../resources/textures/smoke_texture_trasnparency.png");
 
     scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);

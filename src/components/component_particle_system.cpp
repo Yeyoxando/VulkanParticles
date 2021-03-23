@@ -14,10 +14,11 @@
 ComponentParticleSystem::ComponentParticleSystem() : Component(Component::kComponentKind_ParticleSystem) {
 
 	particles_ = std::vector<Particle*>();
-	initial_velocity_ = glm::vec3(0.0f, 0.0f, 0.1f);
+	initial_velocity_ = glm::vec3(0.0f, 0.0f, 1.0f);
 	max_particles_ = 0;
 	alive_particles_ = 0;
-	max_life_time_ = 5.0f;
+	max_life_time_ = 8.0f;
+	emission_rate_ = 0.2f;
 	burst_ = false;
 
 	mesh_buffer_id_ = 0;
@@ -39,11 +40,14 @@ ComponentParticleSystem::~ComponentParticleSystem() {
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::init(int max_particles, bool burst){
+void ComponentParticleSystem::init(int max_particles, float emission_rate, float max_lifetime, bool burst){
 
 	max_particles_ = max_particles;
-	alive_particles_ = 0;
+	emission_rate_ = emission_rate;
+	max_life_time_ = max_lifetime;
 	burst_ = burst;
+
+	alive_particles_ = 0;
 
 	particles_ = std::vector<Particle*>(max_particles_);
 	for (int i = 0; i < max_particles_; ++i) {
@@ -56,28 +60,32 @@ void ComponentParticleSystem::init(int max_particles, bool burst){
 
 void ComponentParticleSystem::emit(){
 
+	static float time = 0.0f;
+	time -= 0.01666f;
 	int initial_alive_particles = alive_particles_;
 
-	while (alive_particles_ < max_particles_) {
-		// Activate particle on the first one dead
-		for (auto particle : particles_) {
-			if (!particle->alive_) {
-				particle->alive_ = true;
-				particle->position_ = glm::vec3(0.0f, 0.0f, 0.0f);
-				particle->velocity_ = initial_velocity_;
-				alive_particles_++;
-				break;
-			}
+	if (!burst_) {
+		if (time > 0.0f) {
+			return;
 		}
-
-		// If burst is not active, spawn max 10 particles in a frame
-		if (!burst_) {
-			if ((alive_particles_ - initial_alive_particles) > 9) {
-				break;
-			}
+		else {
+			time = emission_rate_;
 		}
 	}
 
+	// Activate particle on the first one dead
+	for (auto particle : particles_) {
+		if (!particle->alive_) {
+			particle->alive_ = true;
+			particle->position_ = glm::vec3(0.0f, 0.0f, 0.0f);
+			float rz = randFloat(-0.1f, 0.1f);
+			float rx = randFloat(-0.1f, 0.1f);
+			particle->velocity_ = glm::vec3(rz, rx, 0.1f);
+			alive_particles_++;
+			if(!burst_) break;
+		}
+	}
+	
 }
 
 // ------------------------------------------------------------------------- //

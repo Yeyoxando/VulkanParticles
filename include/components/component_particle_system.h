@@ -43,7 +43,7 @@ class ComponentParticleSystem : public Component {
 public:
   ComponentParticleSystem();
 
-	void init(int max_particles, bool burst = false);
+	void init(int max_particles, float emission_rate = 0.2f, float max_lifetime = 5.0f, bool burst = false);
 
 	void loadTexture(const char* texture_path);
 
@@ -67,6 +67,7 @@ protected:
 	int alive_particles_;
 	int max_particles_;
 	float max_life_time_;
+	float emission_rate_;
 	bool burst_;
 
 	int mesh_buffer_id_;
