@@ -1495,7 +1495,7 @@ void ParticlesMaterial::createGraphicPipeline(){
 	// Create depth and stencil settings for the framebuffer
 	VkPipelineDepthStencilStateCreateInfo translucent_depth_stencil_info{};
 	translucent_depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	translucent_depth_stencil_info.depthTestEnable = VK_TRUE;
+	translucent_depth_stencil_info.depthTestEnable = VK_FALSE;
 	translucent_depth_stencil_info.depthWriteEnable = VK_TRUE;
 	translucent_depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
 	translucent_depth_stencil_info.depthBoundsTestEnable = VK_FALSE;

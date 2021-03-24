@@ -22,26 +22,32 @@
 
 /*
 TODO (ordered):
-  - implement the same for particles
-  - use blend mode which not requires sorting (additive?)
+
+	- try burst
+	- implement radix sort
 
 	- static getDefaultGraphicsPipelineCreateInfo and tweak only what its needed on each one
-	- order objects by mesh and call bindVertex and bindIndex only when needed
+	- order 3D objects by mesh and call bindVertex and bindIndex only when needed
 
-  - implement radix sort    
+	- it could be fine create dynamic command buffers with the alive particles to store lots of space in buffers
+	- implement sokol time
 
   - Extra
     - add texture tiling to opaque mat
 	  - add an update component with a callback to customize it from the outside as a scripting method
-		- only one bind vertex and idx (packed vertex buffers for normal objects)
-		  (not needed for particles as they are all going to be quads)
+		- only one bind vertex and idx (packed vertex buffers for normal objects, to do something like textures)
 	  - add a simple directional light and a specular texture to the opaque material
-    - node system?
+    - node system, definitely implemented in transform component and particle systems
 
   - clean everything and made a little example
+	- measure times to see how the thing is going and extract conclusions when DOD get implemented
   - finished step 2
 
   - start step 3 -> minimum to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
+		- First modules replacing the basic PS
+		- Next modules designed in report
+		- Everything whats written in basic design section in report
+		- Continue the improvement of the "engine"
 
 */
 
