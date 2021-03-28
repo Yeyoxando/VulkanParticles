@@ -15,8 +15,8 @@
 
 Camera::Camera() {
 
-  position_ = glm::vec3(0.0f, 0.0f, -1.0f);
-  rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+  position_ = glm::vec3(0.0f, 0.0f, -2.0f);
+  rotation_ = glm::vec3(-45.0f, 0.0f, -90.0f);
   view_pos_ = glm::vec4();
 
   last_mouse_pos_ = glm::vec2(-1.0f, -1.0f);
@@ -41,7 +41,7 @@ void Camera::setupProjection(float fov_degrees, float aspect_ratio, float cam_ne
 	projection_ = glm::perspective(glm::radians(fov_degrees), aspect_ratio, cam_near, cam_far);
 
 	// Invert clip Y due to GLM works with OpenGL and its inverted
-	projection_[1][1] *= -1;
+	projection_[1].y *= -1;
 
 	updateViewMatrix();
 
@@ -54,14 +54,14 @@ void Camera::updateViewMatrix() {
   glm::mat4 rot_mat = glm::mat4(1.0f);
   glm::mat4 trans_mat;
 
+  rot_mat = glm::translate(rot_mat, position_);
   rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
   rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
   rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
-  
-  trans_mat = glm::translate(glm::mat4(1.0f), position_);
+  //trans_mat = glm::translate(glm::mat4(1.0f), position_);
 
-  view_ = trans_mat * rot_mat;
+  //view_ = trans_mat * rot_mat ;
 
   view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
 
@@ -71,7 +71,7 @@ void Camera::updateViewMatrix() {
 	// Fill the ubos with the updated data
   auto materials = app_data->materials_;
   for (int i = 0; i < materials.size(); ++i) {
-    materials[i]->scene_ubo_.view = view_;
+    materials[i]->scene_ubo_.view = rot_mat;
     materials[i]->scene_ubo_.projection = projection_;
   }
 
@@ -96,14 +96,15 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 	glm::mat4 rot_mat = glm::mat4(1.0f);
 	glm::mat4 trans_mat;
 
+  rot_mat = glm::translate(rot_mat, position_);
 	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
 	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
 	rot_mat = glm::rotate(rot_mat, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
 
-	trans_mat = glm::translate(glm::mat4(1.0f), position_);
+  //trans_mat = glm::translate(glm::mat4(1.0f), position_);
 
-	view_ = trans_mat * rot_mat;
+  //view_ = trans_mat * rot_mat ;
 
 	view_pos_ = glm::vec4(position_, 0.0f) * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f);
 
@@ -115,7 +116,7 @@ void Camera::updateViewMatrix(glm::vec2 new_mouse_pos) {
 	// Fill the ubos with the updated data
 	auto materials = app_data->materials_;
 	for (int i = 0; i < materials.size(); ++i) {
-		materials[i]->scene_ubo_.view = view_;
+		materials[i]->scene_ubo_.view = rot_mat;
 		materials[i]->scene_ubo_.projection = projection_;
 	}
 

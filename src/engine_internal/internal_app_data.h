@@ -46,6 +46,7 @@ struct ParticleEditor::AppData {
   VkPhysicalDevice physical_device_; // GPU
   VkDevice logical_device_;
 
+  // - Vulkan render - 
   VkQueue graphics_queue_;
   VkQueue present_queue_;
   VkSurfaceKHR surface_; //Abstract window
@@ -137,8 +138,6 @@ struct ParticleEditor::AppData {
 
 
   // ----- Frame -----
-  // Updates frame logic
-  void updateFrame();
   // Updates the uniform buffers and map their memory
   void updateUniformBuffers(uint32_t current_image);
   // Draw using the recorded command buffers

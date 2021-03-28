@@ -99,9 +99,8 @@ int main(){
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(scenery2->getComponent(Component::kComponentKind_Transform));
-    // z, x, y
-    transform->translate(glm::vec3(0.0f, 1.6f, 0.0f));
-    transform->rotate(glm::vec3(0.0f, 0.0f, -90.0f));
+    transform->translate(glm::vec3(0.0f, 0.0f, 2.0f));
+    transform->rotate(glm::vec3(0.0f, -90.0f, 0.0f));
 
 
 		// Get mesh component
@@ -136,9 +135,8 @@ int main(){
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(floor->getComponent(Component::kComponentKind_Transform));
-		// z, x, y
-		transform->translate(glm::vec3(0.0f, 0.0f, -0.1f));
-		transform->scale(glm::vec3(5.0f, 5.0f, 1.0f));
+		transform->translate(glm::vec3(0.0f, -0.1f, 0.0f));
+		transform->scale(glm::vec3(5.0f, 0.0f, 5.0f));
 
 
 		// Get mesh component
@@ -160,7 +158,7 @@ int main(){
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
 		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/numerical_grid.jpg");
-    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
+    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(floor, opaque_instance_data->getParentID());
@@ -174,9 +172,7 @@ int main(){
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(translucent1->getComponent(Component::kComponentKind_Transform));
-		// z, x, y
-		transform->translate(glm::vec3(0.0f, 2.0f, 0.0f));
-		transform->rotate(glm::vec3(0.0f, 0.0f, 0.0f));
+		transform->translate(glm::vec3(2.0f, 0.0f, 0.0f));
 
 
 		// Get mesh component
@@ -194,7 +190,7 @@ int main(){
 
 		// Create instance data
 		ComponentMaterial::TranslucentData* translucent_data = new ComponentMaterial::TranslucentData();
-		translucent_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		translucent_data->loadAlbedoTexture("../../../resources/textures/smoke.png");
 		//translucent_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
 		mat->setInstanceData(translucent_data);
 
@@ -209,18 +205,38 @@ int main(){
     
 
 		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(translucent1->getComponent(Component::kComponentKind_Transform));
-		// z, x, y
-		transform->translate(glm::vec3(0.1f, 0.0f, 0.0f));
+			(particle_system->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(0.0f, 0.0f, -1.0f));
 
     // Get particle system component
     ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
       (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
-		ps->init(3000, 0.1f, 250.0f, false);
-		ps->loadTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		ps->init(100, 0.3f, 5.0f, false);
+		ps->loadTexture("../../../resources/textures/smoke.png");
 
     scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+  }
+
+
+  // Particle system creation and setting
+  Entity* particle_system2 = new Entity();
+  {
+    particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
+
+    ComponentTransform* transform = static_cast<ComponentTransform*>
+      (particle_system2->getComponent(Component::kComponentKind_Transform));
+    transform->translate(glm::vec3(0.1f, 0.0f, 0.0f));
+
+    // Get particle system component
+    ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+      (particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
+    // Initialize particle system with max 500 particles
+    ps->init(100, 0.6f, 5.0f, false);
+    ps->loadTexture("../../../resources/textures/fire.png");
+
+    scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
   }
   
   

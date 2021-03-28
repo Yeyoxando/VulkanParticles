@@ -23,7 +23,7 @@ ComponentTransform::ComponentTransform() : Component(Component::kComponentKind_T
 
 void ComponentTransform::translate(glm::vec3 position){
 
-	position_ = position;
+	position_ = glm::vec3(-position.z, position.x, position.y);
 	computeModelMatrix();
 
 }
@@ -32,7 +32,7 @@ void ComponentTransform::translate(glm::vec3 position){
 
 void ComponentTransform::rotate(glm::vec3 rotation_degrees){
 
-	rotation_ = rotation_degrees;
+	rotation_ = glm::vec3(-rotation_degrees.z, -rotation_degrees.x, rotation_degrees.y);
 	computeModelMatrix();
 
 }
@@ -41,7 +41,7 @@ void ComponentTransform::rotate(glm::vec3 rotation_degrees){
 
 void ComponentTransform::scale(glm::vec3 scale){
 
-	scale_ = scale;
+	scale_ = glm::vec3(scale.z, scale.x, scale.y);
 	computeModelMatrix();
 
 }
@@ -67,10 +67,10 @@ void ComponentTransform::computeModelMatrix(){
 	//multiply matrices and store them in component
 	glm::mat4 model = glm::mat4(1.0f);
 
-	model = glm::translate(model, position_);
+  model = glm::translate(model, position_);
 	model = glm::rotate(model, glm::radians(rotation_.x), glm::vec3(1.0f, 0.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(rotation_.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
+  model = glm::rotate(model, glm::radians(rotation_.z), glm::vec3(0.0f, 0.0f, 1.0f));
 	model = glm::scale(model, scale_);
 
 	model_ = model;
