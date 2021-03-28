@@ -203,16 +203,17 @@ int main(){
   {
     particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
     
-
+		// Transform affect to all particles
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(particle_system->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.0f, 0.0f, -1.0f));
+		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
+		transform->scale(glm::vec3(0.6f, 0.6f, 0.6f));
 
     // Get particle system component
     ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
       (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
-		ps->init(100, 0.3f, 5.0f, false);
+		ps->init(40, 0.4f, 8.0f, false);
 		ps->loadTexture("../../../resources/textures/smoke.png");
 
     scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
@@ -224,19 +225,42 @@ int main(){
   {
     particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
-
+		// Transform affect to all particles
     ComponentTransform* transform = static_cast<ComponentTransform*>
       (particle_system2->getComponent(Component::kComponentKind_Transform));
-    transform->translate(glm::vec3(0.1f, 0.0f, 0.0f));
+    transform->translate(glm::vec3(0.64f, 0.7f, 0.26f));
+		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
     // Get particle system component
     ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
       (particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
     // Initialize particle system with max 500 particles
-    ps->init(100, 0.6f, 5.0f, false);
+    ps->init(60, 0.6f, 5.0f, false);
     ps->loadTexture("../../../resources/textures/fire.png");
 
     scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+  }
+
+
+  // Particle system creation and setting
+  Entity* particle_system3 = new Entity();
+  {
+		particle_system3->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
+    // Transform affect to all particles
+    ComponentTransform* transform = static_cast<ComponentTransform*>
+      (particle_system3->getComponent(Component::kComponentKind_Transform));
+    transform->translate(glm::vec3(-0.56f, 0.68f, 0.26f));
+    transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
+
+    // Get particle system component
+    ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+      (particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
+    // Initialize particle system with max 500 particles
+    ps->init(60, 0.6f, 5.0f, false);
+    ps->loadTexture("../../../resources/textures/fire.png");
+
+    scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
   }
   
   

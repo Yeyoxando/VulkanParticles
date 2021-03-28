@@ -9,6 +9,7 @@
 #include "systems/system_draw_particles.h"
 #include "../src/engine_internal/internal_app_data.h"
 
+#include "components/component_transform.h"
 #include "components/component_particle_system.h"
 
 // ------------------------------------------------------------------------- //
@@ -121,6 +122,9 @@ glm::mat4* SystemDrawParticles::getParticlesModel(std::vector<Entity*>& entities
 	for (auto entity : entities) {
 		if (hasRequiredComponents(entity)) {
 
+      auto transform = static_cast<ComponentTransform*>
+        (entity->getComponent(Component::ComponentKind::kComponentKind_Transform));
+
 			auto ps = static_cast<ComponentParticleSystem*>
 				(entity->getComponent(Component::ComponentKind::kComponentKind_ParticleSystem));
 			auto particles = ps->getAllParticles();
@@ -135,6 +139,9 @@ glm::mat4* SystemDrawParticles::getParticlesModel(std::vector<Entity*>& entities
 				glm::mat4 aux_model = glm::translate(glm::mat4(1.0f), particles[j]->position_);
 				aux_model = glm::scale(aux_model, glm::vec3(0.2f, 0.2f, 0.2f));
 				
+				// PS model matrix parent transform
+				aux_model = transform->getModelMatrix() * aux_model;
+
 				*model_mat = aux_model;
 
 				++index;

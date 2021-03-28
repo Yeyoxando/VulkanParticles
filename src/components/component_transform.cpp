@@ -48,6 +48,30 @@ void ComponentTransform::scale(glm::vec3 scale){
 
 // ------------------------------------------------------------------------- //
 
+glm::vec3 ComponentTransform::getPosition(){
+
+	return position_;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::vec3 ComponentTransform::getRotation(){
+
+	return rotation_;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+glm::vec3 ComponentTransform::getScale(){
+
+	return scale_;
+
+}
+
+// ------------------------------------------------------------------------- //
+
 glm::mat4 ComponentTransform::getModelMatrix(){
 
 	return model_;
