@@ -14,7 +14,7 @@
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
 
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 class Camera {
 public:

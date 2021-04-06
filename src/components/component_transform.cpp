@@ -6,7 +6,7 @@
 
 
 #include "components/component_transform.h"
-#include <glm/gtc/matrix_transform.hpp>
+#include <matrix_transform.hpp>
 
 // ------------------------------------------------------------------------- //
 

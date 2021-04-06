@@ -11,7 +11,7 @@
 
 #include <Vulkan/vulkan.h>
 #include <vector>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 #include "particle_editor.h"
 

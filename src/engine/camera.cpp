@@ -8,7 +8,7 @@
 #include "particle_editor.h"
 #include "../src/engine_internal/internal_app_data.h"
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <matrix_transform.hpp>
 #include <math.h>
 
  // ------------------------------------------------------------------------- // 

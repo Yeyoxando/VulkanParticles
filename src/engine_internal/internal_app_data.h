@@ -21,8 +21,8 @@
 
 #include <vector>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm.hpp>
+#include <matrix_transform.hpp>
 
 // ------------------------------------------------------------------------- //
 

@@ -22,7 +22,7 @@
 #include <optional>
 #include <algorithm>
 
-#include <glm/gtx/hash.hpp>
+#include <hash.hpp>
 
 // ------------------------------------------------------------------------- // 
 

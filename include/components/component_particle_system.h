@@ -13,7 +13,7 @@
 #include "particle_editor.h"
 
 #include <vector>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 // ------------------------------------------------------------------------- //
 

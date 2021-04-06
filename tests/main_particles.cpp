@@ -22,22 +22,20 @@
 
 /*
 TODO (ordered):
-
-	- try burst
 	- implement radix sort
 
 	- static getDefaultGraphicsPipelineCreateInfo and tweak only what its needed on each one
-	- order 3D objects by mesh and call bindVertex and bindIndex only when needed
-
-	- it could be fine create dynamic command buffers with the alive particles to store lots of space in buffers
 	- implement sokol time
+	- try burst
 
   - Extra
     - add texture tiling to opaque mat
+    - node system
 	  - add an update component with a callback to customize it from the outside as a scripting method
+		- order 3D objects by mesh and call bindVertex and bindIndex only when needed
+
 		- only one bind vertex and idx (packed vertex buffers for normal objects, to do something like textures)
-	  - add a simple directional light and a specular texture to the opaque material
-    - node system, definitely implemented in transform component and particle systems
+		- it could be fine create dynamic command buffers with the alive particles to store lots of space in buffers
 
   - clean everything and made a little example
 	- measure times to see how the thing is going and extract conclusions when DOD get implemented

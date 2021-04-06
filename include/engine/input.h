@@ -8,7 +8,7 @@
 #define __INPUT_MANAGER_H__
 
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 #include <map>
 

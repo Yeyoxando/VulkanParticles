@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <Vulkan/vulkan.h>
-#include <glm/glm.hpp>
+#include <glm.hpp>
 
 #include "particle_editor.h"
 #include "systems/system.h"

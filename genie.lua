@@ -45,11 +45,12 @@ project "ParticleEditor"
 	includedirs{
 	  "./include/",
 	  "./src/engine_internal/",
-	  "C:/Program Files/VulkanSDK/1.2.162.0/Include/",
-	  "C:/VSLibraries/glfw-3.3.2.bin.WIN64/include/",
-	  "C:/VSLibraries/glm/",
-	  "C:/VSLibraries/SingleHeaderFiles/stb_image/",
-	  "C:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/",
+	  "./external/vulkan/Include/",
+	  "./external/glfw/include/",
+	  "./external/glm/",
+	  "./external/glm/**",
+	  "./external/stb_image/",
+	  "./external/tiny_obj/",
 	}
 
 	--Common files
@@ -63,15 +64,9 @@ project "ParticleEditor"
 		"./resources/**.vert", 
 		"./resources/**.frag", 
 
-		-- Vulkan
-		--"C:/Program Files/VulkanSDK/1.2.162.0/Include/",
-		
-		--GLM
-		--"./deps/glm/*.h",
-		--"./deps/glm/*.hpp",
-
-		"C:/VSLibraries/SingleHeaderFiles/stb_image/**.h",
-		"C:/VSLibraries/SingleHeaderFiles/tiny_obj_loader/**.h"
+		"./external/stb_image/**.h",
+		"./external/tiny_obj/**.h",
+		"./external/sokol_time/**.h",
 
 	}
 
@@ -88,7 +83,7 @@ project "ParticleEditor"
 	}	 
 	
 	links{
-		"C:/Program Files/VulkanSDK/1.2.162.0/Lib/vulkan-1",
-		"C:/VSLibraries/glfw-3.3.2.bin.WIN64/lib-vc2019/glfw3"
+		"./external/vulkan/vulkan-1",
+		"./external/glfw/glfw3"
 	}
 
