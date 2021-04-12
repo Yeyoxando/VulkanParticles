@@ -16,24 +16,23 @@
 
 // ------------------------------------------------------------------------- //
 
+/**
+* @brief Base for all the systems implemented in the ECS.
+*/
 class System {
 public:
-  System();
-  virtual ~System();
+	System();
+	virtual ~System();
 
-  // Check if the entity has the components required by the system
-  bool hasRequiredComponents(Entity* entity);
+	/// @brief Checks if an entity has the components required by the system.
+	bool hasRequiredComponents(Entity* entity);
 
-  // Called to set the components directly using an archetype
-  void setRequiredArchetype(Entity::Archetype archetype);
-
+	/// @brief Sets the required components directly using an archetype for the system to act.
+	void setRequiredArchetype(Entity::Archetype archetype);
 
 protected:
 
-	// Can be called multiple times to set where the system should act
-	void setRequiredComponent(Component::ComponentKind comp_kind);
-
-  std::vector<Component::ComponentKind> required_components_;
+	std::vector<Component::ComponentKind> required_components_;
 
 };
 

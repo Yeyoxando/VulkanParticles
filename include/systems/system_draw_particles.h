@@ -7,37 +7,42 @@
 #ifndef __SYSTEM_DRAW_PARTICLES_H__
 #define __SYSTEM_DRAW_PARTICLES_H__
 
-// ------------------------------------------------------------------------- //
+ // ------------------------------------------------------------------------- //
 
 #include <vector>
 
 #include <Vulkan/vulkan.h>
 #include <glm.hpp>
 
-#include "systems/system.h"
+#include "system.h"
 #include "particle_editor.h"
 
 struct Particle;
 
 // ------------------------------------------------------------------------- //
 
+/**
+* @brief This system acts on each entity with a particle system archetype.
+*        It creates a command buffer to draw all the particles of each particle system.
+*        It also updates the uniforms that they are using.
+*/
 class SystemDrawParticles : public System {
 public:
 	SystemDrawParticles();
 	~SystemDrawParticles();
 
-	// It will create one command and it will add it to the current command buffer containing all the objects
-	void drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
+	/// @brief It adds a draw command for each particle of a particle system archetype in the entities vector to the current draw command buffer.
+	void addParticlesDrawCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, std::vector<Entity*>& entities);
 
-	// Updates the uniform buffer where objects are rendered (max objects set somewhere)
+	/// @brief Updates the uniform buffer that particles use to be rendered.
 	void updateUniformBuffers(int current_image, std::vector<Entity*>& entities);
 
 protected:
-	// Return the model matrix for all the objects
-	glm::mat4* getParticlesModel(std::vector<Entity*>& entities);
+	/// @return Model matrix for all the particles.
+	glm::mat4* getParticlesModelMatrices(std::vector<Entity*>& entities);
 
-	// Return the translucent data for all the objects
-	glm::mat4* getParticlesData(std::vector<Entity*>& entities);
+	/// @return Particle materials data for all the particles (Shader uniforms).
+	glm::mat4* getParticleMaterialsData(std::vector<Entity*>& entities);
 
 };
 

@@ -30,7 +30,7 @@ SystemDrawParticles::~SystemDrawParticles() {
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawParticles::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
+void SystemDrawParticles::addParticlesDrawCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
 	std::vector<Entity*>& entities){
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
@@ -97,12 +97,12 @@ void SystemDrawParticles::updateUniformBuffers(int current_image, std::vector<En
 	material_parent->updateSceneUBO(current_image);
 
 	// Update model matrices
-	material_parent->models_ubo_.models = getParticlesModel(entities);
+	material_parent->models_ubo_.models = getParticlesModelMatrices(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateModelsUBO(current_image);
 
 	// Update per object uniforms and textures
-	material_parent->specific_ubo_.packed_uniforms = getParticlesData(entities);
+	material_parent->specific_ubo_.packed_uniforms = getParticleMaterialsData(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateSpecificUBO(current_image);
 
@@ -110,7 +110,7 @@ void SystemDrawParticles::updateUniformBuffers(int current_image, std::vector<En
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawParticles::getParticlesModel(std::vector<Entity*>& entities) {
+glm::mat4* SystemDrawParticles::getParticlesModelMatrices(std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
@@ -158,7 +158,7 @@ glm::mat4* SystemDrawParticles::getParticlesModel(std::vector<Entity*>& entities
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawParticles::getParticlesData(std::vector<Entity*>& entities) {
+glm::mat4* SystemDrawParticles::getParticleMaterialsData(std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 

@@ -13,24 +13,26 @@
 
 // ------------------------------------------------------------------------- //
 
+/**
+* @brief Base for all the components implemented in the ECS.
+*/
 class Component {
 public:
 
-  enum ComponentKind {
-    kComponentKind_Transform = 0,
-    kComponentKind_Mesh = 1,
-    kComponentKind_Material = 2,
-    kComponentKind_ParticleSystem = 3,
-  };
+	/// @brief All the component kinds available for the ECS.
+	enum ComponentKind {
+		kComponentKind_Transform = 0, // Always included in any created entity by default.
+		kComponentKind_Mesh = 1,
+		kComponentKind_Material = 2,
+		kComponentKind_ParticleSystem = 3,
+	};
 
-  explicit Component(ComponentKind comp_kind) : component_kind_(comp_kind) {};
-  virtual ~Component();
+	/// @brief Special constructor which requires to always pass the component kind as parameter.
+	explicit Component(ComponentKind comp_kind) : component_kind_(comp_kind) {};
+	virtual ~Component();
 
-  ComponentKind component_kind_;
-
-protected:
-
-  //int entity_reference_id_;
+	/// @brief Current kind of the component.
+	ComponentKind component_kind_;
 
 };
 

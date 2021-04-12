@@ -30,14 +30,6 @@ bool System::hasRequiredComponents(Entity* entity){
 
 // ------------------------------------------------------------------------- //
 
-void System::setRequiredComponent(Component::ComponentKind comp_kind){
-
-	required_components_.push_back(comp_kind);
-
-}
-
-// ------------------------------------------------------------------------- //
-
 void System::setRequiredArchetype(Entity::Archetype archetype){
 
 	// transform components are not required because are added by default

@@ -30,7 +30,7 @@ SystemDrawTranslucents::~SystemDrawTranslucents() {
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawTranslucents::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer,
+void SystemDrawTranslucents::addDrawCommands(int cmd_buffer_image, VkCommandBuffer& cmd_buffer,
 	std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
@@ -94,12 +94,12 @@ void SystemDrawTranslucents::updateUniformBuffers(int current_image, std::vector
 	material_parent->updateSceneUBO(current_image);
 
 	// Update model matrices
-	material_parent->models_ubo_.models = getObjectModels(entities);
+	material_parent->models_ubo_.models = getModelMatrices(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateModelsUBO(current_image);
 
 	// Update per object uniforms and textures
-	material_parent->specific_ubo_.packed_uniforms = getObjectTranslucentData(entities);
+	material_parent->specific_ubo_.packed_uniforms = getTranslucentMaterialsData(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateSpecificUBO(current_image);
 
@@ -107,7 +107,7 @@ void SystemDrawTranslucents::updateUniformBuffers(int current_image, std::vector
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawTranslucents::getObjectModels(std::vector<Entity*>& entities) {
+glm::mat4* SystemDrawTranslucents::getModelMatrices(std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
@@ -142,7 +142,7 @@ glm::mat4* SystemDrawTranslucents::getObjectModels(std::vector<Entity*>& entitie
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawTranslucents::getObjectTranslucentData(std::vector<Entity*>& entities) {
+glm::mat4* SystemDrawTranslucents::getTranslucentMaterialsData(std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 

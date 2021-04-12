@@ -9,34 +9,45 @@
 
 // ------------------------------------------------------------------------- // 
 
+#include <glm.hpp>
+
 #include "component.h"
-#include "glm.hpp"
 
 // ------------------------------------------------------------------------- //
 
+/**
+* @brief Transform component for all entity archetypes.
+*        Always added by default when creating an entity.
+*/
 class ComponentTransform : public Component {
 public:
-  ComponentTransform();
+	ComponentTransform();
 
-  void translate(glm::vec3 position);
-  void rotate(glm::vec3 rotation_degrees);
-  void scale(glm::vec3 scale);
+	/// @brief Translates the entity to a new position in world space.
+	void translate(glm::vec3 position);
+	/// @brief Rotates the entity to a new rotation in degrees in world space.
+	void rotate(glm::vec3 rotation_degrees);
+	/// @brief Scales the entity in world space.
+	void scale(glm::vec3 scale);
 
-  glm::vec3 getPosition();
-  glm::vec3 getRotation();
-  glm::vec3 getScale();
-  glm::mat4 getModelMatrix();
+	glm::vec3 getPosition();
+	glm::vec3 getRotation();
+	glm::vec3 getScale();
+	/// @brief Get the model matrix for the current transform of the entity.
+	glm::mat4 getModelMatrix();
 
 protected:
-  ~ComponentTransform();
+	~ComponentTransform();
 
-  void computeModelMatrix();
+	/// @brief Computes the model matrix with the current transform of the entity.
+	void computeModelMatrix();
 
-  glm::vec3 position_;
-  glm::vec3 rotation_;
-  glm::vec3 scale_;
+	glm::vec3 position_;
+	glm::vec3 rotation_;
+	glm::vec3 scale_;
 
-  glm::mat4 model_;
+	/// @brief Last computed model matrix.
+	glm::mat4 model_;
 
 };
 

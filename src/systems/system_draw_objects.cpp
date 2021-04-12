@@ -30,7 +30,7 @@ SystemDrawObjects::~SystemDrawObjects() {
 
 // ------------------------------------------------------------------------- //
 
-void SystemDrawObjects::drawObjectsCommand(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
+void SystemDrawObjects::addDrawCommands(int cmd_buffer_image, VkCommandBuffer& cmd_buffer, 
 	std::vector<Entity*>& entities) {
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
@@ -94,12 +94,12 @@ void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Enti
 	material_parent->updateSceneUBO(current_image);
 
 	// Update model matrices
-	material_parent->models_ubo_.models = getObjectModels(entities);
+	material_parent->models_ubo_.models = getModelMatrices(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateModelsUBO(current_image);
 
 	// Update per object uniforms and textures
-	material_parent->specific_ubo_.packed_uniforms = getObjectOpaqueData(entities);
+	material_parent->specific_ubo_.packed_uniforms = getOpaqueMaterialsData(entities);
 	// Map the memory from the CPU to GPU
 	material_parent->updateSpecificUBO(current_image);
 
@@ -107,7 +107,7 @@ void SystemDrawObjects::updateUniformBuffers(int current_image, std::vector<Enti
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
+glm::mat4* SystemDrawObjects::getModelMatrices(std::vector<Entity*> &entities){
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 
@@ -142,7 +142,7 @@ glm::mat4* SystemDrawObjects::getObjectModels(std::vector<Entity*> &entities){
 
 // ------------------------------------------------------------------------- //
 
-glm::mat4* SystemDrawObjects::getObjectOpaqueData(std::vector<Entity*>& entities){
+glm::mat4* SystemDrawObjects::getOpaqueMaterialsData(std::vector<Entity*>& entities){
 
 	ParticleEditor::AppData* app_data = ParticleEditor::instance().app_data_;
 

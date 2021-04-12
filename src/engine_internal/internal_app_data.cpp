@@ -836,13 +836,13 @@ void ParticleEditor::AppData::createCommandBuffers() {
     vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     // Call draw systems to prepare the commands for all the entities
-    system_draw_objects_->drawObjectsCommand(i, command_buffers_[i], 
+    system_draw_objects_->addDrawCommands(i, command_buffers_[i], 
       scene->getEntities(0)); // opaque entities
 
-		system_draw_translucents_->drawObjectsCommand(i, command_buffers_[i],
+		system_draw_translucents_->addDrawCommands(i, command_buffers_[i],
       scene->getEntities(1)); // translucent entities
 
-		system_draw_particles_->drawObjectsCommand(i, command_buffers_[i],
+		system_draw_particles_->addParticlesDrawCommand(i, command_buffers_[i],
 			scene->getEntities(2)); // particle system entities
 
     // Finish recording commands
