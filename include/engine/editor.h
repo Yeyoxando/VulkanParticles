@@ -14,14 +14,14 @@
 // ------------------------------------------------------------------------- //
 
 /*
-  - Will be based on ImGUI
+  - Will be implemented with ImGUI
   - Creation of the particle system
   - Editor
     - Small window with the part system with orbital camera and stack based modules
     - 
   - Scene
     - Position and all of the things of a game object (ECS?)
-    - Show components on the inspector and modify them as on SufferEngine
+    - Show components on the inspector and modify them
     - FPS camera
     - 
 */

@@ -76,15 +76,15 @@ struct ParticleEditor::AppData {
 
 
   // ----- RESOURCES -----
-  const int default_geometries = 1;
-  std::vector<Buffer*> vertex_buffers_;
-  std::vector<Buffer*> index_buffers_;
-	std::map<int, const char*> loaded_models_;
+  const int default_geometries = 1; // Number of geometries provided by default
+  std::vector<Buffer*> vertex_buffers_; // Actual meshes
+  std::vector<Buffer*> index_buffers_; // Actual meshes
+	std::map<int, const char*> loaded_models_; // Models marked for loading
 
-  std::vector<Image*> texture_images_;
-	std::map<int, const char*> loaded_textures_;
+  std::vector<Image*> texture_images_; // Actual textures
+	std::map<int, const char*> loaded_textures_; // Textures mark for loading
 
-  std::vector<Material*> materials_;
+  std::vector<Material*> materials_; // Material parents used to stored gpu data
 
 // --------------- METHODS ---------------
 

@@ -30,6 +30,7 @@ void main(){
 	vec3 cam_up_world = vec3(scene_ubo.view[0][1], scene_ubo.view[1][1], scene_ubo.view[2][1]);
 	vec3 particle_center = vec3(0.0f);
 
+	// Make the vertices orient to camera view
 	vec3 vertex_pos = particle_center + 
 	cam_right_world * in_position.x + 
 	cam_up_world * in_position.y;

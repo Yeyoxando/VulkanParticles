@@ -15,8 +15,8 @@
 
 // ------------------------------------------------------------------------- //
 
-struct AppSettings {
-  // This will be send as parameter to the app to initialize certain values
+// This will be send as parameter to the app to initialize certain values
+/*struct AppSettings {
   int max_entities;
   int max_particles;
   int max_lights;
@@ -25,23 +25,23 @@ struct AppSettings {
   bool use_msaa;
   // etc
 
-};
+};*/
 
 // ------------------------------------------------------------------------- //
 
 class ParticleEditor {
 public:
-	// Main base app instance, use it to run the editor
+	/// @brief Editor running instance, use it to run the program (Singleton pattern).
 	static ParticleEditor& instance();
 
-  // Correspond to engine_internal vertex and index buffers for these geometries
+  /// @brief Corresponds to internal vertex and index buffers for the defined geometries.
 	enum DefaultMesh {
 		kDefaultMesh_Quad = 0,
 		kDefaultMesh_Cube = 1,
 		// ...
 	};
 
-  // Correspond to engine_internal material which have a pipeline and a descriptor set associated
+  /// @brief Corresponds to internal material parents that contains GPU resources.
   enum MaterialParent {
     kMaterialParent_Opaque = 0,
     kMaterialParent_Translucent = 1,
@@ -50,23 +50,25 @@ public:
 
 
 
-  // set a scene to run
+  /// @brief Set a scene to run in the editor.
   void loadScene(Scene* scene);
-  // call this method to start the editor after setting a scene
+  /// @brief This method has to be called to start the editor after setting a scene.
   void run();
 
 
 
-  // returns the current camera
+  /// @return Current camera.
 	Camera* getCamera();
-	// returns the current scene
+  /// @return Current scene running.
 	Scene* getScene();
 
 private:
   ParticleEditor();
   ~ParticleEditor();
 
+  /// @brief Starts the editor internal functions.
   void init();
+  /// @brief Shuts down the editor internal functions and close it.
   void shutDown();
 
   void input();
@@ -74,23 +76,19 @@ private:
   void render();
 
 
-
-  // Input manager for keyboard and mouse inputs
+  /// @brief Input manager for keyboard and mouse input.
   InputManager* input_;
-  // Camera to travel around scene or particle edition
+  /// @brief Camera to travel around a scene or in the particle editor view.
   Camera* camera_;
-
-  // The scene which is loaded to run on the editor
+  /// @brief The scene which is loaded to run on the editor.
   Scene* active_scene_;
 
-
-
-  // Internal data and functions to manage everything hiding it from the user
+  /// @brief Internal data and functions to manage internal APIs resources hiding them from the user.
   struct AppData;
   AppData* app_data_;
 
 
-  // Friends to access app_data
+  // Friend classes that can access to AppData
 	friend class Camera;
 	
   friend class Material;

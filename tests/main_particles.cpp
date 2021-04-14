@@ -3,11 +3,10 @@
  *  Date: 05/12/2020
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
- 
-// ------------------------------------------------------------------------- // 
+
+ // ------------------------------------------------------------------------- // 
 
 #include "engine/common_def.h"
-#ifdef MAIN_BILLBOARDS
 
 #include <iostream>
 #include <stdexcept>
@@ -28,20 +27,20 @@ TODO (ordered):
 	- implement sokol time
 	- try burst
 
-  - Extra
-    - add texture tiling to opaque mat
-    - node system
-	  - add an update component with a callback to customize it from the outside as a scripting method
+	- Extra
+		- add texture tiling to opaque mat
+		- node system
+		- add an update component with a callback to customize it from the outside as a scripting method
 		- order 3D objects by mesh and call bindVertex and bindIndex only when needed
 
 		- only one bind vertex and idx (packed vertex buffers for normal objects, to do something like textures)
 		- it could be fine create dynamic command buffers with the alive particles to store lots of space in buffers
 
-  - clean everything and made a little example
+	- clean everything and made a little example
 	- measure times to see how the thing is going and extract conclusions when DOD get implemented
-  - finished step 2
+	- finished step 2
 
-  - start step 3 -> minimum to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
+	- start step 3 -> minimum to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
 		- First modules replacing the basic PS
 		- Next modules designed in report
 		- Everything whats written in basic design section in report
@@ -49,9 +48,7 @@ TODO (ordered):
 
 */
 
-int main(){
-  
-  //while (1) {} // 2MB start
+int main() {
 
 
 
@@ -60,34 +57,34 @@ int main(){
 	scene->setName("Particles test");
 
 
-  // 3D object creation and components setting
-  Entity* scenery = new Entity();
-  {
-    scenery->initAsArchetype(Entity::kArchetype_3DObject);
+	// 3D object creation and components setting
+	Entity* scenery = new Entity();
+	{
+		scenery->initAsArchetype(Entity::kArchetype_3DObject);
 
-    // Get mesh component
-    ComponentMesh* mesh = static_cast<ComponentMesh*>
-      (scenery->getComponent(Component::kComponentKind_Mesh));
+		// Get mesh component
+		ComponentMesh* mesh = static_cast<ComponentMesh*>
+			(scenery->getComponent(Component::kComponentKind_Mesh));
 
-    // Load a model
-    mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-    //mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
+		// Load a model
+		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		//mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
-    // Get material component
-    ComponentMaterial* mat = static_cast<ComponentMaterial*>
-      (scenery->getComponent(Component::kComponentKind_Material));
-    // Indicate material parent to internally set pipeline, descriptor set...
-    mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
+		// Get material component
+		ComponentMaterial* mat = static_cast<ComponentMaterial*>
+			(scenery->getComponent(Component::kComponentKind_Material));
+		// Indicate material parent to internally set pipeline, descriptor set...
+		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
 
-    // Create instance data
-    ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-    opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-    //opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
-    mat->setInstanceData(opaque_instance_data);
+		// Create instance data
+		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
+		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
+		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(scenery, opaque_instance_data->getParentID());
-  }
+	}
 
 
 	Entity* scenery2 = new Entity();
@@ -97,8 +94,8 @@ int main(){
 		// Get transform component
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(scenery2->getComponent(Component::kComponentKind_Transform));
-    transform->translate(glm::vec3(0.0f, 0.0f, 2.0f));
-    transform->rotate(glm::vec3(0.0f, -90.0f, 0.0f));
+		transform->translate(glm::vec3(0.0f, 0.0f, 2.0f));
+		transform->rotate(glm::vec3(0.0f, -90.0f, 0.0f));
 
 
 		// Get mesh component
@@ -119,8 +116,8 @@ int main(){
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-    mat->setInstanceData(opaque_instance_data);
+		opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(scenery2, opaque_instance_data->getParentID());
 	}
@@ -156,7 +153,7 @@ int main(){
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
 		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/numerical_grid.jpg");
-    opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(floor, opaque_instance_data->getParentID());
@@ -196,94 +193,88 @@ int main(){
 	}
 
 
-  // Particle system creation and setting
-  Entity* particle_system = new Entity();
-  {
-    particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
-    
+	// Particle system creation and setting
+	Entity* particle_system = new Entity();
+	{
+		particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
 		// Transform affect to all particles
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(particle_system->getComponent(Component::kComponentKind_Transform));
 		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
 		transform->scale(glm::vec3(0.6f, 0.6f, 0.6f));
 
-    // Get particle system component
-    ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
-      (particle_system->getComponent(Component::kComponentKind_ParticleSystem));
-    // Initialize particle system with max 500 particles
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max 500 particles
 		ps->init(40, 0.4f, 8.0f, false);
 		ps->loadTexture("../../../resources/textures/smoke.png");
 
-    scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
-  }
+		scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
 
 
-  // Particle system creation and setting
-  Entity* particle_system2 = new Entity();
-  {
-    particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
+	// Particle system creation and setting
+	Entity* particle_system2 = new Entity();
+	{
+		particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
 		// Transform affect to all particles
-    ComponentTransform* transform = static_cast<ComponentTransform*>
-      (particle_system2->getComponent(Component::kComponentKind_Transform));
-    transform->translate(glm::vec3(0.64f, 0.7f, 0.26f));
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(particle_system2->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(0.64f, 0.7f, 0.26f));
 		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
-    // Get particle system component
-    ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
-      (particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
-    // Initialize particle system with max 500 particles
-    ps->init(60, 0.6f, 5.0f, false);
-    ps->loadTexture("../../../resources/textures/fire.png");
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max 500 particles
+		ps->init(60, 0.6f, 5.0f, false);
+		ps->loadTexture("../../../resources/textures/fire.png");
 
-    scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
-  }
+		scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
 
 
-  // Particle system creation and setting
-  Entity* particle_system3 = new Entity();
-  {
+	// Particle system creation and setting
+	Entity* particle_system3 = new Entity();
+	{
 		particle_system3->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
-    // Transform affect to all particles
-    ComponentTransform* transform = static_cast<ComponentTransform*>
-      (particle_system3->getComponent(Component::kComponentKind_Transform));
-    transform->translate(glm::vec3(-0.56f, 0.68f, 0.26f));
-    transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
+		// Transform affect to all particles
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(particle_system3->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(-0.56f, 0.68f, 0.26f));
+		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
-    // Get particle system component
-    ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
-      (particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
-    // Initialize particle system with max 500 particles
-    ps->init(60, 0.6f, 5.0f, false);
-    ps->loadTexture("../../../resources/textures/fire.png");
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max 500 particles
+		ps->init(60, 0.6f, 5.0f, false);
+		ps->loadTexture("../../../resources/textures/fire.png");
 
-    scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
-  }
-  
-  
-
-  // Set up scene to the app!!
-  ParticleEditor::instance().loadScene(scene);
-
-
-  // Run particle editor
-  try {
-    ParticleEditor::instance().run();
-  }
-  catch(const std::exception& e) {
-    printf(e.what());
-    return EXIT_FAILURE;
-  }
-
-
-  // This is to check that memory gets cleaned
-  //while (1) {} //5MB at the end -> 3MB??
+		scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
 
 
 
-  return EXIT_SUCCESS;
-  
+	// Set up scene to the app!!
+	ParticleEditor::instance().loadScene(scene);
+
+
+	// Run particle editor
+	try {
+		ParticleEditor::instance().run();
+	}
+	catch (const std::exception& e) {
+		printf(e.what());
+		return EXIT_FAILURE;
+	}
+
+
+
+	return EXIT_SUCCESS;
+
 }
-
-#endif

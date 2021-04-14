@@ -7,7 +7,7 @@
 #ifndef __VULKAN_UTILS_H__
 #define __VULKAN_UTILS_H__
 
-// ------------------------------------------------------------------------- // 
+ // ------------------------------------------------------------------------- // 
 
 #include "common_def.h"
 
@@ -54,7 +54,7 @@ struct SwapChainSupportDetails {
 // ------------------------------------------------------------------------- // 
 
 // Checks which queue families are supported on the device
-static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface){
+static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
 
 	QueueFamilyIndices indices;
 
@@ -185,33 +185,33 @@ static bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
 
 // Extension function that is not loaded by default, so it has to be created specifically
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-  const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-  const VkAllocationCallbacks* pAllocator,
-  VkDebugUtilsMessengerEXT* pDebugMessenger) {
+	const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+	const VkAllocationCallbacks* pAllocator,
+	VkDebugUtilsMessengerEXT* pDebugMessenger) {
 
-  // Get function from memory
-  auto function = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+	// Get function from memory
+	auto function = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
-  if (function != nullptr) {
-    return function(instance, pCreateInfo, pAllocator, pDebugMessenger);
-  }
-  else {
-    return VK_ERROR_EXTENSION_NOT_PRESENT;
-  }
+	if (function != nullptr) {
+		return function(instance, pCreateInfo, pAllocator, pDebugMessenger);
+	}
+	else {
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
 
 }
 
 // ------------------------------------------------------------------------- // 
 
 // Extension function that is not loaded by default, so it has to be created specifically
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, 
-  VkDebugUtilsMessengerEXT debugMessenger, 
-  const VkAllocationCallbacks* pAllocator) {
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+	VkDebugUtilsMessengerEXT debugMessenger,
+	const VkAllocationCallbacks* pAllocator) {
 
-  auto function = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-  if (function != nullptr) {
-    function(instance, debugMessenger, pAllocator);
-  }
+	auto function = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+	if (function != nullptr) {
+		function(instance, debugMessenger, pAllocator);
+	}
 
 }
 
@@ -269,21 +269,21 @@ static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT&
 // Read files in binary format (Spir-V shaders)
 static std::vector<char> readFile(const char* file_name) {
 
-  std::ifstream file(file_name, std::ios::ate | std::ios::binary);
+	std::ifstream file(file_name, std::ios::ate | std::ios::binary);
 
-  if (!file.is_open()) {
-    throw std::runtime_error("\nFailed to open shader file.");
-  }
+	if (!file.is_open()) {
+		throw std::runtime_error("\nFailed to open shader file.");
+	}
 
-  size_t file_size = (size_t)file.tellg();
-  std::vector<char> buffer(file_size);
+	size_t file_size = (size_t)file.tellg();
+	std::vector<char> buffer(file_size);
 
-  file.seekg(0);
-  file.read(buffer.data(), file_size);
+	file.seekg(0);
+	file.read(buffer.data(), file_size);
 
-  file.close();
+	file.close();
 
-  return buffer;
+	return buffer;
 
 }
 
@@ -313,7 +313,7 @@ static VkShaderModule createShaderModule(VkDevice* logical_device, const std::ve
 
 // Allocs aligned memory to use the dynamic ubo with the correct offset and alignment
 // Windows specific
-static void* alignedAlloc(size_t size, size_t alignment){
+static void* alignedAlloc(size_t size, size_t alignment) {
 
 	void* data = nullptr;
 	data = _aligned_malloc(size, alignment);
@@ -325,7 +325,7 @@ static void* alignedAlloc(size_t size, size_t alignment){
 
 // Releases the aligned memory created by alignedAlloc
 // Windows specific
-static void alignedFree(void* data){
+static void alignedFree(void* data) {
 
 	_aligned_free(data);
 

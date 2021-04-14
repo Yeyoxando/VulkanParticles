@@ -14,45 +14,52 @@
 #include "entity.h"
 
 // ------------------------------------------------------------------------- //
-
+/*
 struct SceneSettings {
 	// This will be send as parameter to the scene to initialize certain values
 
-  // name
+	// name
 	// settings like fog
-  // Global lighting
-  // ...
+	// Global lighting
+	// ...
 
 };
-
+*/
 // ------------------------------------------------------------------------- //
 
-class Scene{
+/**
+* @brief Class used to create examples using the particle editor.
+*        ECS based.
+*/
+class Scene {
 public:
-  Scene();
-  ~Scene();
+	Scene();
+	~Scene();
 
-  // Set the scene name, to identify it easier
-  void setName(const char* scene_name);
+	/// @brief Set the scene name, to identify it easier when multiple ones are created.
+	void setName(const char* scene_name);
 
-  void addEntity(Entity* entity, int material_id);
-  // void removeEntity (Not for the moment due to dynamic buffers, until know how they work)
+	void init();
+	void update(float time);
 
-  void init();
-  void update(float time);
-  // draw()?
+	/// @brief Adds a new entity to the scene, with its correspondent material ID
+	void addEntity(Entity* entity, int material_id);
+	// void removeEntity (Not for the moment due to fixed command buffer)
 
-  // Return a vector of the entities which contains the given material id
+	/// @brief Return a vector of the entities which contains the given material id.
 	std::vector<Entity*> getEntities(int material_id);
-  // Return the current number of objects from the entities list of a material kind
+	/// @brief Return the current number of objects from the entities list of a material kind.
 	int getNumberOfObjects(int material_id);
 
 private:
-  const char* name_;
+	const char* name_;
 
-  std::vector<Entity*> opaque_entities_;
-  std::vector<Entity*> translucent_entities_;
-  std::vector<Entity*> particle_entities_;
+	/// @brief Separated opaque objects by material to use them easier in the systems, it also can benefit in a later DOD improvement.
+	std::vector<Entity*> opaque_entities_;
+	/// @brief Separated translucent objects by material to use them easier in the systems, it also can benefit in a later DOD improvement.
+	std::vector<Entity*> translucent_entities_;
+	/// @brief Separated particle system objects by material to use them easier in the systems, it also can benefit in a later DOD improvement.
+	std::vector<Entity*> particle_entities_;
 
 };
 

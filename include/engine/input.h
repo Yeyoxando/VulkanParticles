@@ -7,20 +7,28 @@
 #ifndef __INPUT_MANAGER_H__
 #define __INPUT_MANAGER_H__
 
+ // ------------------------------------------------------------------------- //
+
 #include <GLFW/glfw3.h>
 #include <glm.hpp>
 
 #include <map>
 
+// ------------------------------------------------------------------------- //
+
+/**
+* @brief Stores the input state of mouse and keyboard
+*/
 struct InputState {
 
-  // Mouse
+  /// @brief Mouse actions
   uint8_t right_click_action;
   uint8_t left_click_action;
   float wheel_offset;
 
+
   // Maybe a map could be better (std::map<int, int> key_states)
-  // Keyboard
+  /// @brief Keyboard actions
   uint8_t escape_key_action;
   uint8_t zero_key_action;
   uint8_t one_key_action;
@@ -61,25 +69,34 @@ struct InputState {
 
 };
 
+// ------------------------------------------------------------------------- //
+
+/**
+* @brief Used to know if a key or mouse action is happening.
+*/
 class InputManager {
 public:
   InputManager();
   ~InputManager();
 
+  /// @brief Initializes the input manager using a reference to the window
   void init(GLFWwindow* window);
 
+  /// @brief Get the current state for all keys and mouse actions.
   static InputState* getState();
-  glm::vec2 getMousePos();
   
+  glm::vec2 getMousePos();
+  /// @brief Get the state of a mouse button, (parameter has to be an GLFW_... enum).
   bool getMouseButtonPressed(int button);
+  /// @brief Get the state of the mouse wheel.
   float getMouseScroll();
 
+  /// @brief Get the state of a key, (parameter has to be an GLFW_... enum).
   bool getKeyPressed(int key_code);
 
 private:
 
   static InputState* input_state_;
-
   GLFWwindow* window_ref_;
 
 };
