@@ -40,7 +40,7 @@ public:
 	void setName(const char* scene_name);
 
 	void init();
-	void update(float time);
+	void update(double time);
 
 	/// @brief Adds a new entity to the scene, with its correspondent material ID
 	void addEntity(Entity* entity, int material_id);

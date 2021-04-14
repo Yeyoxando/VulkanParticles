@@ -1,7 +1,8 @@
 solution ("VulkanParticles")
 	configurations { "Debug", "Release" }
 	platforms { "x64" }
-	location ("build")	
+	location ("build")
+		
 	
 	projects = { "ParticleEditor" }
 
@@ -23,13 +24,13 @@ solution ("VulkanParticles")
 
 		configuration "Debug"
 			defines { "DEBUG", "ASSERT" }
-			targetdir ("./bin")
+			targetdir ("./bin/Debug/x64")
 			targetsuffix "_d"
 			objdir ("./build/Debug")
 			flags { "Symbols", "NoPCH" }
 
 		configuration "Release"
-			targetdir ("./bin")
+			targetdir ("./bin/Release/x64")
 			objdir ("./build/Release")
 			flags { "Optimize", "NoPCH" }
 

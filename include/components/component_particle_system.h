@@ -49,10 +49,24 @@ class ComponentParticleSystem : public Component {
 public:
 	ComponentParticleSystem();
 
-	/// @brief Initializes the particle system and its settings.
-	void init(int max_particles, float emission_rate = 0.2f, float max_lifetime = 5.0f, bool burst = false);
+	/// @brief Initializes the particle system and its max particles.
+	void init(int max_particles);
 	/// @brief Add a texture to load it internally if it is not previously added to load and store its id.
 	void loadTexture(const char* texture_path);
+
+	/// @brief 
+	void setEmissionRate(float emission_rate);
+	/// @brief 
+	void setLifetime(float lifetime);
+	/// @brief 
+	void setInitialVelocity(glm::vec3 constant_velocity);
+	/// @brief 
+	void setInitialVelocity(glm::vec3 min_velocity, glm::vec3 max_velocity);
+	/// @brief 
+	void setBurst();
+	/// @brief 
+	void setParticleColor(glm::vec4 color);
+	/// @brief 
 
 
 	int getMaxParticles() { return max_particles_; }
@@ -66,9 +80,9 @@ protected:
 	~ComponentParticleSystem();
 
 	/// @brief Emit stage where particles get spawned and initialized.
-	void emit();
+	void emit(double deltatime);
 	/// @brief Particles update and die if they surpass their lifetime.
-	void update(float time);
+	void update(double deltatime);
 	/// @brief Particles get sorted by their distance to the camera if the blending mode requires it.
 	void sort();
 
@@ -90,7 +104,8 @@ protected:
 	/// @brief Internal ID of the texture used in the particle system.
 	int texture_id_;
 
-
+	/// @brief Time passed since last spawned particle
+	float last_time_;
 
 	friend class Scene;
 

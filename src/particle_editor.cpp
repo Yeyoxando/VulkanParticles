@@ -39,11 +39,26 @@ void ParticleEditor::run() {
 
   init();
 
+  const double fps_limit = 1.0 / 60.0;
+  double last_update_time = 0.0;
+  double last_frame_time = 0.0;
+  double accumm_delta_time = 0.0;
+
   // Render Loop
   while (!glfwWindowShouldClose(app_data_->window_) && !app_data_->close_window_) {
+    double now = glfwGetTime();
+    double delta_time = now - last_update_time;
+    accumm_delta_time += delta_time;
+
     input();
-    update();
-    render();
+    if ((now - last_frame_time) >= fps_limit) {
+      update(accumm_delta_time);
+      render();
+      last_frame_time = now;
+      accumm_delta_time = 0.0;
+    }
+
+    last_update_time = now;
   }
 
   shutDown();
@@ -153,7 +168,7 @@ void ParticleEditor::input() {
 
 // ------------------------------------------------------------------------- //
 
-void ParticleEditor::update() {
+void ParticleEditor::update(double deltatime) {
 
 	// Calculate time since rendering started
 	static auto start_time = std::chrono::high_resolution_clock::now();
@@ -163,8 +178,8 @@ void ParticleEditor::update() {
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
 
 	
-  // TODO: Fix this shit
-  active_scene_->update(0.01666f);
+ 
+  active_scene_->update(deltatime);
 
 }
 

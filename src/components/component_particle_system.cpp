@@ -25,6 +25,8 @@ ComponentParticleSystem::ComponentParticleSystem() : Component(Component::kCompo
 	material_parent_id_ = 2;
 	texture_id_ = -1;
 
+	last_time_ = 0.0f;
+
 }
 
 // ------------------------------------------------------------------------- //
@@ -40,12 +42,12 @@ ComponentParticleSystem::~ComponentParticleSystem() {
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::init(int max_particles, float emission_rate, float max_lifetime, bool burst){
-
+void ComponentParticleSystem::init(int max_particles) {
+	
 	max_particles_ = max_particles;
-	emission_rate_ = emission_rate;
-	max_life_time_ = max_lifetime;
-	burst_ = burst;
+	emission_rate_ = 0.2f;
+	max_life_time_ = 5.0f;
+	burst_ = false;
 
 	alive_particles_ = 0;
 
@@ -58,20 +60,12 @@ void ComponentParticleSystem::init(int max_particles, float emission_rate, float
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::emit(){
+void ComponentParticleSystem::emit(double deltatime) {
 
-	static float time = 0.0f;
-	time -= 0.01666f;
+	last_time_ -= deltatime;
 	int initial_alive_particles = alive_particles_;
 
-	if (!burst_) {
-		if (time > 0.0f) {
-			return;
-		}
-		else {
-			time = emission_rate_;
-		}
-	}
+	if (!burst_ && last_time_ > 0.0f) return;
 
 	// Activate particle on the first one dead
 	for (auto particle : particles_) {
@@ -82,15 +76,16 @@ void ComponentParticleSystem::emit(){
 			float rx = randFloat(-0.1f, 0.1f);
 			particle->velocity_ = glm::vec3(rz, rx, 0.1f);
 			alive_particles_++;
-			if(!burst_) break;
+			last_time_ = emission_rate_;
+			if (!burst_) break;
 		}
 	}
-	
+
 }
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::update(float time){
+void ComponentParticleSystem::update(double deltatime) {
 
 	for (auto particle : particles_) {
 		if (particle->alive_) {
@@ -104,8 +99,8 @@ void ComponentParticleSystem::update(float time){
 			}
 
 			//Update position and velocity
-			particle->life_time_ += time;
-			particle->position_ += particle->velocity_ * time;
+			particle->life_time_ += static_cast<float>(deltatime);
+			particle->position_ += particle->velocity_ * static_cast<float>(deltatime);
 		}
 	}
 
@@ -113,7 +108,7 @@ void ComponentParticleSystem::update(float time){
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::sort(){
+void ComponentParticleSystem::sort() {
 
 
 
@@ -121,7 +116,7 @@ void ComponentParticleSystem::sort(){
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::loadTexture(const char* texture_path){
+void ComponentParticleSystem::loadTexture(const char* texture_path) {
 
 	auto app_data = ParticleEditor::instance().app_data_;
 
@@ -156,7 +151,59 @@ void ComponentParticleSystem::loadTexture(const char* texture_path){
 
 }
 
-std::vector<Particle*>& ComponentParticleSystem::getAliveParticles(){
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setEmissionRate(float emission_rate) {
+
+	if (emission_rate <= 0.0f) return;
+	
+	emission_rate_ = emission_rate;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setLifetime(float lifetime) {
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setInitialVelocity(glm::vec3 constant_velocity) {
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setInitialVelocity(glm::vec3 min_velocity, glm::vec3 max_velocity) {
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setBurst() {
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setParticleColor(glm::vec4 color) {
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
+std::vector<Particle*>& ComponentParticleSystem::getAliveParticles() {
 
 	std::vector<Particle*> alive_particles = std::vector<Particle*>(0);
 
@@ -170,7 +217,7 @@ std::vector<Particle*>& ComponentParticleSystem::getAliveParticles(){
 
 // ------------------------------------------------------------------------- //
 
-std::vector<Particle*>& ComponentParticleSystem::getAllParticles(){
+std::vector<Particle*>& ComponentParticleSystem::getAllParticles() {
 
 	return particles_;
 

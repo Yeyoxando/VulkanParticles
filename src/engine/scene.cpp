@@ -79,13 +79,13 @@ void Scene::init(){
 
 // ------------------------------------------------------------------------- //
 
-void Scene::update(float time){
+void Scene::update(double time){
 
 	for (int i = 0; i < particle_entities_.size(); ++i){
 
 		auto ps = static_cast<ComponentParticleSystem*>
 			(particle_entities_[i]->getComponent(Component::ComponentKind::kComponentKind_ParticleSystem));
-		ps->emit();
+		ps->emit(time);
 		ps->update(time);
 		ps->sort();
 

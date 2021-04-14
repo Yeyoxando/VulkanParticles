@@ -72,7 +72,7 @@ private:
   void shutDown();
 
   void input();
-  void update();
+  void update(double deltatime);
   void render();
 
 

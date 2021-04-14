@@ -4,7 +4,7 @@
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
- // ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- // 
 
 #include "engine/common_def.h"
 
@@ -19,38 +19,9 @@
 #include "components/component_transform.h"
 #include "components/component_particle_system.h"
 
-/*
-TODO (ordered):
-	- implement radix sort
-
-	- static getDefaultGraphicsPipelineCreateInfo and tweak only what its needed on each one
-	- implement sokol time
-	- try burst
-
-	- Extra
-		- add texture tiling to opaque mat
-		- node system
-		- add an update component with a callback to customize it from the outside as a scripting method
-		- order 3D objects by mesh and call bindVertex and bindIndex only when needed
-
-		- only one bind vertex and idx (packed vertex buffers for normal objects, to do something like textures)
-		- it could be fine create dynamic command buffers with the alive particles to store lots of space in buffers
-
-	- clean everything and made a little example
-	- measure times to see how the thing is going and extract conclusions when DOD get implemented
-	- finished step 2
-
-	- start step 3 -> minimum to do for the submission (Complete principal objectives, Modular DOD-Vulkan)
-		- First modules replacing the basic PS
-		- Next modules designed in report
-		- Everything whats written in basic design section in report
-		- Continue the improvement of the "engine"
-
-*/
+// ------------------------------------------------------------------------- // 
 
 int main() {
-
-
 
 	// Scene creation and settings, entities are added after them settings
 	Scene* scene = new Scene();
@@ -68,7 +39,6 @@ int main() {
 
 		// Load a model
 		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-		//mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
 		// Get material component
@@ -80,116 +50,9 @@ int main() {
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
 		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/smoke_texture_trasnparency.png");
 		mat->setInstanceData(opaque_instance_data);
 
 		scene->addEntity(scenery, opaque_instance_data->getParentID());
-	}
-
-
-	Entity* scenery2 = new Entity();
-	{
-		scenery2->initAsArchetype(Entity::kArchetype_3DObject);
-
-		// Get transform component
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(scenery2->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.0f, 0.0f, 2.0f));
-		transform->rotate(glm::vec3(0.0f, -90.0f, 0.0f));
-
-
-		// Get mesh component
-		ComponentMesh* mesh = static_cast<ComponentMesh*>
-			(scenery2->getComponent(Component::kComponentKind_Mesh));
-
-		// Load a model
-		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-		//mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
-
-
-		// Get material component
-		ComponentMaterial* mat = static_cast<ComponentMaterial*>
-			(scenery2->getComponent(Component::kComponentKind_Material));
-		// Indicate material parent to internally set pipeline, descriptor set...
-		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
-
-		// Create instance data
-		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-		opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-		mat->setInstanceData(opaque_instance_data);
-
-		scene->addEntity(scenery2, opaque_instance_data->getParentID());
-	}
-
-
-	Entity* floor = new Entity();
-	{
-		floor->initAsArchetype(Entity::kArchetype_3DObject);
-
-		// Get transform component
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(floor->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.0f, -0.1f, 0.0f));
-		transform->scale(glm::vec3(5.0f, 0.0f, 5.0f));
-
-
-		// Get mesh component
-		ComponentMesh* mesh = static_cast<ComponentMesh*>
-			(floor->getComponent(Component::kComponentKind_Mesh));
-
-		// Load a model
-		//mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
-		mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
-
-
-		// Get material component
-		ComponentMaterial* mat = static_cast<ComponentMaterial*>
-			(floor->getComponent(Component::kComponentKind_Material));
-		// Indicate material parent to internally set pipeline, descriptor set...
-		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
-
-		// Create instance data
-		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		//opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/numerical_grid.jpg");
-		opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		mat->setInstanceData(opaque_instance_data);
-
-		scene->addEntity(floor, opaque_instance_data->getParentID());
-	}
-
-
-	Entity* translucent1 = new Entity();
-	{
-		translucent1->initAsArchetype(Entity::kArchetype_3DObject);
-
-		// Get transform component
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(translucent1->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(2.0f, 0.0f, 0.0f));
-
-
-		// Get mesh component
-		ComponentMesh* mesh = static_cast<ComponentMesh*>
-			(translucent1->getComponent(Component::kComponentKind_Mesh));
-		// Load a model
-		mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
-
-
-		// Get material component
-		ComponentMaterial* mat = static_cast<ComponentMaterial*>
-			(translucent1->getComponent(Component::kComponentKind_Material));
-		// Indicate material parent to internally set pipeline, descriptor set...
-		mat->setMaterialParent(ParticleEditor::kMaterialParent_Translucent);
-
-		// Create instance data
-		ComponentMaterial::TranslucentData* translucent_data = new ComponentMaterial::TranslucentData();
-		translucent_data->loadAlbedoTexture("../../../resources/textures/smoke.png");
-		//translucent_data->color_ = glm::vec4(1.0f, 1.0f, 0.8f, 1.0f);
-		mat->setInstanceData(translucent_data);
-
-		scene->addEntity(translucent1, translucent_data->getParentID());
 	}
 
 
@@ -202,14 +65,16 @@ int main() {
 		ComponentTransform* transform = static_cast<ComponentTransform*>
 			(particle_system->getComponent(Component::kComponentKind_Transform));
 		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
-		transform->scale(glm::vec3(0.6f, 0.6f, 0.6f));
+		transform->scale(glm::vec3(0.3f, 0.3f, 0.3f));
 
 		// Get particle system component
-		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+		ComponentParticleSystem* psc1 = static_cast<ComponentParticleSystem*>
 			(particle_system->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max 500 particles
-		ps->init(40, 0.4f, 8.0f, false);
-		ps->loadTexture("../../../resources/textures/smoke.png");
+		// Initialize particle system with max 100 particles
+		psc1->init(300);
+		//psc1->setEmissionRate(1.0f);
+
+		psc1->loadTexture("../../../resources/textures/smoke.png");
 
 		scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -227,11 +92,13 @@ int main() {
 		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
 		// Get particle system component
-		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+		ComponentParticleSystem* psc2 = static_cast<ComponentParticleSystem*>
 			(particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max 500 particles
-		ps->init(60, 0.6f, 5.0f, false);
-		ps->loadTexture("../../../resources/textures/fire.png");
+		// Initialize particle system with max 60 particles
+		psc2->init(150);
+		//psc2->setEmissionRate(1.0f);
+
+		psc2->loadTexture("../../../resources/textures/fire.png");
 
 		scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -249,11 +116,13 @@ int main() {
 		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
 		// Get particle system component
-		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+		ComponentParticleSystem* psc3 = static_cast<ComponentParticleSystem*>
 			(particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max 500 particles
-		ps->init(60, 0.6f, 5.0f, false);
-		ps->loadTexture("../../../resources/textures/fire.png");
+		// Initialize particle system with max 60 particles
+		psc3->init(150);
+		psc3->setEmissionRate(2.0f);
+
+		psc3->loadTexture("../../../resources/textures/fire.png");
 
 		scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
