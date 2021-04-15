@@ -21,11 +21,18 @@
 
 // ------------------------------------------------------------------------- // 
 
+/**
+* @brief
+*	THE SCENE EXAMPLE!
+*
+*	Scene to test different particle effects combined with another environment objects using the ECS.
+*	This scene will be used to work in the editor's usability.
+*/
 int main() {
 
 	// Scene creation and settings, entities are added after them settings
 	Scene* scene = new Scene();
-	scene->setName("Particles test");
+	scene->setName("Particles scene test");
 
 
 	// 3D object creation and components setting

@@ -1,6 +1,6 @@
 /*
  *	Author: Diego Ochando Torres
- *  Date: 05/12/2020
+ *  Date: 14/04/2021
  *  e-mail: c0022981@my.shu.ac.uk | yeyoxando@gmail.com
  */
 
@@ -19,117 +19,85 @@
 #include "components/component_transform.h"
 #include "components/component_particle_system.h"
 
-// ------------------------------------------------------------------------- // 
+// ------------------------------------------------------------------------- //
 
+/**
+* @brief
+*	THE PLAYGROUND!
+*
+*	Scene to test different particle effect settings.
+*	This scene will be used to work in the editor's flexibility.
+*/
 int main() {
 
 	// Scene creation and settings, entities are added after them settings
 	Scene* scene = new Scene();
-	scene->setName("Particles test");
+	scene->setName("Particles editor test");
 
+	Entity* particle_systems[16] = {};
+	ComponentParticleSystem* ps_components[16];
 
 	// 3D object creation and components setting
-	Entity* scenery = new Entity();
+	Entity* floor = new Entity();
 	{
-		scenery->initAsArchetype(Entity::kArchetype_3DObject);
+		floor->initAsArchetype(Entity::kArchetype_3DObject);
+
+		// Get transform component
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(floor->getComponent(Component::kComponentKind_Transform));
+		transform->scale(glm::vec3(8.0f, 0.0f, 8.0f));
+
 
 		// Get mesh component
 		ComponentMesh* mesh = static_cast<ComponentMesh*>
-			(scenery->getComponent(Component::kComponentKind_Mesh));
+			(floor->getComponent(Component::kComponentKind_Mesh));
 
 		// Load a model
-		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		mesh->loadDefaultMesh(ParticleEditor::DefaultMesh::kDefaultMesh_Quad);
 
 
 		// Get material component
 		ComponentMaterial* mat = static_cast<ComponentMaterial*>
-			(scenery->getComponent(Component::kComponentKind_Material));
+			(floor->getComponent(Component::kComponentKind_Material));
 		// Indicate material parent to internally set pipeline, descriptor set...
 		mat->setMaterialParent(ParticleEditor::kMaterialParent_Opaque);
 
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/chessboard.jpg");
+		opaque_instance_data->color_ = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
-		scene->addEntity(scenery, opaque_instance_data->getParentID());
+		scene->addEntity(floor, opaque_instance_data->getParentID());
 	}
 
 
-	// Particle system creation and setting
-	Entity* particle_system = new Entity();
-	{
-		particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
+	for (int x = 0; x < 4; ++x) {
+		for (int z = 0; z < 4; ++z) {
+			Entity* particle_system = particle_systems[z + (x * 4)];
+			particle_system = new Entity();
+			particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
-		// Transform affect to all particles
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
-		transform->scale(glm::vec3(0.3f, 0.3f, 0.3f));
+			// Transform affect to all particles
+			ComponentTransform* transform = static_cast<ComponentTransform*>
+				(particle_system->getComponent(Component::kComponentKind_Transform));
+			transform->translate(glm::vec3(x * 2.0f - 3.0f, 0.0f, z * 2.0f - 3.0f));
 
-		// Get particle system component
-		ComponentParticleSystem* psc1 = static_cast<ComponentParticleSystem*>
-			(particle_system->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max particles
-		psc1->init(20);
-		psc1->setBurst();
-		psc1->setLifetime(3.0f);
-		//psc1->setConstantVelocity(glm::vec3(0.0f, 0.0f, 0.1f));
-		//psc1->setInitialVelocity(glm::vec3(-0.3f, -0.3f, 0.1f), glm::vec3(0.3f, 0.3f, 0.2f));
-		psc1->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.33f));
+			//ComponentParticleSystem* psc = ps_components[z + (x * 4)];
+			ps_components[z + (x * 4)] = static_cast<ComponentParticleSystem*>(particle_system->getComponent
+				(Component::kComponentKind_ParticleSystem));
 
-		psc1->loadTexture("../../../resources/textures/smoke.png");
+			// Initialize particle system with max particles
+			ps_components[z + (x * 4)]->init(150);
+			ps_components[z + (x * 4)]->loadTexture("../../../resources/textures/fire.png");
 
-		scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+			scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+		}
 	}
+	
 
-
-	// Particle system creation and setting
-	Entity* particle_system2 = new Entity();
-	{
-		particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
-
-		// Transform affect to all particles
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system2->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.64f, 0.7f, 0.26f));
-		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
-
-		// Get particle system component
-		ComponentParticleSystem* psc2 = static_cast<ComponentParticleSystem*>
-			(particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max particles
-		psc2->init(150);
-		//psc2->setEmissionRate(1.0f);
-
-		psc2->loadTexture("../../../resources/textures/fire.png");
-
-		scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
-	}
-
-
-	// Particle system creation and setting
-	Entity* particle_system3 = new Entity();
-	{
-		particle_system3->initAsArchetype(Entity::kArchetype_ParticleSystem);
-
-		// Transform affect to all particles
-		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system3->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(-0.56f, 0.68f, 0.26f));
-		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
-
-		// Get particle system component
-		ComponentParticleSystem* psc3 = static_cast<ComponentParticleSystem*>
-			(particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
-		// Initialize particle system with max particles
-		psc3->init(50);
-		psc3->setEmissionRate(2.0f);
-
-		psc3->loadTexture("../../../resources/textures/fire.png");
-
-		scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
-	}
+	ps_components[0]->setBurst();
+	ps_components[10]->setBurst();
 
 
 
