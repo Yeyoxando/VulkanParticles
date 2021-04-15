@@ -56,25 +56,25 @@ public:
 
 
 	// -- These setters will be part of the modules, for now they are hard-coded --
-	/// @brief Spawn particles in a box area. If not called particles will spawn in the same position
+	/// @brief Spawn particles in a box area. If not called particles will spawn in the same position.
 	void setSpawnArea(float length, float width, float height);
-	/// @brief 
+	/// @brief Time between two particles spawn.
 	void setEmissionRate(float emission_rate);
-	/// @brief 
+	/// @brief Time that a particle will live. If set to 0 it won't die.
 	void setLifetime(float lifetime);
-	/// @brief 
+	/// @brief Set a constant velocity for all the particles.
 	void setConstantVelocity(glm::vec3 constant_velocity);
-	/// @brief 
+	/// @brief Set a random initial velocity between the two given vectors.
 	void setInitialVelocity(glm::vec3 min_velocity, glm::vec3 max_velocity);
 	/// @brief Interpolates initial velocity with final velocity over lifetime.
 	void setVelocityOverTime(glm::vec3 final_velocity);
-	/// @brief 
+	/// @brief If called it will spawn all the particles in the same frame.
 	void setBurst();
-	/// @brief 
+	/// @brief Set a constant color for all the particles.
 	void setParticleColor(glm::vec4 color);
-	/// @brief 
+	/// @brief Set a color to change the particle over their life time.
 	void setParticleColorOverTime(glm::vec4 final_color);
-	/// @brief 
+	/// @brief Set an alpha value to change the particles over their life time.
 	void setAlphaColorOverTime(float final_alpha);
 
 
@@ -105,20 +105,27 @@ protected:
 	glm::vec4 initial_color_;
 
 	glm::vec3 initial_velocity_;
+	/// @brief Min velocity for the random distribution.
 	glm::vec3 min_velocity_;
+	/// @brief Max velocity for the random distribution.
 	glm::vec3 max_velocity_;
 
+	/// @brief Indicates if the color should interpolate over time.
 	bool lerp_color_;
+	/// @brief Indicates if the alpha value should interpolate over time.
 	bool lerp_alpha_;
+	/// @brief Color to lerp.
 	glm::vec4 final_color_;
+	/// @brief Indicates if the speed should interpolate over time.
 	bool lerp_speed_;
+	/// @brief Speed to lerp.
 	glm::vec3 final_speed_;
 
 	/// @brief Time that passes between two particles spawning.
 	float emission_rate_;
 	/// @brief If true all particles will spawn at the same time ignoring the emission rate.
 	bool burst_;
-	///
+	/// @brief If set, all the particles will share the same velocity.
 	bool constant_velocity_;
 
 	/// @brief Internal ID of the mesh used in the particle system. For now is always a quad.
