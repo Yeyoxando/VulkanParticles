@@ -14,6 +14,7 @@
 ComponentParticleSystem::ComponentParticleSystem() : Component(Component::kComponentKind_ParticleSystem) {
 
 	particles_ = std::vector<Particle*>();
+	initial_color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	initial_velocity_ = glm::vec3(0.0f, 0.0f, 0.1f);
 	min_velocity_ = glm::vec3(-0.1f, -0.1f, 0.1f);
 	max_velocity_ = glm::vec3(0.1f, 0.1f, 0.12f);
@@ -29,6 +30,12 @@ ComponentParticleSystem::ComponentParticleSystem() : Component(Component::kCompo
 	texture_id_ = -1;
 
 	last_time_ = 0.0f;
+
+	lerp_color_ = false;
+	lerp_alpha_ = false;
+	final_color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	lerp_speed_ = false;
+	final_speed_ = glm::vec3(0.0f, 0.0f, 0.1f);
 
 }
 
@@ -107,6 +114,31 @@ void ComponentParticleSystem::update(double deltatime) {
 				particle->position_ = glm::vec3(0.0f, 0.0f, -10000.0f);
 				--alive_particles_;
 				continue;
+			}
+
+			float lerp_value = particle->life_time_ / max_life_time_;
+			
+			//Update color
+			if (lerp_color_) {
+				glm::vec4 color;
+				color.r = glm::smoothstep(initial_color_.r, final_color_.r, lerp_value);
+				color.g = glm::smoothstep(initial_color_.g, final_color_.g, lerp_value);
+				color.b = glm::smoothstep(initial_color_.b, final_color_.b, lerp_value);
+				color.a = glm::smoothstep(initial_color_.a, final_color_.a, lerp_value);
+				particle->color_ = color;
+			}
+			if (lerp_alpha_) {
+				float alpha = glm::smoothstep(initial_color_.a, final_color_.a, lerp_value);
+				particle->color_.a = alpha;
+			}
+
+			//Update speed
+			if (lerp_speed_) {
+				glm::vec3 speed;
+				speed.x = glm::smoothstep(initial_color_.x, final_color_.x, lerp_value);
+				speed.y = glm::smoothstep(initial_color_.y, final_color_.y, lerp_value);
+				speed.z = glm::smoothstep(initial_color_.z, final_color_.z, lerp_value);
+				particle->velocity_ = speed;
 			}
 
 			//Update position and velocity
@@ -211,7 +243,8 @@ void ComponentParticleSystem::setInitialVelocity(glm::vec3 min_velocity, glm::ve
 
 void ComponentParticleSystem::setVelocityOverTime(glm::vec3 final_velocity){
 
-
+	lerp_speed_ = true;
+	final_speed_ = final_velocity;
 
 }
 
@@ -227,6 +260,8 @@ void ComponentParticleSystem::setBurst() {
 
 void ComponentParticleSystem::setParticleColor(glm::vec4 color) {
 
+	initial_color_ = color;
+
 	for (auto particle : particles_) {
 		particle->color_ = color;
 	}
@@ -237,7 +272,17 @@ void ComponentParticleSystem::setParticleColor(glm::vec4 color) {
 
 void ComponentParticleSystem::setParticleColorOverTime(glm::vec4 final_color){
 
+	lerp_color_ = true;
+	final_color_ = final_color;
 
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setAlphaColorOverTime(float final_alpha){
+
+	lerp_alpha_ = true;
+	final_color_.a = final_alpha;
 
 }
 

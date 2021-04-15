@@ -80,7 +80,7 @@ void ParticleEditor::AppData::initWindow(int width /*= 800*/, int height /*= 600
 
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-  window_ = glfwCreateWindow(width, height, "Hello Particles", nullptr, nullptr);
+  window_ = glfwCreateWindow(width, height, "Particle System Editor", nullptr, nullptr);
   window_width_ = width;
   window_height_ = height;
 

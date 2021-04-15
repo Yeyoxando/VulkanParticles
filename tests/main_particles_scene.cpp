@@ -64,78 +64,161 @@ int main() {
 
 
 	// Particle system creation and setting
-	Entity* particle_system = new Entity();
+	Entity* particle_system_smoke_puff = new Entity();
 	{
-		particle_system->initAsArchetype(Entity::kArchetype_ParticleSystem);
+		particle_system_smoke_puff->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
 		// Transform affect to all particles
 		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system->getComponent(Component::kComponentKind_Transform));
+			(particle_system_smoke_puff->getComponent(Component::kComponentKind_Transform));
 		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
 		transform->scale(glm::vec3(0.3f, 0.3f, 0.3f));
 
 		// Get particle system component
-		ComponentParticleSystem* psc1 = static_cast<ComponentParticleSystem*>
-			(particle_system->getComponent(Component::kComponentKind_ParticleSystem));
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_smoke_puff->getComponent(Component::kComponentKind_ParticleSystem));
 		// Initialize particle system with max particles
-		psc1->init(20);
-		psc1->setBurst();
-		psc1->setLifetime(3.0f);
-		//psc1->setConstantVelocity(glm::vec3(0.0f, 0.0f, 0.1f));
-		//psc1->setInitialVelocity(glm::vec3(-0.3f, -0.3f, 0.1f), glm::vec3(0.3f, 0.3f, 0.2f));
-		psc1->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.33f));
+		ps->init(20);
+		ps->setBurst();
+		ps->setLifetime(5.14f);
+		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.33f));
+		ps->setAlphaColorOverTime(0.0f);
 
-		psc1->loadTexture("../../../resources/textures/smoke.png");
+		ps->loadTexture("../../../resources/textures/smoke.png");
 
-		scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+		scene->addEntity(particle_system_smoke_puff, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
+
+	// Particle system creation and setting
+	Entity* particle_system_smoke_puff_two = new Entity();
+	{
+		particle_system_smoke_puff_two->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
+		// Transform affect to all particles
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(particle_system_smoke_puff_two->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(0.0f, 0.17f, -0.1f));
+		transform->scale(glm::vec3(0.2f, 0.2f, 0.3f));
+
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_smoke_puff_two->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max particles
+		ps->init(20);
+		ps->setBurst();
+		ps->setLifetime(6.35f);
+		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.22f));
+		ps->setAlphaColorOverTime(0.0f);
+
+		ps->loadTexture("../../../resources/textures/smoke.png");
+
+		scene->addEntity(particle_system_smoke_puff_two, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
 
 
 	// Particle system creation and setting
-	Entity* particle_system2 = new Entity();
+	Entity* particle_system_fire_torch_right = new Entity();
 	{
-		particle_system2->initAsArchetype(Entity::kArchetype_ParticleSystem);
+		particle_system_fire_torch_right->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
 		// Transform affect to all particles
 		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system2->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(0.64f, 0.7f, 0.26f));
+			(particle_system_fire_torch_right->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(0.63f, 0.69f, 0.26f));
 		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
 		// Get particle system component
-		ComponentParticleSystem* psc2 = static_cast<ComponentParticleSystem*>
-			(particle_system2->getComponent(Component::kComponentKind_ParticleSystem));
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_fire_torch_right->getComponent(Component::kComponentKind_ParticleSystem));
 		// Initialize particle system with max particles
-		psc2->init(150);
-		//psc2->setEmissionRate(1.0f);
+		ps->init(100);
+		ps->setLifetime(2.0f);
+		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.02f), glm::vec3(0.06f, 0.06f, 0.06f));
+		ps->setAlphaColorOverTime(0.0f);
 
-		psc2->loadTexture("../../../resources/textures/fire.png");
+		ps->loadTexture("../../../resources/textures/fire.png");
 
-		scene->addEntity(particle_system2, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+		scene->addEntity(particle_system_fire_torch_right, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
+
+	// Particle system creation and setting
+	Entity* particle_system_smoke_torch_right = new Entity();
+	{
+		particle_system_smoke_torch_right->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
+		// Transform affect to all particles
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(particle_system_smoke_torch_right->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(0.63f, 0.71f, 0.26f));
+		transform->scale(glm::vec3(0.4f, 0.4f, 0.4f));
+
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_smoke_torch_right->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max particles
+		ps->init(100);
+		ps->setLifetime(6.0f);
+		//ps->setEmissionRate(0.3f);
+		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.17f));
+		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.08f), glm::vec3(0.06f, 0.06f, 0.12f));
+		ps->setAlphaColorOverTime(0.0f);
+
+		ps->loadTexture("../../../resources/textures/smoke.png");
+
+		scene->addEntity(particle_system_smoke_torch_right, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
 
 
 	// Particle system creation and setting
-	Entity* particle_system3 = new Entity();
+	Entity* particle_system_fire_torch_left = new Entity();
 	{
-		particle_system3->initAsArchetype(Entity::kArchetype_ParticleSystem);
+		particle_system_fire_torch_left->initAsArchetype(Entity::kArchetype_ParticleSystem);
 
 		// Transform affect to all particles
 		ComponentTransform* transform = static_cast<ComponentTransform*>
-			(particle_system3->getComponent(Component::kComponentKind_Transform));
-		transform->translate(glm::vec3(-0.56f, 0.68f, 0.26f));
+			(particle_system_fire_torch_left->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(-0.56f, 0.67f, 0.25f));
 		transform->scale(glm::vec3(0.2f, 0.2f, 0.2f));
 
 		// Get particle system component
-		ComponentParticleSystem* psc3 = static_cast<ComponentParticleSystem*>
-			(particle_system3->getComponent(Component::kComponentKind_ParticleSystem));
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_fire_torch_left->getComponent(Component::kComponentKind_ParticleSystem));
 		// Initialize particle system with max particles
-		psc3->init(50);
-		psc3->setEmissionRate(2.0f);
+		ps->init(100);
+		ps->setLifetime(2.0f);
+		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.02f), glm::vec3(0.06f, 0.06f, 0.06f));
+		ps->setAlphaColorOverTime(0.0f);
 
-		psc3->loadTexture("../../../resources/textures/fire.png");
+		ps->loadTexture("../../../resources/textures/fire.png");
 
-		scene->addEntity(particle_system3, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+		scene->addEntity(particle_system_fire_torch_left, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
+	}
+
+	// Particle system creation and setting
+	Entity* particle_system_smoke_torch_left = new Entity();
+	{
+		particle_system_smoke_torch_left->initAsArchetype(Entity::kArchetype_ParticleSystem);
+
+		// Transform affect to all particles
+		ComponentTransform* transform = static_cast<ComponentTransform*>
+			(particle_system_smoke_torch_left->getComponent(Component::kComponentKind_Transform));
+		transform->translate(glm::vec3(-0.56f, 0.69f, 0.25f));
+		transform->scale(glm::vec3(0.4f, 0.4f, 0.4f));
+
+		// Get particle system component
+		ComponentParticleSystem* ps = static_cast<ComponentParticleSystem*>
+			(particle_system_smoke_torch_left->getComponent(Component::kComponentKind_ParticleSystem));
+		// Initialize particle system with max particles
+		ps->init(100);
+		ps->setLifetime(6.0f);
+		//ps->setEmissionRate(0.3f);
+		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.17f));
+		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.08f), glm::vec3(0.06f, 0.06f, 0.12f));
+		ps->setAlphaColorOverTime(0.0f);
+
+		ps->loadTexture("../../../resources/textures/smoke.png");
+
+		scene->addEntity(particle_system_smoke_torch_left, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
 
 

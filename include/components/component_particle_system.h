@@ -74,6 +74,8 @@ public:
 	void setParticleColor(glm::vec4 color);
 	/// @brief 
 	void setParticleColorOverTime(glm::vec4 final_color);
+	/// @brief 
+	void setAlphaColorOverTime(float final_alpha);
 
 
 	int getMaxParticles() { return max_particles_; }
@@ -100,10 +102,17 @@ protected:
 	float max_life_time_;
 
 
+	glm::vec4 initial_color_;
+
 	glm::vec3 initial_velocity_;
 	glm::vec3 min_velocity_;
 	glm::vec3 max_velocity_;
 
+	bool lerp_color_;
+	bool lerp_alpha_;
+	glm::vec4 final_color_;
+	bool lerp_speed_;
+	glm::vec3 final_speed_;
 
 	/// @brief Time that passes between two particles spawning.
 	float emission_rate_;
