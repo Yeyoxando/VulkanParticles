@@ -7,7 +7,7 @@ The project is about researching and implement a modular particle system editor 
 
 ## Youtube video
 	You can see this youtube video showing all the features and different examples:
-	Link
+	https://www.youtube.com/watch?v=bdYD0lVFeDo
 
 ## Build
 	To generate a Visual studio solution execute "compile_vs2017.bat" or "compile_vs2019.bat", 	 
