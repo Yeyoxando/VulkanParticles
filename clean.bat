@@ -1,1 +1,3 @@
-rmdir /s /q build
+del ".\build\" /s /q
+
+exit

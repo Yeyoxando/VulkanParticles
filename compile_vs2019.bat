@@ -1,8 +1,11 @@
-rmdir /s /q build/ParticleEditor
-rm build/VulkanParticles.sln
+
+del ".\build\Debug\" /s /q
+del ".\build\Release\" /s /q 
+del ".\build\ParticleEditor\" /s /q 
+del ".\build\VulkanParticles.sln"
 
 .\tools\genie.exe vs2019
 
 .\build\VulkanParticles.sln
 
-pause
+exit
