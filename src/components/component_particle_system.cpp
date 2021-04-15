@@ -14,12 +14,15 @@
 ComponentParticleSystem::ComponentParticleSystem() : Component(Component::kComponentKind_ParticleSystem) {
 
 	particles_ = std::vector<Particle*>();
-	initial_velocity_ = glm::vec3(0.0f, 0.0f, 1.0f);
+	initial_velocity_ = glm::vec3(0.0f, 0.0f, 0.1f);
+	min_velocity_ = glm::vec3(-0.1f, -0.1f, 0.1f);
+	max_velocity_ = glm::vec3(0.1f, 0.1f, 0.12f);
 	max_particles_ = 0;
 	alive_particles_ = 0;
-	max_life_time_ = 8.0f;
+	max_life_time_ = 5.0f;
 	emission_rate_ = 0.2f;
 	burst_ = false;
+	constant_velocity_ = false;
 
 	mesh_buffer_id_ = 0;
 	material_parent_id_ = 2;
@@ -62,6 +65,8 @@ void ComponentParticleSystem::init(int max_particles) {
 
 void ComponentParticleSystem::emit(double deltatime) {
 
+	if (alive_particles_ == max_particles_) return;
+
 	last_time_ -= deltatime;
 	int initial_alive_particles = alive_particles_;
 
@@ -72,9 +77,15 @@ void ComponentParticleSystem::emit(double deltatime) {
 		if (!particle->alive_) {
 			particle->alive_ = true;
 			particle->position_ = glm::vec3(0.0f, 0.0f, 0.0f);
-			float rz = randFloat(-0.1f, 0.1f);
-			float rx = randFloat(-0.1f, 0.1f);
-			particle->velocity_ = glm::vec3(rz, rx, 0.1f);
+			if (!constant_velocity_) {
+				float rz = randFloat(min_velocity_.x, max_velocity_.x);
+				float rx = randFloat(min_velocity_.y, max_velocity_.y);
+				float ry = randFloat(min_velocity_.z, max_velocity_.z);
+				particle->velocity_ = glm::vec3(rz, rx, ry);
+			}
+			else {
+				particle->velocity_ = initial_velocity_;
+			}
 			alive_particles_++;
 			last_time_ = emission_rate_;
 			if (!burst_) break;
@@ -90,7 +101,7 @@ void ComponentParticleSystem::update(double deltatime) {
 	for (auto particle : particles_) {
 		if (particle->alive_) {
 			// If particle has exceeded the max lifetime it marks it as dead
-			if (particle->life_time_ > max_life_time_) {
+			if (particle->life_time_ > max_life_time_ && max_life_time_ > 0.0f) {
 				particle->alive_ = false;
 				particle->life_time_ = 0.0f;
 				particle->position_ = glm::vec3(0.0f, 0.0f, -10000.0f);
@@ -153,6 +164,14 @@ void ComponentParticleSystem::loadTexture(const char* texture_path) {
 
 // ------------------------------------------------------------------------- //
 
+void ComponentParticleSystem::setSpawnArea(float length, float width, float height){
+
+
+
+}
+
+// ------------------------------------------------------------------------- //
+
 void ComponentParticleSystem::setEmissionRate(float emission_rate) {
 
 	if (emission_rate <= 0.0f) return;
@@ -165,21 +184,32 @@ void ComponentParticleSystem::setEmissionRate(float emission_rate) {
 
 void ComponentParticleSystem::setLifetime(float lifetime) {
 
-
+	max_life_time_ = lifetime;
 
 }
 
 // ------------------------------------------------------------------------- //
 
-void ComponentParticleSystem::setInitialVelocity(glm::vec3 constant_velocity) {
+void ComponentParticleSystem::setConstantVelocity(glm::vec3 constant_velocity) {
 
-
+	initial_velocity_ = constant_velocity;
+	constant_velocity_ = true;
 
 }
 
 // ------------------------------------------------------------------------- //
 
 void ComponentParticleSystem::setInitialVelocity(glm::vec3 min_velocity, glm::vec3 max_velocity) {
+
+	min_velocity_ = min_velocity;
+	max_velocity_ = max_velocity;
+	constant_velocity_ = false;
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setVelocityOverTime(glm::vec3 final_velocity){
 
 
 
@@ -189,13 +219,23 @@ void ComponentParticleSystem::setInitialVelocity(glm::vec3 min_velocity, glm::ve
 
 void ComponentParticleSystem::setBurst() {
 
-
+	burst_ = true;
 
 }
 
 // ------------------------------------------------------------------------- //
 
 void ComponentParticleSystem::setParticleColor(glm::vec4 color) {
+
+	for (auto particle : particles_) {
+		particle->color_ = color;
+	}
+
+}
+
+// ------------------------------------------------------------------------- //
+
+void ComponentParticleSystem::setParticleColorOverTime(glm::vec4 final_color){
 
 
 

@@ -4,7 +4,7 @@ solution ("VulkanParticles")
 	location ("build")
 		
 	
-	projects = { "ParticleEditor" }
+	projects = { "ParticleEditor", "ParticlesScene", "ParticlesPerformance" }
 
 	for i, prj in ipairs(projects) do 
 		project (prj)
@@ -61,7 +61,7 @@ project "ParticleEditor"
 		"./src/**.cpp",
 		"./src/engine_internal/**.h",
 		"./src/engine_internal/**.cpp",
-		"./tests/**.cpp", 
+		"./tests/main_particle_editor.cpp", 
 		"./resources/**.vert", 
 		"./resources/**.frag", 
 
@@ -88,3 +88,104 @@ project "ParticleEditor"
 		"./external/glfw/glfw3"
 	}
 
+
+project "ParticlesScene"
+
+  language "C++"
+	kind "ConsoleApp"
+	
+	includedirs{
+	  "./include/",
+	  "./src/engine_internal/",
+	  "./external/vulkan/Include/",
+	  "./external/glfw/include/",
+	  "./external/glm/",
+	  "./external/glm/**",
+	  "./external/stb_image/",
+	  "./external/tiny_obj/",
+	}
+
+	--Common files
+	files{
+		--ParticleEditor
+		"./include/**.h",
+		"./src/**.cpp",
+		"./src/engine_internal/**.h",
+		"./src/engine_internal/**.cpp",
+		"./tests/main_particles_scene.cpp", 
+		"./resources/**.vert", 
+		"./resources/**.frag", 
+
+		"./external/stb_image/**.h",
+		"./external/tiny_obj/**.h",
+		"./external/sokol_time/**.h",
+
+	}
+
+	defines { 	
+                "VK_USE_PLATFORM_WIN32_KHR",
+		"GLFW_INCLUDE_VULKAN",
+		"WIN32",
+		"_WIN32",
+		"_WINDOWS",
+		"GLM_FORCE_RADIANS",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"GLM_ENABLE_EXPERIMENTAL",
+		"TINYOBJLOADER_IMPLEMENTATION",
+	}	 
+	
+	links{
+		"./external/vulkan/vulkan-1",
+		"./external/glfw/glfw3"
+	}
+
+project "ParticlesPerformance" 
+
+  language "C++"
+	kind "ConsoleApp"
+	
+
+	includedirs{
+	  "./include/",
+	  "./src/engine_internal/",
+	  "./external/vulkan/Include/",
+	  "./external/glfw/include/",
+	  "./external/glm/",
+	  "./external/glm/**",
+	  "./external/stb_image/",
+	  "./external/tiny_obj/",
+	}
+
+	--Common files
+	files{
+		--ParticleEditor
+		"./include/**.h",
+		"./src/**.cpp",
+		"./src/engine_internal/**.h",
+		"./src/engine_internal/**.cpp",
+		"./tests/main_particles_performance.cpp", 
+		"./resources/**.vert", 
+		"./resources/**.frag", 
+
+		"./external/stb_image/**.h",
+		"./external/tiny_obj/**.h",
+		"./external/sokol_time/**.h",
+
+	}
+
+	defines { 	
+                "VK_USE_PLATFORM_WIN32_KHR",
+		"GLFW_INCLUDE_VULKAN",
+		"WIN32",
+		"_WIN32",
+		"_WINDOWS",
+		"GLM_FORCE_RADIANS",
+		"GLM_FORCE_DEPTH_ZERO_TO_ONE",
+		"GLM_ENABLE_EXPERIMENTAL",
+		"TINYOBJLOADER_IMPLEMENTATION",
+	}	 
+	
+	links{
+		"./external/vulkan/vulkan-1",
+		"./external/glfw/glfw3"
+	}

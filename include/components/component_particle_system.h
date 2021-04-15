@@ -54,19 +54,26 @@ public:
 	/// @brief Add a texture to load it internally if it is not previously added to load and store its id.
 	void loadTexture(const char* texture_path);
 
+
+	// -- These setters will be part of the modules, for now they are hard-coded --
+	/// @brief Spawn particles in a box area. If not called particles will spawn in the same position
+	void setSpawnArea(float length, float width, float height);
 	/// @brief 
 	void setEmissionRate(float emission_rate);
 	/// @brief 
 	void setLifetime(float lifetime);
 	/// @brief 
-	void setInitialVelocity(glm::vec3 constant_velocity);
+	void setConstantVelocity(glm::vec3 constant_velocity);
 	/// @brief 
 	void setInitialVelocity(glm::vec3 min_velocity, glm::vec3 max_velocity);
+	/// @brief Interpolates initial velocity with final velocity over lifetime.
+	void setVelocityOverTime(glm::vec3 final_velocity);
 	/// @brief 
 	void setBurst();
 	/// @brief 
 	void setParticleColor(glm::vec4 color);
 	/// @brief 
+	void setParticleColorOverTime(glm::vec4 final_color);
 
 
 	int getMaxParticles() { return max_particles_; }
@@ -88,14 +95,22 @@ protected:
 
 
 	std::vector<Particle*> particles_;
-	glm::vec3 initial_velocity_;
 	int alive_particles_;
 	int max_particles_;
 	float max_life_time_;
+
+
+	glm::vec3 initial_velocity_;
+	glm::vec3 min_velocity_;
+	glm::vec3 max_velocity_;
+
+
 	/// @brief Time that passes between two particles spawning.
 	float emission_rate_;
 	/// @brief If true all particles will spawn at the same time ignoring the emission rate.
 	bool burst_;
+	///
+	bool constant_velocity_;
 
 	/// @brief Internal ID of the mesh used in the particle system. For now is always a quad.
 	int mesh_buffer_id_;
