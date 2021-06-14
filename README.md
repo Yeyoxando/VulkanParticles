@@ -1,5 +1,10 @@
 # VulkanParticles
 
+## Current state
+The project was submitted and obtained a mark of 77.0/100.0.
+Not all of the researched and proposed features were implemented initially, although I have plans to continue working on this project to implement these features and improve the flexibility and performance of the particle system.
+
+## Description
 This is the repository for my Technical Computing Project in my final year of Computer Science For Games BSc at Sheffield Hallam University.
 The project is about researching and implement a modular particle system editor with data oriented design using the Vulkan graphics API and C++.
 
