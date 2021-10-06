@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include <Vulkan/vulkan.h>
+#include <vulkan.h>
 #include <glm.hpp>
 
 #include "system.h"

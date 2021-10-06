@@ -6,7 +6,7 @@
 
  // ------------------------------------------------------------------------- // 
 
-#include "engine/common_def.h"
+//#include "engine/common_def.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -62,7 +62,7 @@ int main() {
 
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/numerical_grid.jpg");
+		opaque_instance_data->loadAlbedoTexture("../../resources/textures/numerical_grid.jpg");
 		opaque_instance_data->color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
@@ -90,7 +90,7 @@ int main() {
 		psc1->setInitialVelocity(glm::vec3(-0.4f, -0.4f, -0.4f), glm::vec3(0.4f, 0.4f, 0.4f));
 		psc1->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.33f));
 
-		psc1->loadTexture("../../../resources/textures/dot.png");
+		psc1->loadTexture("../../resources/textures/dot.png");
 
 		scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}

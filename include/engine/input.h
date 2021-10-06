@@ -9,12 +9,14 @@
 
  // ------------------------------------------------------------------------- //
 
-#include <GLFW/glfw3.h>
+
 #include <glm.hpp>
 
 #include <map>
 
 // ------------------------------------------------------------------------- //
+
+class GLFWwindow;
 
 /**
 * @brief Stores the input state of mouse and keyboard

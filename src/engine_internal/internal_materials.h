@@ -9,7 +9,7 @@
 
 // ------------------------------------------------------------------------- //
 
-#include <Vulkan/vulkan.h>
+#include <vulkan.h>
 #include <vector>
 #include <glm.hpp>
 

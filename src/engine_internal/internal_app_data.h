@@ -9,8 +9,8 @@
 
 // ------------------------------------------------------------------------- //
 
-#include "engine/common_def.h"
-#include "engine/vulkan_utils.h"
+#include "common_def.h"
+#include "vulkan_utils.h"
 #include "systems/system_draw_objects.h"
 #include "systems/system_draw_particles.h"
 #include "systems/system_draw_translucents.h"

@@ -7,7 +7,7 @@
  // ------------------------------------------------------------------------- //
 
 #include "internal_materials.h"
-#include "engine/vulkan_utils.h"
+#include "vulkan_utils.h"
 
 #include "../src/engine_internal/internal_gpu_resources.h"
 #include "../src/engine_internal/internal_app_data.h"
@@ -428,8 +428,8 @@ void OpaqueMaterial::createGraphicPipeline() {
 	auto app_data = ParticleEditor::instance().app_data_;
 
 	// Load shaders
-	auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_default.spv");
-	auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_default.spv");
+	auto vert_shader_code = readFile("../../resources/shaders/shaders_spirv/v_default.spv");
+	auto frag_shader_code = readFile("../../resources/shaders/shaders_spirv/f_default.spv");
 
 	VkShaderModule vert_shader_module = createShaderModule(logical_device_reference_, vert_shader_code);
 	VkShaderModule frag_shader_module = createShaderModule(logical_device_reference_, frag_shader_code);
@@ -912,8 +912,8 @@ void TranslucentMaterial::createGraphicPipeline() {
 	auto app_data = ParticleEditor::instance().app_data_;
 
 	// Load shaders
-	auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_translucent.spv");
-	auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_translucent.spv");
+	auto vert_shader_code = readFile("../../resources/shaders/shaders_spirv/v_translucent.spv");
+	auto frag_shader_code = readFile("../../resources/shaders/shaders_spirv/f_translucent.spv");
 
 	VkShaderModule vert_shader_module = createShaderModule(logical_device_reference_, vert_shader_code);
 	VkShaderModule frag_shader_module = createShaderModule(logical_device_reference_, frag_shader_code);
@@ -1395,8 +1395,8 @@ void ParticlesMaterial::createGraphicPipeline(){
 	auto app_data = ParticleEditor::instance().app_data_;
 
 	// Load shaders
-	auto vert_shader_code = readFile("../../../resources/shaders/shaders_spirv/v_billboard.spv");
-	auto frag_shader_code = readFile("../../../resources/shaders/shaders_spirv/f_billboard.spv");
+  auto vert_shader_code = readFile("../../resources/shaders/shaders_spirv/v_billboard.spv");
+  auto frag_shader_code = readFile("../../resources/shaders/shaders_spirv/f_billboard.spv");
 
 	VkShaderModule vert_shader_module = createShaderModule(logical_device_reference_, vert_shader_code);
 	VkShaderModule frag_shader_module = createShaderModule(logical_device_reference_, frag_shader_code);

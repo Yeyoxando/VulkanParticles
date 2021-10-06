@@ -5,6 +5,7 @@
  */
 
 #include "engine/input.h"
+#include <GLFW/glfw3.h>
 
 InputState* InputManager::input_state_ = nullptr;
 

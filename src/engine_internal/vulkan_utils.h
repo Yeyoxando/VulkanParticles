@@ -12,7 +12,7 @@
 #include "common_def.h"
 
 #include <GLFW/glfw3.h>
-#include <Vulkan/vulkan.h>
+#include <vulkan.h>
 
 #include <set>
 #include <array>

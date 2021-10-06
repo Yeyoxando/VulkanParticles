@@ -9,11 +9,11 @@
 
 // ------------------------------------------------------------------------- //
 
-#include <vulkan/vulkan.h>
+#include <vulkan.h>
 
 #include <stdexcept>
 
-#include "engine/vulkan_utils.h"
+#include "vulkan_utils.h"
 #include "../src/engine_internal/internal_commands.h"
 
 // ------------------------------------------------------------------------- //

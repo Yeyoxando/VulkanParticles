@@ -6,7 +6,7 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include "engine/common_def.h"
+//#include "engine/common_def.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -64,7 +64,7 @@ int main() {
 
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/chessboard.jpg");
+		opaque_instance_data->loadAlbedoTexture("../../resources/textures/chessboard.jpg");
 		opaque_instance_data->color_ = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
 		mat->setInstanceData(opaque_instance_data);
 
@@ -89,7 +89,7 @@ int main() {
 
 			// Initialize particle system with max particles
 			ps_components[z + (x * 4)]->init(150);
-			ps_components[z + (x * 4)]->loadTexture("../../../resources/textures/fire.png");
+			ps_components[z + (x * 4)]->loadTexture("../../resources/textures/fire.png");
 
 			scene->addEntity(particle_system, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 		}

@@ -6,7 +6,7 @@
 
 // ------------------------------------------------------------------------- // 
 
-#include "engine/common_def.h"
+//#include "engine/common_def.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -44,7 +44,7 @@ int main() {
 		ComponentMesh* mesh = static_cast<ComponentMesh*>
 			(scenery->getComponent(Component::kComponentKind_Mesh));
 		// Load a model
-		mesh->loadMeshFromFile("../../../resources/models/viking_room.obj");
+		mesh->loadMeshFromFile("../../resources/models/viking_room.obj");
 
 
 		// Get material component
@@ -55,7 +55,7 @@ int main() {
 
 		// Create instance data
 		ComponentMaterial::OpaqueData* opaque_instance_data = new ComponentMaterial::OpaqueData();
-		opaque_instance_data->loadAlbedoTexture("../../../resources/textures/viking_room.png");
+		opaque_instance_data->loadAlbedoTexture("../../resources/textures/viking_room.png");
 		mat->setInstanceData(opaque_instance_data);
 
 		// Add it to the scene
@@ -84,7 +84,7 @@ int main() {
 		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.33f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/smoke.png");
+		ps->loadTexture("../../resources/textures/smoke.png");
 
 		scene->addEntity(particle_system_smoke_puff, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -110,7 +110,7 @@ int main() {
 		ps->setParticleColor(glm::vec4(1.0f, 1.0f, 1.0f, 0.22f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/smoke.png");
+		ps->loadTexture("../../resources/textures/smoke.png");
 
 		scene->addEntity(particle_system_smoke_puff_two, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -136,7 +136,7 @@ int main() {
 		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.02f), glm::vec3(0.06f, 0.06f, 0.06f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/fire.png");
+		ps->loadTexture("../../resources/textures/fire.png");
 
 		scene->addEntity(particle_system_fire_torch_right, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -162,7 +162,7 @@ int main() {
 		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.08f), glm::vec3(0.06f, 0.06f, 0.12f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/smoke.png");
+		ps->loadTexture("../../resources/textures/smoke.png");
 
 		scene->addEntity(particle_system_smoke_torch_right, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -188,7 +188,7 @@ int main() {
 		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.02f), glm::vec3(0.06f, 0.06f, 0.06f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/fire.png");
+		ps->loadTexture("../../resources/textures/fire.png");
 
 		scene->addEntity(particle_system_fire_torch_left, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
@@ -215,7 +215,7 @@ int main() {
 		ps->setInitialVelocity(glm::vec3(-0.06f, -0.06f, 0.08f), glm::vec3(0.06f, 0.06f, 0.12f));
 		ps->setAlphaColorOverTime(0.0f);
 
-		ps->loadTexture("../../../resources/textures/smoke.png");
+		ps->loadTexture("../../resources/textures/smoke.png");
 
 		scene->addEntity(particle_system_smoke_torch_left, (int)ParticleEditor::MaterialParent::kMaterialParent_Particles);
 	}
