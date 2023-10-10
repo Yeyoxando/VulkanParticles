@@ -16,13 +16,16 @@ The project is about researching and implement a modular particle system editor 
 
 ## Build
 	To generate a Visual studio solution execute "compile_vs2017.bat" or "compile_vs2019.bat", 	 
-	depending on your VS version.
+	depending on your VS version (you can also modify one of them for a newer VS version).
 	This process is shown in the video.
 	
 ## Examples
-	Different examples are available inside the folder "bin".  
+	Different examples are available inside the folder "bin" after compiling the code for the different VS projects.  
 	If there is any issue executing them, they are shown in the video.
 	
-## Trello
-	You can see here the progress of the project: 
+## Documentation
+	Project research and implementation is documented here:
+	https://docs.google.com/document/d/1Qg_q5_hhinJW7K2p-IML6Fruy7PwXDy8/edit
+ 
+	You can see here the current work being done in the project: 
 	https://trello.com/b/MPq0ILAt/technical-computing
